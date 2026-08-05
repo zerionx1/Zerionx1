@@ -1033,3 +1033,150 @@ select {
 .pricing-preview__card--featured {
   border-color: #C4C1B9;
 }
+
+
+/* Zerion X1 final cinematic visibility and contrast */
+.cinematic-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: #1E0B10;
+}
+
+.cinematic-background__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.54;
+  filter:
+    saturate(0.52)
+    contrast(1.16)
+    brightness(0.68)
+    sepia(0.12);
+}
+
+.cinematic-background__fallback {
+  z-index: -2;
+}
+
+.cinematic-background__overlay {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(30, 11, 16, 0.36) 0%,
+      rgba(30, 11, 16, 0.64) 38%,
+      rgba(30, 11, 16, 0.78) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(30, 11, 16, 0.58),
+      rgba(80, 33, 43, 0.12) 48%,
+      rgba(30, 11, 16, 0.56)
+    );
+}
+
+.marketing-page,
+.hero-shell,
+.marketing-section,
+.content-page {
+  background: transparent;
+}
+
+a[class*="bg-[#C4C1B9]"],
+button[class*="bg-[#C4C1B9]"] {
+  background: #50212B !important;
+  border: 1px solid #755058 !important;
+  color: #C4C1B9 !important;
+}
+
+a[class*="bg-[#C4C1B9]"] *,
+button[class*="bg-[#C4C1B9]"] * {
+  color: #C4C1B9 !important;
+}
+
+.legal-document {
+  position: relative;
+  min-height: 100vh;
+  padding: 150px 0 110px;
+}
+
+.legal-document__header {
+  max-width: 900px;
+  margin-bottom: 52px;
+}
+
+.legal-document__header h1 {
+  margin: 16px 0 22px;
+  color: #C4C1B9;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.1rem, 7vw, 6.8rem);
+  font-weight: 500;
+  line-height: 0.98;
+}
+
+.legal-document__header > p:last-child {
+  max-width: 760px;
+  color: #C4C1B9;
+  opacity: 0.78;
+  line-height: 1.8;
+}
+
+.legal-document__body {
+  display: grid;
+  gap: 18px;
+}
+
+.legal-section {
+  padding: clamp(25px, 4vw, 42px);
+  border: 1px solid rgba(117, 80, 88, 0.66);
+  border-radius: 25px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(80, 33, 43, 0.83),
+      rgba(30, 11, 16, 0.86)
+    );
+  box-shadow: 0 30px 80px rgba(30, 11, 16, 0.34);
+  backdrop-filter: blur(24px);
+}
+
+.legal-section h2 {
+  margin: 0 0 18px;
+  color: #C4C1B9;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+}
+
+.legal-section p,
+.legal-section li {
+  color: #C4C1B9;
+  opacity: 0.78;
+  line-height: 1.85;
+}
+
+.legal-section ul {
+  display: grid;
+  gap: 10px;
+  padding-left: 22px;
+}
+
+.legal-highlight {
+  border-color: #C4C1B9;
+}
+
+.contact-information-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 26px;
+  padding: 20px;
+  border: 1px solid rgba(117, 80, 88, 0.72);
+  border-radius: 17px;
+  background: rgba(30, 11, 16, 0.72);
+}
+
+.contact-information-card a {
+  color: #C4C1B9;
+  font-weight: 700;
+}

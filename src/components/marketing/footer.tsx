@@ -57,8 +57,8 @@ export function MarketingFooter() {
               workspace built around transparent data and user authorization.
             </p>
 
-            <a href="mailto:support@zerionx1.com">
-              support@zerionx1.com
+            <a href="mailto:zerionx1@gmail.com">
+              zerionx1@gmail.com
             </a>
           </div>
 
