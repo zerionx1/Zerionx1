@@ -1,0 +1,1 @@
+import { describe,it,expect } from "vitest"; import { ConnectionMachine } from "@/lib/market-data/streaming/connection"; describe("ConnectionMachine",()=>{it("enforces transitions",()=>{const m=new ConnectionMachine();m.transition("connecting");m.transition("connected");expect(m.state).toBe("connected");expect(()=>m.transition("idle")).toThrow();});});

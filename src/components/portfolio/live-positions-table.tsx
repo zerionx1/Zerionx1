@@ -1,0 +1,1 @@
+import {Card} from "@/components/ui/card";export function LivePositionsTable(){return <Card><h3>Live positions</h3><p>Connect a verified broker account to sync positions. No sample position is presented as live.</p></Card>}

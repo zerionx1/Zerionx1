@@ -1,0 +1,1 @@
+export function reportExpiry(days=7){return new Date(Date.now()+days*86_400_000).toISOString();}export function validateReportRange(from:string,to:string,maxDays=366){const ms=new Date(to).getTime()-new Date(from).getTime();return ms>=0&&ms<=maxDays*86_400_000;}

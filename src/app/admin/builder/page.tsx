@@ -1,0 +1,1 @@
+import { BuilderCanvas } from "@/components/admin/builder-canvas"; export default function Builder(){return <><h1 className="mb-2 text-4xl font-semibold">Visual Builder</h1><p className="mb-8 text-[var(--mist)]">Drag-and-drop foundation for founder-controlled surfaces.</p><BuilderCanvas/></>}

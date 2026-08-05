@@ -1,0 +1,1 @@
+import { describe,expect,it } from "vitest"; import { planEntitlements } from "./plans"; describe("plans",()=>{it("does not grant forex below global elite",()=>{expect(planEntitlements.indian_pro.markets).not.toContain("forex");expect(planEntitlements.multi_market_pro.markets).not.toContain("forex");});});

@@ -1,0 +1,2 @@
+export const marketEventId=(provider:string,symbol:string,sequence:number)=>`${provider}:${symbol}:${sequence}`;
+export const candleId=(symbol:string,timeframe:string,openTime:number)=>`${symbol}:${timeframe}:${openTime}`;

@@ -1,0 +1,1 @@
+export const cryptoPairKey=(base:string,quote:string)=>`${base.toUpperCase()}-${quote.toUpperCase()}`;

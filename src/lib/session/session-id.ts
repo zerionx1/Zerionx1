@@ -1,0 +1,1 @@
+export function getSessionId():string{ if(typeof window==='undefined')return 'server'; const key='zx1:session-id'; let value=sessionStorage.getItem(key); if(!value){value=crypto.randomUUID();sessionStorage.setItem(key,value);} return value; }

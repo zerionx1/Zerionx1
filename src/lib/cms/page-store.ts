@@ -1,0 +1,1 @@
+import type{CmsPage}from"@/types/cms";const pages=new Map<string,CmsPage>();export const cmsPageStore={list:()=>[...pages.values()],get:(slug:string)=>[...pages.values()].find(x=>x.slug===slug),save:(page:CmsPage)=>{pages.set(page.id,page);return page}};

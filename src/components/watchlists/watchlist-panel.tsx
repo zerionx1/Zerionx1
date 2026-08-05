@@ -1,0 +1,2 @@
+import { watchlistStore } from "@/lib/watchlists/watchlist-store";
+export async function WatchlistPanel(){const list=await watchlistStore.getDefault();return <section className="panel compact"><div className="panel-header"><div><p className="eyebrow">Watchlist</p><h2>{list.name}</h2></div><button className="text-button">Manage</button></div><div className="watchlist">{list.items.map(x=><div key={x.id}><strong>{x.symbol}</strong><span>Monitoring</span></div>)}</div></section>}

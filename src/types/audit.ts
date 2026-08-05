@@ -1,0 +1,1 @@
+export type AuditSeverity="info"|"warning"|"critical"; export type AuditEvent={id:string;actorId:string;action:string;resource:string;severity:AuditSeverity;createdAt:string;metadata:Record<string,string|number|boolean|null>};

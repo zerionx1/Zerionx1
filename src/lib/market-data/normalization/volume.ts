@@ -1,0 +1,3 @@
+export interface VolumeNormalizationInput { value: unknown; provider: string; receivedAt?: number; }
+export interface VolumeNormalizationResult<T> { ok:boolean; value?:T; errors:string[]; provider:string; }
+export function normalizeVolume<T>(input:VolumeNormalizationInput, mapper:(value:unknown)=>T):VolumeNormalizationResult<T>{try{const value=mapper(input.value);return{ok:true,value,errors:[],provider:input.provider};}catch(error){return{ok:false,errors:[error instanceof Error?error.message:"Normalization failed"],provider:input.provider};}}

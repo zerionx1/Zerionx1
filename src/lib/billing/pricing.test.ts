@@ -1,0 +1,1 @@
+import{describe,it,expect}from"vitest";import{calculatePlanAmount}from"./pricing";describe("pricing",()=>{it("calculates annual discount",()=>expect(calculatePlanAmount(500,12,10)).toBe(5400))});

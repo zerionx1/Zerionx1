@@ -1,0 +1,1 @@
+export const reconnectDelay=(attempt:number,baseMs=500,maxMs=30_000)=>Math.min(maxMs,Math.round(baseMs*Math.pow(2,Math.max(0,attempt-1))*(0.8+Math.random()*0.4)));

@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkTimestampOrder(condition:boolean,message="timestamp order check failed"):IntegrityResult{return condition?{valid:true,code:"TIMESTAMP_ORDER",severity:"info"}:{valid:false,code:"TIMESTAMP_ORDER",message,severity:"error"};}

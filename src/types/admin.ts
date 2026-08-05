@@ -1,0 +1,1 @@
+export type FeatureFlag={key:string;label:string;description:string;enabled:boolean;risk:"low"|"medium"|"high"}; export type ProviderStatus={id:string;name:string;category:string;status:"healthy"|"degraded"|"offline";latencyMs:number;lastCheckedAt:string};

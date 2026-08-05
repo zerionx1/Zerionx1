@@ -1,0 +1,2 @@
+export class MarketDataError extends Error { constructor(message:string, readonly code:string, readonly retryable:boolean, readonly details?:Record<string,unknown>){super(message);this.name="MarketDataError";} }
+export class StaleFeedError extends MarketDataError { constructor(provider:string){super(`Stale market feed: ${provider}`,"STALE_FEED",true,{provider});} }

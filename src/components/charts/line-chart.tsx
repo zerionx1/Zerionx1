@@ -1,0 +1,2 @@
+import type { Candle } from "@/types/market";
+export function LineChart({candles}:{candles:Candle[]}){const values=candles.map(c=>c.close);const min=Math.min(...values),max=Math.max(...values),range=max-min||1;const points=values.map((v,i)=>`${(i/(values.length-1))*100},${100-((v-min)/range)*100}`).join(" ");return <div className="chart-frame" role="img" aria-label="Price chart"><svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.2" vectorEffect="non-scaling-stroke"/></svg></div>}

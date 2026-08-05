@@ -1,0 +1,1 @@
+export class FallbackRouter{constructor(private providers:string[]){}select(health:Record<string,boolean>){return this.providers.find(id=>health[id])??null;}prioritize(id:string){this.providers=[id,...this.providers.filter(x=>x!==id)];}}

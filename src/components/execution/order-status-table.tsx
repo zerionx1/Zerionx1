@@ -1,0 +1,1 @@
+import {Card} from "@/components/ui/card";export function OrderStatusTable(){return <Card><h3>Execution ledger</h3><table><thead><tr><th>Intent</th><th>Symbol</th><th>Status</th><th>Confirmation</th></tr></thead><tbody><tr><td>Preview only</td><td>NIFTY</td><td>Awaiting configuration</td><td>Required</td></tr></tbody></table></Card>}

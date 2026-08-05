@@ -1,0 +1,3 @@
+export interface TimestampNormalizationInput { value: unknown; provider: string; receivedAt?: number; }
+export interface TimestampNormalizationResult<T> { ok:boolean; value?:T; errors:string[]; provider:string; }
+export function normalizeTimestamp<T>(input:TimestampNormalizationInput, mapper:(value:unknown)=>T):TimestampNormalizationResult<T>{try{const value=mapper(input.value);return{ok:true,value,errors:[],provider:input.provider};}catch(error){return{ok:false,errors:[error instanceof Error?error.message:"Normalization failed"],provider:input.provider};}}

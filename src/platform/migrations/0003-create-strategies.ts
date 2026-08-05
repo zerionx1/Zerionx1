@@ -1,0 +1,1 @@
+export const migration={id:'0003-create-strategies',up:["create table if not exists strategies (id text primary key, tenant_id text not null, payload jsonb not null, created_at timestamptz not null, updated_at timestamptz not null)"],down:["drop table if exists strategies"]} as const;

@@ -1,0 +1,1 @@
+export class SymbolAliasMap{private aliases=new Map<string,string>();add(alias:string,symbolId:string){this.aliases.set(alias.toUpperCase(),symbolId);}resolve(value:string){return this.aliases.get(value.toUpperCase())??value;}}

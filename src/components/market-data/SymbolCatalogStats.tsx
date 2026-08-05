@@ -1,0 +1,1 @@
+export function SymbolCatalogStats({total,enabled,venues}:{total:number;enabled:number;venues:number}){return <dl className="grid grid-cols-3 gap-4"><div><dt>Total</dt><dd>{total}</dd></div><div><dt>Enabled</dt><dd>{enabled}</dd></div><div><dt>Venues</dt><dd>{venues}</dd></div></dl>}

@@ -1,0 +1,1 @@
+export interface SecretVault { put(scope:string,value:Record<string,string>):Promise<string>; read(reference:string):Promise<Record<string,string>>; revoke(reference:string):Promise<void>; } export const assertSecretReference=(value:string)=>{if(!value.startsWith("vault://")) throw new Error("Raw broker credentials are not permitted"); return value;};

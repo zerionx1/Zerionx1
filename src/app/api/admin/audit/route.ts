@@ -1,0 +1,1 @@
+import { ok } from "@/lib/security/api-response"; import { listAudit } from "@/lib/audit/audit-store"; export async function GET(){return ok(await listAudit());}

@@ -1,0 +1,1 @@
+import { EmptyState } from "@/components/ui/empty-state"; export default function Integrations(){return <><h1 className="mb-6 text-4xl font-semibold">Integrations</h1><EmptyState title="No production provider connected" description="Provider secrets will be entered through secure server-side settings, never browser JSON or committed source."/></>}

@@ -1,0 +1,1 @@
+import { ok } from "@/lib/security/api-response"; import { getFoundationHealth } from "@/lib/observability/health"; export async function GET(){return ok({service:"zerion-x1-web",phase:1,checks:await getFoundationHealth(),at:new Date().toISOString()});}

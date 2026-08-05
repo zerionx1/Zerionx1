@@ -1,0 +1,1 @@
+import type { AuditEvent } from "@/types/audit"; const events:AuditEvent[]=[]; export async function appendAudit(event:Omit<AuditEvent,"id"|"createdAt">){const saved={...event,id:`aud_${crypto.randomUUID()}`,createdAt:new Date().toISOString()};events.unshift(saved);return saved;} export async function listAudit(){return events.slice(0,100);}

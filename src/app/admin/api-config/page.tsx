@@ -1,0 +1,1 @@
+import{ApiConfiguration}from"@/components/admin/api-configuration";export default function Page(){return <section className="space-y-6"><div><p className="text-xs uppercase tracking-[.25em] opacity-60">Founder Admin OS</p><h1 className="mt-2 text-3xl font-semibold">API Configuration</h1></div><ApiConfiguration/></section>}

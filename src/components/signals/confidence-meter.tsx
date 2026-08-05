@@ -1,0 +1,1 @@
+export function ConfidenceMeter({value}:{value:number}){return <div className="confidence"><div className="confidence-track"><span style={{width:`${Math.max(0,Math.min(100,value))}%`}}/></div><strong>{value}%</strong></div>}

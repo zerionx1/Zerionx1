@@ -1,0 +1,4 @@
+import type { PaperPosition } from "@/types/paper-trading";
+import type { TradingMetrics } from "@/types/analytics";
+export function summariseTrades(pnls:number[]):TradingMetrics{ const wins=pnls.filter(x=>x>0),losses=pnls.filter(x=>x<0); const grossWin=wins.reduce((a,b)=>a+b,0),grossLoss=Math.abs(losses.reduce((a,b)=>a+b,0)); return{totalTrades:pnls.length,winningTrades:wins.length,losingTrades:losses.length,winRate:pnls.length?wins.length/pnls.length*100:0,netPnl:pnls.reduce((a,b)=>a+b,0),profitFactor:grossLoss?grossWin/grossLoss:grossWin?Infinity:0,averageWin:wins.length?grossWin/wins.length:0,averageLoss:losses.length?grossLoss/losses.length:0,maxDrawdown:0,expectancy:pnls.length?pnls.reduce((a,b)=>a+b,0)/pnls.length:0}; }
+export function totalUnrealizedPnl(positions:PaperPosition[]){return positions.reduce((s,p)=>s+p.unrealizedPnl,0)}

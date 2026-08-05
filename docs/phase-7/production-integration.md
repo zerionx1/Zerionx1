@@ -1,0 +1,2 @@
+# Phase 7 Production Integration
+Phase 7 adds reload-safe non-sensitive workspace persistence, navigation/activity telemetry, global loading and recovery boundaries, connectivity degradation handling, and release verification. Browser storage is never used for broker secrets, authentication credentials, live-order approvals, or financial authorization tokens. The in-memory activity store is a development adapter and must be replaced by the configured durable database adapter before production launch.

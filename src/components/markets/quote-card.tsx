@@ -1,0 +1,2 @@
+import type { MarketQuote } from "@/types/market";
+export function QuoteCard({quote}:{quote:MarketQuote}){return <article className="quote-card"><div><p className="eyebrow">{quote.symbol}</p><strong>{quote.price.toLocaleString()}</strong></div><span className={quote.changePercent>=0?"positive":"negative"}>{quote.changePercent>=0?"+":""}{quote.changePercent.toFixed(2)}%</span><small>{quote.delayed?"Delayed sample":"Provider feed"}</small></article>}

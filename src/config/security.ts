@@ -1,0 +1,1 @@
+export const securityConfig={sessionMinutes:30,privilegedSessionMinutes:15,maxFailedLogins:5,stepUpActions:["broker.connect","automation.authorize","role.grant","emergency.flatten"]} as const;

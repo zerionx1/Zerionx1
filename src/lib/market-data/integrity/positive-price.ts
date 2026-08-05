@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkPositivePrice(condition:boolean,message="positive price check failed"):IntegrityResult{return condition?{valid:true,code:"POSITIVE_PRICE",severity:"info"}:{valid:false,code:"POSITIVE_PRICE",message,severity:"error"};}

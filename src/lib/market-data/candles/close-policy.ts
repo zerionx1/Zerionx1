@@ -1,0 +1,1 @@
+export const shouldCloseCandle=(now:number,closeTime:number,graceMs=250)=>now>closeTime+graceMs;

@@ -1,0 +1,1 @@
+import { EmptyState } from "@/components/ui/empty-state"; export default function Page(){return <><h1 className="mb-6 text-4xl font-semibold">Workspace Settings</h1><EmptyState title="Foundation ready" description="Preferences, security and integration permissions will be managed here."/></>}

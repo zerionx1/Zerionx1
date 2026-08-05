@@ -1,0 +1,1 @@
+import fs from 'node:fs';const f=fs.readdirSync('src/platform/migrations').filter(x=>/^\d{4}-/.test(x)).sort();if(new Set(f.map(x=>x.slice(0,4))).size!==f.length)throw new Error('Duplicate migration number');console.log(`${f.length} migrations ordered`);

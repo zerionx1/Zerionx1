@@ -1,0 +1,1 @@
+export class EventWatermark{private value=0;advance(timestamp:number){this.value=Math.max(this.value,timestamp);return this.value;}get current(){return this.value;}isLate(timestamp:number,allowedLatenessMs:number){return timestamp<this.value-allowedLatenessMs;}}

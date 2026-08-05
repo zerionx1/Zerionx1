@@ -1,0 +1,7 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: local_only
+  redis:
+    image: redis:7-alpine

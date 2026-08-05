@@ -1,0 +1,1 @@
+import { AdminShell } from "@/components/admin/admin-shell"; import { requirePermission } from "@/lib/auth/require-permission"; export default async function Layout({children}:{children:React.ReactNode}){await requirePermission("admin.read");return <AdminShell>{children}</AdminShell>}

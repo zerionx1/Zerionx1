@@ -1,0 +1,4 @@
+import { createCipheriv,createDecipheriv,randomBytes } from 'node:crypto';
+export interface EncryptedValue{iv:string;tag:string;ciphertext:string}
+export function encrypt(value:string,key:Buffer):EncryptedValue{if(key.length!==32)throw new Error('AES-256 key required');const iv=randomBytes(12);const c=createCipheriv('aes-256-gcm',key,iv);const ciphertext=Buffer.concat([c.update(value,'utf8'),c.final()]);return{iv:iv.toString('base64url'),tag:c.getAuthTag().toString('base64url'),ciphertext:ciphertext.toString('base64url')}}
+export function decrypt(v:EncryptedValue,key:Buffer):string{const d=createDecipheriv('aes-256-gcm',key,Buffer.from(v.iv,'base64url'));d.setAuthTag(Buffer.from(v.tag,'base64url'));return Buffer.concat([d.update(Buffer.from(v.ciphertext,'base64url')),d.final()]).toString('utf8')}

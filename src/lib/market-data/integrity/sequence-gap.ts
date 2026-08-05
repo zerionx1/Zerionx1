@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkSequenceGap(condition:boolean,message="sequence gap check failed"):IntegrityResult{return condition?{valid:true,code:"SEQUENCE_GAP",severity:"info"}:{valid:false,code:"SEQUENCE_GAP",message,severity:"error"};}

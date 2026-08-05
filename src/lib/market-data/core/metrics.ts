@@ -1,0 +1,2 @@
+export interface FeedMetrics { received:number;accepted:number;rejected:number;duplicates:number;outOfOrder:number;lastLatencyMs:number;maxLatencyMs:number; }
+export const emptyFeedMetrics=():FeedMetrics=>({received:0,accepted:0,rejected:0,duplicates:0,outOfOrder:0,lastLatencyMs:0,maxLatencyMs:0});

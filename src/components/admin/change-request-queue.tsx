@@ -1,0 +1,1 @@
+import{listChangeRequests}from"@/lib/admin/change-control";import{Card}from"@/components/ui/card";export function ChangeRequestQueue(){return <Card><h2 className="font-semibold">Change approvals</h2><p className="mt-2 text-sm opacity-60">{listChangeRequests().length} pending changes. High-risk production changes require a second approver.</p></Card>}

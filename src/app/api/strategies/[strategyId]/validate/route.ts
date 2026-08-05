@@ -1,0 +1,2 @@
+import { apiError, apiSuccess } from "@/lib/security/api-response"; import { getStrategy } from "@/lib/strategy/strategy-store"; import { validateStrategy } from "@/lib/strategy/validator";
+export async function POST(_:Request,{params}:{params:Promise<{strategyId:string}>}){const {strategyId}=await params;const strategy=getStrategy(strategyId);return strategy?apiSuccess({validation:validateStrategy(strategy)}):apiError("NOT_FOUND","Strategy not found",404)}

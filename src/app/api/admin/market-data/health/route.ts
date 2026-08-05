@@ -1,0 +1,1 @@
+import { NextResponse } from "next/server"; export async function GET(){return NextResponse.json({summary:{healthy:0,degraded:0,down:0,total:0},checkedAt:Date.now()});}

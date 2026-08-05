@@ -1,0 +1,1 @@
+import { DataTable } from "@/components/ui/data-table"; export default function Users(){return <><h1 className="mb-6 text-4xl font-semibold">Users</h1><DataTable headers={["Name","Role","MFA","Status"]} rows={[["Founder","founder","Verified","Active"]]}/></>}

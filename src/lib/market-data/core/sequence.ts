@@ -1,0 +1,1 @@
+export class SequenceGuard { private last=new Map<string,number>(); accept(key:string,sequence:number){const previous=this.last.get(key);if(previous!==undefined&&sequence<=previous)return false;this.last.set(key,sequence);return true;} reset(key?:string){key?this.last.delete(key):this.last.clear();} }

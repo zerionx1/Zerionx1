@@ -1,0 +1,2 @@
+import { QuoteGrid } from "@/components/markets/quote-grid";import { MarketChartPanel } from "@/components/markets/market-chart-panel";import { WatchlistPanel } from "@/components/watchlists/watchlist-panel";import { AlertsPanel } from "@/components/alerts/alerts-panel";
+export function MarketOverview(){return <><QuoteGrid/><div className="workspace-grid"><MarketChartPanel/><div className="stack"><WatchlistPanel/><AlertsPanel/></div></div></>}

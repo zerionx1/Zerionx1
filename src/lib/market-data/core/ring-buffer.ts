@@ -1,0 +1,1 @@
+export class RingBuffer<T>{private values:T[]=[];constructor(readonly capacity:number){if(capacity<1)throw new Error("capacity must be positive");}push(value:T){if(this.values.length===this.capacity)this.values.shift();this.values.push(value);}toArray(){return [...this.values];}get size(){return this.values.length;}clear(){this.values=[];}}

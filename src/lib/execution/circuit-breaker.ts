@@ -1,0 +1,1 @@
+let failures=0,openUntil=0; export const executionCircuitBreaker={canExecute:()=>Date.now()>=openUntil,success:()=>{failures=0;openUntil=0},failure:()=>{failures+=1;if(failures>=3)openUntil=Date.now()+60_000},status:()=>({failures,openUntil,isOpen:Date.now()<openUntil})};

@@ -1,0 +1,1 @@
+import {BrokerCatalog} from "@/components/brokers/broker-catalog";import {ConnectionHealth} from "@/components/brokers/connection-health";export default function Page(){return <main><h1>Broker Connections</h1><p>Provider-neutral integrations for Indian, crypto and Forex markets.</p><ConnectionHealth/><BrokerCatalog/></main>}

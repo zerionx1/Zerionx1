@@ -1,0 +1,2 @@
+import { describe,it,expect } from "vitest"; import { calculatePositionSize } from "@/lib/risk/position-sizing";
+describe("position sizing",()=>{it("limits loss by risk budget",()=>{const r=calculatePositionSize({equity:100000,riskPct:1,entryPrice:100,stopPrice:95,maxPositionPct:100});expect(r.allowedQuantity).toBe(200);expect(r.riskAmount).toBe(1000)});it("rejects zero distance",()=>{expect(calculatePositionSize({equity:100000,riskPct:1,entryPrice:100,stopPrice:100}).allowedQuantity).toBe(0)})})

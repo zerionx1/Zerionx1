@@ -1,0 +1,3 @@
+export interface SymbolNormalizationInput { value: unknown; provider: string; receivedAt?: number; }
+export interface SymbolNormalizationResult<T> { ok:boolean; value?:T; errors:string[]; provider:string; }
+export function normalizeSymbol<T>(input:SymbolNormalizationInput, mapper:(value:unknown)=>T):SymbolNormalizationResult<T>{try{const value=mapper(input.value);return{ok:true,value,errors:[],provider:input.provider};}catch(error){return{ok:false,errors:[error instanceof Error?error.message:"Normalization failed"],provider:input.provider};}}

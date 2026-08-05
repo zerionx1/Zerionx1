@@ -1,0 +1,1 @@
+export const candleCacheKey=(provider:string,symbol:string,timeframe:string,from:number,to:number)=>["candles",provider,symbol,timeframe,from,to].join(":");

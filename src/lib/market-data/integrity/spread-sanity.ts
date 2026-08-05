@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkSpreadSanity(condition:boolean,message="spread sanity check failed"):IntegrityResult{return condition?{valid:true,code:"SPREAD_SANITY",severity:"info"}:{valid:false,code:"SPREAD_SANITY",message,severity:"error"};}

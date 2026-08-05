@@ -1,0 +1,9 @@
+name: Production Approval
+on: {workflow_dispatch: {}}
+jobs:
+  approval:
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo 'Protected environment approval recorded'

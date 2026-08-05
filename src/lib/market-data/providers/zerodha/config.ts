@@ -1,0 +1,1 @@
+export interface ZerodhaProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultZerodhaConfig:ZerodhaProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

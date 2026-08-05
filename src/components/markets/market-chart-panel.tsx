@@ -1,0 +1,2 @@
+import { createSampleCandles } from "@/lib/market/sample-data"; import { CandlestickChart } from "@/components/charts/candlestick-chart";
+export function MarketChartPanel(){return <section className="panel"><div className="panel-header"><div><p className="eyebrow">Market workspace</p><h2>NIFTY 50 · 15m</h2></div><span className="data-badge">Sample data</span></div><CandlestickChart candles={createSampleCandles(24700)}/></section>}

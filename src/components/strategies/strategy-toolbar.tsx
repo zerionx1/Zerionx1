@@ -1,0 +1,1 @@
+import { Button } from "@/components/ui/button"; export function StrategyToolbar(){return <div className="flex flex-wrap gap-3"><Button>Save draft</Button><Button variant="secondary">Validate graph</Button><Button variant="secondary">Create version</Button><Button variant="secondary">Run backtest</Button></div>}

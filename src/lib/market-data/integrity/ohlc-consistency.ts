@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkOhlcConsistency(condition:boolean,message="ohlc consistency check failed"):IntegrityResult{return condition?{valid:true,code:"OHLC_CONSISTENCY",severity:"info"}:{valid:false,code:"OHLC_CONSISTENCY",message,severity:"error"};}

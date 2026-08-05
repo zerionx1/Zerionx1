@@ -1,0 +1,2 @@
+import { SectionHeading } from "@/components/ui/section-heading";
+export default function ReleasePage() { return <main><SectionHeading eyebrow="Founder OS" title="Release Control" description="Review quality gates, approvals, migrations, rollback plans and environment readiness before production promotion."/><div className="glass-card p-6">Production promotion remains blocked until all mandatory gates pass.</div></main>; }

@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkTickSize(condition:boolean,message="tick size check failed"):IntegrityResult{return condition?{valid:true,code:"TICK_SIZE",severity:"info"}:{valid:false,code:"TICK_SIZE",message,severity:"error"};}

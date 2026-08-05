@@ -1,0 +1,1 @@
+import type { BrokerAdapter } from "./adapter"; const adapters=new Map<string,BrokerAdapter>(); export const brokerRegistry={register:(key:string,a:BrokerAdapter)=>adapters.set(key,a),get:(key:string)=>adapters.get(key),keys:()=>[...adapters.keys()]};

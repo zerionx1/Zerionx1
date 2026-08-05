@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkDuplicateEvent(condition:boolean,message="duplicate event check failed"):IntegrityResult{return condition?{valid:true,code:"DUPLICATE_EVENT",severity:"info"}:{valid:false,code:"DUPLICATE_EVENT",message,severity:"error"};}

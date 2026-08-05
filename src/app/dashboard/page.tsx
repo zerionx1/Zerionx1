@@ -1,0 +1,2 @@
+import { MarketOverview } from "@/components/dashboard/market-overview";import { DisclaimerStrip } from "@/components/dashboard/disclaimer-strip";
+export default function DashboardPage(){return <main className="dashboard-page"><div className="page-heading"><div><p className="eyebrow">Unified intelligence workspace</p><h1>Market Command Center</h1><p>Indian, crypto and forex visibility with explicit data provenance and execution boundaries.</p></div><span className="status-pill">Phase 2 · Simulation</span></div><DisclaimerStrip/><MarketOverview/></main>}

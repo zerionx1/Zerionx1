@@ -1,0 +1,1 @@
+import { describe,it,expect } from "vitest"; import { SequenceGuard } from "@/lib/market-data/core/sequence"; describe("SequenceGuard",()=>{it("rejects duplicates and older sequences",()=>{const g=new SequenceGuard();expect(g.accept("x",1)).toBe(true);expect(g.accept("x",1)).toBe(false);expect(g.accept("x",0)).toBe(false);expect(g.accept("x",2)).toBe(true);});});

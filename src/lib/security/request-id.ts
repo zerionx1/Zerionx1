@@ -1,0 +1,1 @@
+export const createRequestId=()=>`req_${crypto.randomUUID()}`;

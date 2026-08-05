@@ -1,0 +1,3 @@
+export interface ForexPairNormalizationInput { value: unknown; provider: string; receivedAt?: number; }
+export interface ForexPairNormalizationResult<T> { ok:boolean; value?:T; errors:string[]; provider:string; }
+export function normalizeForexPair<T>(input:ForexPairNormalizationInput, mapper:(value:unknown)=>T):ForexPairNormalizationResult<T>{try{const value=mapper(input.value);return{ok:true,value,errors:[],provider:input.provider};}catch(error){return{ok:false,errors:[error instanceof Error?error.message:"Normalization failed"],provider:input.provider};}}

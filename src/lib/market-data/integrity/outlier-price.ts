@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkOutlierPrice(condition:boolean,message="outlier price check failed"):IntegrityResult{return condition?{valid:true,code:"OUTLIER_PRICE",severity:"info"}:{valid:false,code:"OUTLIER_PRICE",message,severity:"error"};}

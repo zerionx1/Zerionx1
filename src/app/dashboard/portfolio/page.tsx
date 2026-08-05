@@ -1,0 +1,1 @@
+import {PortfolioSummary} from "@/components/portfolio/portfolio-summary";import {LivePositionsTable} from "@/components/portfolio/live-positions-table";export default function Page(){return <main><h1>Unified Portfolio</h1><PortfolioSummary/><LivePositionsTable/></main>}

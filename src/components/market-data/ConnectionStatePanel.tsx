@@ -1,0 +1,1 @@
+import type { ConnectionState } from "@/types/market-data"; export function ConnectionStatePanel({state,message}:{state:ConnectionState;message?:string}){return <div role="status" className="rounded-xl border border-white/10 p-4"><strong>Feed: {state}</strong>{message&&<p>{message}</p>}</div>}

@@ -1,0 +1,1 @@
+import type { BrokerConnection } from "@/types/broker"; const rows=new Map<string,BrokerConnection>(); export const brokerConnectionStore={list:(userId:string)=>[...rows.values()].filter(x=>x.userId===userId),get:(id:string)=>rows.get(id),save:(x:BrokerConnection)=>(rows.set(x.id,x),x),remove:(id:string)=>rows.delete(id)};

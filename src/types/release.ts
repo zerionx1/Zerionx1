@@ -1,0 +1,1 @@
+export interface DeploymentRecord { id:string; version:string; commitSha:string; environment:"preview"|"staging"|"production"; status:"queued"|"running"|"succeeded"|"failed"|"rolled_back"; createdAt:string }

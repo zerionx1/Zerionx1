@@ -1,0 +1,1 @@
+import { describe,expect,it } from "vitest"; import { redact } from "./redact"; describe("redact",()=>{it("removes nested secrets",()=>expect(redact({token:"abc",nested:{apiKey:"x",safe:1}})).toEqual({token:"[REDACTED]",nested:{apiKey:"[REDACTED]",safe:1}}));});

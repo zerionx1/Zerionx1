@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkLotSize(condition:boolean,message="lot size check failed"):IntegrityResult{return condition?{valid:true,code:"LOT_SIZE",severity:"info"}:{valid:false,code:"LOT_SIZE",message,severity:"error"};}

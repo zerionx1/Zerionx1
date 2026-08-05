@@ -1,0 +1,2 @@
+import type{PlatformMetric}from"@/types/admin-os";
+export function getPlatformMetrics():PlatformMetric[]{return[{key:"users",label:"Active users",value:1,health:"healthy"},{key:"orders",label:"Live orders today",value:0,health:"healthy"},{key:"worker",label:"Execution worker",value:"Disabled",health:"warning"},{key:"feeds",label:"Market feeds",value:"Sample only",health:"warning"},{key:"incidents",label:"Open incidents",value:0,health:"healthy"},{key:"audit",label:"Audit integrity",value:"Ready",health:"healthy"}]}

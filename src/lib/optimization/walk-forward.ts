@@ -1,0 +1,2 @@
+export function overfitRisk(trainingScore:number,validationScore:number){if(trainingScore<=0)return"high" as const;const decay=(trainingScore-validationScore)/Math.abs(trainingScore);if(decay<0.15)return"low" as const;if(decay<0.35)return"medium" as const;return"high" as const}
+export function rankCandidate(netProfitPct:number,sharpe:number,maxDrawdownPct:number,validationScore:number){return netProfitPct*0.3+sharpe*10-maxDrawdownPct*0.35+validationScore*0.4}

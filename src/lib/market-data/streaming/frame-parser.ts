@@ -1,0 +1,1 @@
+export function parseJsonFrame<T>(frame:string|ArrayBuffer):T{const text=typeof frame==="string"?frame:new TextDecoder().decode(frame);try{return JSON.parse(text) as T;}catch{throw new Error("Invalid JSON market-data frame");}}

@@ -1,0 +1,1 @@
+import{describe,it,expect}from"vitest";import{validateBlocks}from"./block-validator";describe("cms blocks",()=>{it("sorts blocks",()=>expect(validateBlocks([{id:"b",type:"text",order:2,visible:true,props:{}},{id:"a",type:"hero",order:1,visible:true,props:{}}])[0]?.id).toBe("a"))});

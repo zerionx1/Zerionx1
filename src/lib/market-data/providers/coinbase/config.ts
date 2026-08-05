@@ -1,0 +1,1 @@
+export interface CoinbaseProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultCoinbaseConfig:CoinbaseProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

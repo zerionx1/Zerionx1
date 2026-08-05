@@ -1,0 +1,2 @@
+export const roundToTick=(price:number,tickSize:number)=>{if(tickSize<=0)throw new Error("tickSize must be positive");return Math.round(price/tickSize)*tickSize;};
+export const spreadBps=(bid:number,ask:number)=>{const mid=(bid+ask)/2;return mid<=0?0:((ask-bid)/mid)*10_000;};

@@ -1,0 +1,1 @@
+import type { MarketCandle } from "@/types/market-data"; export async function replayCandles(candles:MarketCandle[],emit:(c:MarketCandle)=>void,speed=1){for(const candle of candles){emit(candle);if(speed>0)await new Promise(r=>setTimeout(r,Math.max(1,1000/speed)));}}

@@ -1,0 +1,1 @@
+export function FeedLagChart({values}:{values:number[]}){const max=Math.max(1,...values);return <div aria-label="Feed lag chart" className="flex h-24 items-end gap-1">{values.map((v,i)=><span key={i} title={`${v} ms`} style={{height:`${Math.max(2,v/max*100)}%`}} className="w-2 rounded bg-current opacity-60"/>)}</div>}

@@ -1,0 +1,1 @@
+import {Card} from "@/components/ui/card";export function ReconciliationPanel(){return <Card><h3>Order reconciliation</h3><p>No unresolved mismatches. Production workers will compare local intents, broker orders, fills and positions.</p></Card>}

@@ -1,0 +1,1 @@
+const required=['NEXT_PUBLIC_APP_URL'];const missing=required.filter(k=>!process.env[k]);if(missing.length)console.warn(`Missing: ${missing.join(', ')}`);else console.log('Environment matrix verified');

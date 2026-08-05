@@ -1,0 +1,1 @@
+import type{CmsBlock}from"@/types/cms";export function validateBlocks(blocks:CmsBlock[]){const ids=new Set<string>();for(const b of blocks){if(ids.has(b.id))throw new Error(`Duplicate block ${b.id}`);ids.add(b.id);if(b.order<0)throw new Error("Block order cannot be negative")}return [...blocks].sort((a,b)=>a.order-b.order)}

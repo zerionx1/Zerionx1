@@ -1,0 +1,3 @@
+export interface CurrencyNormalizationInput { value: unknown; provider: string; receivedAt?: number; }
+export interface CurrencyNormalizationResult<T> { ok:boolean; value?:T; errors:string[]; provider:string; }
+export function normalizeCurrency<T>(input:CurrencyNormalizationInput, mapper:(value:unknown)=>T):CurrencyNormalizationResult<T>{try{const value=mapper(input.value);return{ok:true,value,errors:[],provider:input.provider};}catch(error){return{ok:false,errors:[error instanceof Error?error.message:"Normalization failed"],provider:input.provider};}}

@@ -1,0 +1,2 @@
+import { WatchlistPanel } from "@/components/watchlists/watchlist-panel";import { QuoteGrid } from "@/components/markets/quote-grid";
+export default function WatchlistsPage(){return <main className="dashboard-page"><div className="page-heading"><div><p className="eyebrow">Personal market view</p><h1>Watchlists</h1><p>Keep selected instruments together without mixing market execution permissions.</p></div></div><QuoteGrid/><WatchlistPanel/></main>}

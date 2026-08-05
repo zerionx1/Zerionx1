@@ -1,0 +1,1 @@
+export interface TradingSession{days:number[];openMinute:number;closeMinute:number;timezone:string;} export const isSessionOpen=(session:TradingSession,date:Date)=>{const day=date.getUTCDay();const minute=date.getUTCHours()*60+date.getUTCMinutes();return session.days.includes(day)&&minute>=session.openMinute&&minute<session.closeMinute;};

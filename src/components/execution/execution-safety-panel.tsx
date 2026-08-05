@@ -1,0 +1,1 @@
+import {Card} from "@/components/ui/card";export function ExecutionSafetyPanel(){return <Card><h3>Execution safety</h3><ul><li>Global live-trading switch: Disabled</li><li>User confirmation: Required</li><li>Idempotency protection: Enabled</li><li>Stale quote blocking: Enabled</li><li>Reconciliation: Required before production</li></ul></Card>}

@@ -1,0 +1,1 @@
+import{adminStore}from"@/lib/admin/admin-store";import{Card}from"@/components/ui/card";export function SupportDesk(){const t=adminStore.listTickets();return <Card><h2 className="text-lg font-semibold">Support desk</h2><p className="mt-2 text-sm opacity-70">{t.length} open or historical tickets in the current store.</p></Card>}

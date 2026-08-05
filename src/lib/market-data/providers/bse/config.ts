@@ -1,0 +1,1 @@
+export interface BseProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultBseConfig:BseProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

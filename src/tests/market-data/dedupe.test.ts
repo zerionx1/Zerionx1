@@ -1,0 +1,1 @@
+import { describe,it,expect } from "vitest"; import { EventDedupe } from "@/lib/market-data/core/dedupe"; describe("EventDedupe",()=>{it("expires identifiers",()=>{const d=new EventDedupe(10);d.add("a",100);expect(d.has("a",105)).toBe(true);expect(d.has("a",111)).toBe(false);});});

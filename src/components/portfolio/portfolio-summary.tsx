@@ -1,0 +1,1 @@
+import {Card} from "@/components/ui/card";export function PortfolioSummary(){return <div className="grid-3"><Card><span>Total equity</span><h3>Not connected</h3></Card><Card><span>Available margin</span><h3>Not connected</h3></Card><Card><span>Unrealised P&amp;L</span><h3>Not connected</h3></Card></div>}

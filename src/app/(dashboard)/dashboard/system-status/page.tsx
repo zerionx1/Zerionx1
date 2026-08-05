@@ -1,0 +1,2 @@
+import { SectionHeading } from "@/components/ui/section-heading";
+export default function SystemStatusPage() { return <main><SectionHeading eyebrow="Reliability" title="System Status" description="Live readiness, data freshness, workers, providers and incident visibility."/><section className="grid gap-4 md:grid-cols-3"><article className="glass-card p-5">Web application: Ready</article><article className="glass-card p-5">Live execution: Disabled until verified</article><article className="glass-card p-5">Safety mode: Fail closed</article></section></main>; }

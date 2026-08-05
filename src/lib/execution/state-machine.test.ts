@@ -1,0 +1,1 @@
+import {describe,it,expect} from "vitest";import {assertOrderTransition} from "./state-machine";describe("order state",()=>{it("rejects impossible transition",()=>expect(()=>assertOrderTransition("draft","filled")).toThrow())});

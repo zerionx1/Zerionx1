@@ -1,0 +1,1 @@
+import{Card}from"@/components/ui/card";export function IncidentConsole(){return <Card><h2 className="text-lg font-semibold">Incident console</h2><p className="mt-2 text-sm opacity-70">No active incident. Critical incidents can disable signals, market feeds or live execution independently.</p></Card>}

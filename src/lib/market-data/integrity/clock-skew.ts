@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkClockSkew(condition:boolean,message="clock skew check failed"):IntegrityResult{return condition?{valid:true,code:"CLOCK_SKEW",severity:"info"}:{valid:false,code:"CLOCK_SKEW",message,severity:"error"};}

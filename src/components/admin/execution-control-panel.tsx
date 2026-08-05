@@ -1,0 +1,1 @@
+"use client";import {Card} from "@/components/ui/card";export function ExecutionControlPanel(){return <Card><h3>Founder execution controls</h3><label><input type="checkbox" disabled/> Enable live execution globally</label><p>Locked until broker certification, secrets vault, durable worker and production reconciliation are configured.</p></Card>}

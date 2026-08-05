@@ -1,0 +1,4 @@
+import type { MarketTick, MarketCandle } from "@/types/market-data";
+export const isFiniteNumber=(value:unknown):value is number=>typeof value==="number"&&Number.isFinite(value);
+export const isMarketTick=(value:unknown):value is MarketTick=>{if(!value||typeof value!=="object")return false;const v=value as Partial<MarketTick>;return typeof v.symbolId==="string"&&isFiniteNumber(v.price)&&isFiniteNumber(v.eventTime)&&isFiniteNumber(v.receivedAt);};
+export const isMarketCandle=(value:unknown):value is MarketCandle=>{if(!value||typeof value!=="object")return false;const v=value as Partial<MarketCandle>;return typeof v.symbolId==="string"&&[v.open,v.high,v.low,v.close,v.volume].every(isFiniteNumber);};

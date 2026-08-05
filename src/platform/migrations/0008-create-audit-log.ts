@@ -1,0 +1,1 @@
+export const migration={id:'0008-create-audit-log',up:["create table if not exists audit_log (id text primary key, tenant_id text not null, payload jsonb not null, created_at timestamptz not null, updated_at timestamptz not null)"],down:["drop table if exists audit_log"]} as const;

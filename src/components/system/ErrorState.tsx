@@ -1,0 +1,2 @@
+'use client';
+export function ErrorState({title='Something went wrong',message,retry}:{title?:string;message:string;retry?:()=>void}){return <div role="alert" className="rounded-2xl border border-red-400/30 bg-red-950/30 p-6"><h2 className="font-semibold text-red-100">{title}</h2><p className="mt-2 text-sm text-red-100/70">{message}</p>{retry&&<button className="mt-4 rounded-lg border px-4 py-2" onClick={retry}>Try again</button>}</div>;}

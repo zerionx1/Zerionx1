@@ -1,0 +1,1 @@
+export interface RawStreamEvent{provider:string;receivedAt:number;channel:string;payload:unknown;} export const rawStreamEvent=(provider:string,channel:string,payload:unknown):RawStreamEvent=>({provider,channel,payload,receivedAt:Date.now()});

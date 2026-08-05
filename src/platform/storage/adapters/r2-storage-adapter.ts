@@ -1,0 +1,3 @@
+import type { StorageAdapter, StoredObject } from '../storage-adapter';
+export interface R2StorageClient { upload(key:string,body:Uint8Array,contentType:string):Promise<StoredObject>; download(key:string):Promise<Uint8Array|null>; remove(key:string):Promise<void>; sign(key:string,expires:number):Promise<string> }
+export class R2StorageAdapter implements StorageAdapter {constructor(private client:R2StorageClient){} put(k:string,b:Uint8Array,c:string){return this.client.upload(k,b,c)} get(k:string){return this.client.download(k)} delete(k:string){return this.client.remove(k)} signedUrl(k:string,e:number){return this.client.sign(k,e)}}

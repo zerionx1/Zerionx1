@@ -1,0 +1,1 @@
+export const migration={id:'0010-create-incidents',up:["create table if not exists incidents (id text primary key, tenant_id text not null, payload jsonb not null, created_at timestamptz not null, updated_at timestamptz not null)"],down:["drop table if exists incidents"]} as const;

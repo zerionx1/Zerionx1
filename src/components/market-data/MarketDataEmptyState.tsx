@@ -1,0 +1,1 @@
+export function MarketDataEmptyState(){return <section className="rounded-2xl border border-dashed border-white/20 p-8 text-center"><h2>Market data is not connected</h2><p>Configure an approved provider in Founder Admin OS. Live status must never be simulated.</p></section>}

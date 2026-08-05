@@ -1,0 +1,1 @@
+import fs from 'node:fs';const files=[];function walk(d){for(const n of fs.readdirSync(d)){const p=`${d}/${n}`;fs.statSync(p).isDirectory()?walk(p):n==='route.ts'&&files.push(p)}}walk('src/app/api');console.log(`${files.length} API routes inspected`);

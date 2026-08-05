@@ -1,0 +1,2 @@
+import type { PaperAccount } from "@/types/paper-trading";
+export function AccountSummary({account}:{account:PaperAccount}){const stats=[["Equity",account.equity],["Cash",account.cashBalance],["Buying power",account.buyingPower],["Daily P&L",account.dailyPnl]];return <div className="stat-grid">{stats.map(([l,v])=><div className="stat-tile" key={String(l)}><span>{l}</span><strong>₹{Number(v).toLocaleString()}</strong></div>)}</div>}

@@ -1,0 +1,1 @@
+import {NextRequest,NextResponse} from "next/server";import {executionPolicy} from "@/config/execution";export async function GET(){return NextResponse.json({data:[],policy:executionPolicy})} export async function POST(_r:NextRequest){return NextResponse.json({error:"Live order creation is disabled until production adapters and worker are configured"},{status:503})}

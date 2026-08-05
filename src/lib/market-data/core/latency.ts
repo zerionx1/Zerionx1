@@ -1,0 +1,2 @@
+export const calculateLatency=(eventTime:number,receivedAt:number)=>Math.max(0,receivedAt-eventTime);
+export const classifyLatency=(ms:number)=>ms<500?"healthy":ms<2_000?"degraded":"critical" as const;

@@ -1,0 +1,1 @@
+export interface NotificationTemplate{id:string;channel:"email"|"push"|"in_app";name:string;subject?:string;body:string;enabled:boolean}const items:NotificationTemplate[]=[];export const notificationTemplateStore={list:()=>items,save:(x:NotificationTemplate)=>{const i=items.findIndex(v=>v.id===x.id);i<0?items.push(x):items.splice(i,1,x);return x}};

@@ -1,0 +1,1 @@
+import type {PortfolioSnapshot} from "@/types/portfolio"; const rows=new Map<string,PortfolioSnapshot>(); export const portfolioStore={get:(userId:string)=>rows.get(userId),save:(userId:string,x:PortfolioSnapshot)=>(rows.set(userId,x),x)};

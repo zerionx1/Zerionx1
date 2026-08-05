@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkSymbolEnabled(condition:boolean,message="symbol enabled check failed"):IntegrityResult{return condition?{valid:true,code:"SYMBOL_ENABLED",severity:"info"}:{valid:false,code:"SYMBOL_ENABLED",message,severity:"error"};}

@@ -1,0 +1,2 @@
+'use client';
+export default function GlobalError({reset}:{error:Error&{digest?:string};reset:()=>void}){return <html><body className="bg-black text-white"><main className="grid min-h-screen place-items-center p-6"><div className="max-w-md text-center"><h1 className="text-3xl font-semibold">Zerion X1 recovery mode</h1><p className="mt-3 text-white/60">A critical interface error occurred. Financial actions remain blocked until the application recovers.</p><button className="mt-6 rounded-lg border px-4 py-2" onClick={reset}>Reload safely</button></div></main></body></html>;}

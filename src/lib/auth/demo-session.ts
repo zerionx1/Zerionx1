@@ -1,0 +1,1 @@
+import type { AppSession } from "@/types/session"; export const getDemoSession=async():Promise<AppSession>=>({user:{id:"usr_founder_demo",email:"founder@zerionx1.local",name:"Founder",role:"founder",mfaVerified:true},expiresAt:new Date(Date.now()+30*60_000).toISOString()});

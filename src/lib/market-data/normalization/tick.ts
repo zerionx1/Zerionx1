@@ -1,0 +1,3 @@
+export interface TickNormalizationInput { value: unknown; provider: string; receivedAt?: number; }
+export interface TickNormalizationResult<T> { ok:boolean; value?:T; errors:string[]; provider:string; }
+export function normalizeTick<T>(input:TickNormalizationInput, mapper:(value:unknown)=>T):TickNormalizationResult<T>{try{const value=mapper(input.value);return{ok:true,value,errors:[],provider:input.provider};}catch(error){return{ok:false,errors:[error instanceof Error?error.message:"Normalization failed"],provider:input.provider};}}

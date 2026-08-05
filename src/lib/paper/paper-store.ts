@@ -1,0 +1,4 @@
+import type { PaperAccount, PaperOrder, PaperPosition } from "@/types/paper-trading";
+const account:PaperAccount={id:"paper-primary",userId:"demo-user",name:"Primary Paper Account",currency:"INR",startingBalance:1_000_000,cashBalance:962_450,equity:1_012_840,buyingPower:812_450,dailyPnl:5840,totalPnl:12840,createdAt:"2026-08-01T00:00:00.000Z"};
+const orders:PaperOrder[]=[]; const positions:PaperPosition[]=[{id:"pos-1",accountId:account.id,symbol:"NIFTY 50",market:"indian-index",quantity:25,averagePrice:24735,markPrice:24862.4,unrealizedPnl:3185,realizedPnl:0,openedAt:"2026-08-05T06:15:00.000Z"}];
+export const paperStore={async getAccount(){return structuredClone(account)},async listOrders(){return structuredClone(orders)},async listPositions(){return structuredClone(positions)},async addOrder(order:PaperOrder){orders.unshift(structuredClone(order));return order}};

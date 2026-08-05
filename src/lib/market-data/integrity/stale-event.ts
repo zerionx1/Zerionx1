@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkStaleEvent(condition:boolean,message="stale event check failed"):IntegrityResult{return condition?{valid:true,code:"STALE_EVENT",severity:"info"}:{valid:false,code:"STALE_EVENT",message,severity:"error"};}

@@ -1,0 +1,1 @@
+import { describe,it,expect } from "vitest"; import { roundToTick,spreadBps } from "@/lib/market-data/core/price"; describe("price tools",()=>{it("rounds and calculates spread",()=>{expect(roundToTick(100.03,.05)).toBeCloseTo(100.05);expect(spreadBps(99,101)).toBe(200);});});

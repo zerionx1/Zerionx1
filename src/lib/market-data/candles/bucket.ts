@@ -1,0 +1,1 @@
+export const candleBucket=(timestamp:number,timeframeMs:number)=>Math.floor(timestamp/timeframeMs)*timeframeMs;

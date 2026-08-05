@@ -1,0 +1,1 @@
+import{AdminAnalyticsDashboard}from"@/components/admin/analytics-dashboard";export default function Page(){return <section className="space-y-6"><div><p className="text-xs uppercase tracking-[.25em] opacity-60">Founder Admin OS</p><h1 className="mt-2 text-3xl font-semibold">Platform Analytics</h1></div><AdminAnalyticsDashboard/></section>}

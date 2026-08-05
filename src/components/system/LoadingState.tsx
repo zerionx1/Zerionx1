@@ -1,0 +1,1 @@
+export function LoadingState({label='Loading Zerion X1…'}:{label?:string}){return <div className="grid min-h-[240px] place-items-center" role="status" aria-live="polite"><div className="space-y-3 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white"/><p className="text-sm text-white/70">{label}</p></div></div>;}

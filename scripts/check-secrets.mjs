@@ -1,0 +1,1 @@
+import { execSync } from "node:child_process"; const out=execSync("git grep -nEi '(BEGIN (RSA|OPENSSH) PRIVATE KEY|api[_-]?key\s*[:=]\s*[A-Za-z0-9_-]{16,})' -- . ':!scripts/check-secrets.mjs' || true",{encoding:"utf8"}); if(out.trim()){console.error(out);process.exit(1)} console.log("No obvious committed secrets detected");

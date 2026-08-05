@@ -1,0 +1,1 @@
+const seen=new Map<string,number>();export function shouldDeliverNotification(key:string,windowMs=60_000){const now=Date.now();const last=seen.get(key);if(last&&now-last<windowMs)return false;seen.set(key,now);return true;}

@@ -1,0 +1,1 @@
+import{Card}from"@/components/ui/card";export function NotificationCenter(){return <Card><h2 className="text-lg font-semibold">Notification operations</h2><p className="mt-2 text-sm opacity-70">Manage in-app, push and email templates, audience rules, quiet hours, delivery retries and emergency notices.</p></Card>}

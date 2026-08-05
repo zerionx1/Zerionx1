@@ -1,0 +1,1 @@
+import { redact } from "@/lib/security/redact"; type Level="info"|"warn"|"error"; export function log(level:Level,message:string,context:Record<string,unknown>={}){const payload={level,message,context:redact(context),at:new Date().toISOString()}; console[level](JSON.stringify(payload));}

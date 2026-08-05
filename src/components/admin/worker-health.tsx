@@ -1,0 +1,1 @@
+import {Card} from "@/components/ui/card";export function WorkerHealth(){return <Card><h3>Execution worker health</h3><p>Worker deployment pending. Live execution cannot be enabled without heartbeat and queue monitoring.</p></Card>}

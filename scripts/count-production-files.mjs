@@ -1,0 +1,1 @@
+import fs from 'node:fs';let n=0;function w(d){for(const x of fs.readdirSync(d)){if(['node_modules','.next','.git'].includes(x))continue;const p=`${d}/${x}`;fs.statSync(p).isDirectory()?w(p):n++}}w('.');console.log(n);

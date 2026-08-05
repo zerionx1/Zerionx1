@@ -1,0 +1,1 @@
+import {Card} from "@/components/ui/card";export function ConnectionHealth(){return <Card><h3>Connection health</h3><p>No production broker connected.</p><p>Credentials will be stored as vault references, never in browser code.</p></Card>}

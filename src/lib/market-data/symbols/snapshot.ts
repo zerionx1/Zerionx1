@@ -1,0 +1,1 @@
+import type { MarketSymbol } from "@/types/market-data"; export interface SymbolSnapshot{version:string;generatedAt:number;symbols:MarketSymbol[];} export const symbolSnapshot=(symbols:MarketSymbol[]):SymbolSnapshot=>({version:String(Date.now()),generatedAt:Date.now(),symbols});

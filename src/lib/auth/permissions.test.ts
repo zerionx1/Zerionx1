@@ -1,0 +1,1 @@
+import { describe,expect,it } from "vitest"; import { hasPermission } from "./permissions"; describe("permissions",()=>{it("allows founder emergency controls",()=>expect(hasPermission("founder","founder.emergency")).toBe(true));it("blocks free users from admin",()=>expect(hasPermission("free_user","admin.read")).toBe(false));});

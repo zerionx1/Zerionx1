@@ -1,0 +1,5 @@
+managed_rules: true
+rate_limits:
+  public_api: 120_per_minute
+  auth: 10_per_minute
+  live_order: 5_per_minute

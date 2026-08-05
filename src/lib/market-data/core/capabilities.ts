@@ -1,0 +1,1 @@
+export interface ProviderCapabilities{streaming:boolean;historical:boolean;orderBook:boolean;trades:boolean;corporateActions:boolean;maxSymbolsPerConnection:number;timeframes:string[];} export const hasCapability=(caps:ProviderCapabilities,key:keyof ProviderCapabilities)=>Boolean(caps[key]);

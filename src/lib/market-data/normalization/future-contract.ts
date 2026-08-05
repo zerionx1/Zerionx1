@@ -1,0 +1,3 @@
+export interface FutureContractNormalizationInput { value: unknown; provider: string; receivedAt?: number; }
+export interface FutureContractNormalizationResult<T> { ok:boolean; value?:T; errors:string[]; provider:string; }
+export function normalizeFutureContract<T>(input:FutureContractNormalizationInput, mapper:(value:unknown)=>T):FutureContractNormalizationResult<T>{try{const value=mapper(input.value);return{ok:true,value,errors:[],provider:input.provider};}catch(error){return{ok:false,errors:[error instanceof Error?error.message:"Normalization failed"],provider:input.provider};}}

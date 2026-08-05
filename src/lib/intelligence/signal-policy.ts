@@ -1,0 +1,2 @@
+import type { IntelligenceSignal } from "@/types/intelligence";
+export function validateSignalForDisplay(signal:IntelligenceSignal){const errors:string[]=[];if(signal.probability<0||signal.probability>1)errors.push("Probability out of range");if(signal.dataFreshnessMs>60_000)errors.push("Data is stale");if(!signal.educationalOnly)errors.push("Educational disclosure missing");if(!signal.modelVersion)errors.push("Model version missing");return {valid:errors.length===0,errors};}

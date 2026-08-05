@@ -1,0 +1,4 @@
+'use client';
+import { useEffect,useState } from 'react';
+import { detectNetworkStatus,type NetworkStatus } from '@/lib/connectivity/network-status';
+export function ConnectivityBanner(){const[state,setState]=useState<NetworkStatus>('online');useEffect(()=>{const update=()=>void detectNetworkStatus().then(setState);update();window.addEventListener('online',update);window.addEventListener('offline',update);const timer=setInterval(update,30000);return()=>{clearInterval(timer);window.removeEventListener('online',update);window.removeEventListener('offline',update);};},[]);if(state==='online')return null;return <div role="status" className="fixed inset-x-0 top-0 z-[100] bg-amber-950 px-4 py-2 text-center text-sm text-amber-100">{state==='offline'?'You are offline. Read-only cached workspace remains available.':'Connectivity is degraded. Live actions are paused until health recovers.'}</div>;}

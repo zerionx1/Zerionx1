@@ -1,0 +1,1 @@
+import { OptimizationPanel } from "@/components/optimization/optimization-panel"; export default function Page(){return <><h1 className="text-4xl font-semibold">Strategy Optimization</h1><p className="mt-2 text-white/55">Parameter research with separate validation and overfit warnings.</p><div className="mt-8"><OptimizationPanel/></div></>}

@@ -1,0 +1,1 @@
+export interface NseProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultNseConfig:NseProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

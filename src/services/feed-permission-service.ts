@@ -1,0 +1,1 @@
+export interface FeedEntitlement{userId:string;markets:string[];live:boolean;expiresAt:number;} export const canAccessFeed=(e:FeedEntitlement,market:string,live:boolean,now=Date.now())=>e.expiresAt>now&&e.markets.includes(market)&&(!live||e.live);

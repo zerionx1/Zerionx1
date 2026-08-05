@@ -1,0 +1,3 @@
+import { NextRequest } from "next/server"; import { apiError, apiSuccess } from "@/lib/security/api-response"; import { createVersion, getStrategy, listVersions } from "@/lib/strategy/strategy-store";
+export async function GET(_:Request,{params}:{params:Promise<{strategyId:string}>}){const {strategyId}=await params;return apiSuccess({versions:listVersions(strategyId)})}
+export async function POST(req:NextRequest,{params}:{params:Promise<{strategyId:string}>}){const {strategyId}=await params;const strategy=getStrategy(strategyId);if(!strategy)return apiError("NOT_FOUND","Strategy not found",404);const body=await req.json().catch(()=>({}));return apiSuccess({version:createVersion(strategy,String(body.note??"Manual snapshot"),"demo-user")},201)}

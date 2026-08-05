@@ -1,0 +1,1 @@
+export const MARKET_DATA_LIMITS={maxSymbolsPerConnection:500,maxBufferedEvents:10_000,maxEventAgeMs:30_000,maxReconnectDelayMs:30_000,maxClockSkewMs:5_000} as const;

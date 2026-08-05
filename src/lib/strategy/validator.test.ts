@@ -1,0 +1,2 @@
+import { describe,it,expect } from "vitest"; import { validateStrategy } from "@/lib/strategy/validator"; import { listStrategies } from "@/lib/strategy/strategy-store";
+describe("strategy validator",()=>{it("accepts the seeded complete graph",()=>{expect(validateStrategy(listStrategies()[0]!).valid).toBe(true)});it("blocks missing entry",()=>{const s=structuredClone(listStrategies()[0]!);s.nodes=s.nodes.filter(n=>n.kind!=="entry");expect(validateStrategy(s).valid).toBe(false)})})

@@ -1,0 +1,1 @@
+export interface OkxProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultOkxConfig:OkxProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

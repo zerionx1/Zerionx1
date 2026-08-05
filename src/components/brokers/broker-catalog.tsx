@@ -1,0 +1,1 @@
+import {brokerCatalog} from "@/config/brokers";import {Card} from "@/components/ui/card";export function BrokerCatalog(){return <div className="grid-3">{brokerCatalog.map(b=><Card key={b.key}><h3>{b.name}</h3><p>{b.kind.toUpperCase()} · {b.authMode}</p><button disabled>Connect after provider setup</button></Card>)}</div>}

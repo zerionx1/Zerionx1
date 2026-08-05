@@ -1,0 +1,1 @@
+export function ProviderFailoverPanel({order}:{order:string[]}){return <ol>{order.map((id,index)=><li key={id}>{index+1}. {id}</li>)}</ol>}

@@ -1,0 +1,1 @@
+export const migration={id:'0005-create-portfolios',up:["create table if not exists portfolios (id text primary key, tenant_id text not null, payload jsonb not null, created_at timestamptz not null, updated_at timestamptz not null)"],down:["drop table if exists portfolios"]} as const;

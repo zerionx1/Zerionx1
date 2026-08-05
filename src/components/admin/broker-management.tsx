@@ -1,0 +1,1 @@
+import {brokerCatalog} from "@/config/brokers";import {Card} from "@/components/ui/card";export function BrokerManagement(){return <Card><h3>Broker adapter management</h3>{brokerCatalog.map(x=><div key={x.key}><strong>{x.name}</strong> — configuration required</div>)}</Card>}

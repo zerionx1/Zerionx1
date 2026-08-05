@@ -1,0 +1,1 @@
+export interface UpstoxProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultUpstoxConfig:UpstoxProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

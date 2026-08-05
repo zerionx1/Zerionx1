@@ -1,0 +1,2 @@
+import { describe,it,expect } from "vitest"; import { calculateBacktestMetrics } from "@/lib/backtest/metrics";
+describe("backtest metrics",()=>{it("computes win rate",()=>{const trades=[{id:"1",side:"long" as const,entryTime:"a",exitTime:"b",entryPrice:1,exitPrice:2,quantity:1,fees:0,pnl:10,pnlPct:10,exitReason:"x"},{id:"2",side:"long" as const,entryTime:"a",exitTime:"b",entryPrice:2,exitPrice:1,quantity:1,fees:0,pnl:-5,pnlPct:-5,exitReason:"x"}];expect(calculateBacktestMetrics(trades,[],100).winRate).toBe(50)})})

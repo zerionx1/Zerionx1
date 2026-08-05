@@ -1,0 +1,2 @@
+"use client"; const nodes=["Market Source","EMA Indicator","RSI Indicator","AND Logic","Price Condition","Risk Guard","Paper Entry","Take Profit Exit"];
+export function NodePalette(){return <aside className="space-y-3 rounded-3xl border border-white/10 bg-black/25 p-4"><h3 className="font-semibold">Node Palette</h3>{nodes.map((n,i)=><button key={n} draggable className="w-full rounded-2xl border border-white/10 bg-white/5 p-3 text-left text-sm hover:bg-white/10"><span className="mr-2 text-amber-200/70">0{i+1}</span>{n}</button>)}</aside>}

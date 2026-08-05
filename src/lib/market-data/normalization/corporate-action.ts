@@ -1,0 +1,3 @@
+export interface CorporateActionNormalizationInput { value: unknown; provider: string; receivedAt?: number; }
+export interface CorporateActionNormalizationResult<T> { ok:boolean; value?:T; errors:string[]; provider:string; }
+export function normalizeCorporateAction<T>(input:CorporateActionNormalizationInput, mapper:(value:unknown)=>T):CorporateActionNormalizationResult<T>{try{const value=mapper(input.value);return{ok:true,value,errors:[],provider:input.provider};}catch(error){return{ok:false,errors:[error instanceof Error?error.message:"Normalization failed"],provider:input.provider};}}

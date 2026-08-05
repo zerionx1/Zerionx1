@@ -1,0 +1,2 @@
+export const boundedPush=<T>(items:T[],value:T,max:number)=>{items.push(value);if(items.length>max)items.splice(0,items.length-max);return items;};
+export const groupBy=<T,K extends PropertyKey>(items:T[],key:(item:T)=>K)=>items.reduce((acc,item)=>{const k=key(item);(acc[k]??=[]).push(item);return acc;},{} as Record<K,T[]>);

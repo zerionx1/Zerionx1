@@ -1,0 +1,1 @@
+export const futureContractKey=(underlying:string,expiry:string)=>`${underlying}:${expiry}:future`;

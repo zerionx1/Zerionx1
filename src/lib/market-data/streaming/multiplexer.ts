@@ -1,0 +1,1 @@
+type Handler<T>=(event:T)=>void; export class StreamMultiplexer<T>{private handlers=new Map<string,Set<Handler<T>>>();on(channel:string,handler:Handler<T>){const set=this.handlers.get(channel)??new Set();set.add(handler);this.handlers.set(channel,set);return()=>set.delete(handler);}emit(channel:string,event:T){for(const handler of this.handlers.get(channel)??[])handler(event);}}

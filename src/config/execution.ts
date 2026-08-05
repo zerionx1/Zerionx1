@@ -1,0 +1,1 @@
+export const executionPolicy={confirmationTtlSeconds:45,maxSubmissionAttempts:3,reconciliationIntervalSeconds:30,staleQuoteMs:5000,allowLiveExecution:false,requireUserConfirmation:true,requireIdempotencyKey:true} as const;

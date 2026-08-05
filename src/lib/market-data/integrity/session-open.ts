@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkSessionOpen(condition:boolean,message="session open check failed"):IntegrityResult{return condition?{valid:true,code:"SESSION_OPEN",severity:"info"}:{valid:false,code:"SESSION_OPEN",message,severity:"error"};}

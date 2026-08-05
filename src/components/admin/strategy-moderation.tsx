@@ -1,0 +1,1 @@
+import{Card}from"@/components/ui/card";export function StrategyModeration(){return <Card><h2 className="text-lg font-semibold">Strategy review</h2><p className="mt-2 text-sm opacity-70">Review public marketplace eligibility, risk disclosures, backtest assumptions, prohibited claims and version checksum.</p></Card>}

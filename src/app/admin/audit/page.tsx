@@ -1,0 +1,1 @@
+import { DataTable } from "@/components/ui/data-table"; export default function Audit(){return <><h1 className="mb-6 text-4xl font-semibold">Audit Ledger</h1><DataTable headers={["Time","Actor","Action","Severity"]} rows={[[new Date().toISOString(),"system","foundation.initialized","info"]]}/></>}

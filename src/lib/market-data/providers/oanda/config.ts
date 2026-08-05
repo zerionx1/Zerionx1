@@ -1,0 +1,1 @@
+export interface OandaProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultOandaConfig:OandaProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

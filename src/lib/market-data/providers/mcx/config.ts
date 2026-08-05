@@ -1,0 +1,1 @@
+export interface McxProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultMcxConfig:McxProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

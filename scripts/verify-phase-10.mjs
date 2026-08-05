@@ -1,0 +1,1 @@
+import fs from 'node:fs';const required=['src/platform/persistence','src/platform/auth','src/platform/queue','src/platform/security'];for(const p of required)if(!fs.existsSync(p))throw new Error(`Missing ${p}`);console.log('Phase 10 structure verified');

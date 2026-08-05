@@ -1,0 +1,1 @@
+import{SupportDesk}from"@/components/admin/support-desk";export default function Page(){return <section className="space-y-6"><div><p className="text-xs uppercase tracking-[.25em] opacity-60">Founder Admin OS</p><h1 className="mt-2 text-3xl font-semibold">Support Desk</h1></div><SupportDesk/></section>}

@@ -1,0 +1,2 @@
+import type { Logger,LogContext } from './logger';
+export class JsonLogger implements Logger{private write(level:string,message:string,context?:LogContext,error?:unknown){console.log(JSON.stringify({level,message,context,error:error instanceof Error?{name:error.name,message:error.message}:error,time:new Date().toISOString()}))}debug(m:string,c?:LogContext){this.write('debug',m,c)}info(m:string,c?:LogContext){this.write('info',m,c)}warn(m:string,c?:LogContext){this.write('warn',m,c)}error(m:string,e?:unknown,c?:LogContext){this.write('error',m,c,e)}}

@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkNonnegativeVolume(condition:boolean,message="nonnegative volume check failed"):IntegrityResult{return condition?{valid:true,code:"NONNEGATIVE_VOLUME",severity:"info"}:{valid:false,code:"NONNEGATIVE_VOLUME",message,severity:"error"};}

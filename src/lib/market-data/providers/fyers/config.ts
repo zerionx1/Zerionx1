@@ -1,0 +1,1 @@
+export interface FyersProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultFyersConfig:FyersProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

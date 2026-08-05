@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkCandleCompleteness(condition:boolean,message="candle completeness check failed"):IntegrityResult{return condition?{valid:true,code:"CANDLE_COMPLETENESS",severity:"info"}:{valid:false,code:"CANDLE_COMPLETENESS",message,severity:"error"};}

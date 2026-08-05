@@ -1,0 +1,11 @@
+import type { StrategyDefinition, StrategyVersion } from "@/types/strategy";
+import { DEFAULT_RISK_RULES } from "@/config/strategy";
+import { strategyChecksum } from "@/lib/strategy/checksum";
+const now=()=>new Date().toISOString();
+const strategies:StrategyDefinition[]=[{id:"strategy-momentum-1",ownerId:"demo-user",name:"NIFTY Momentum Guard",description:"Educational momentum workflow with bounded risk.",markets:["indian-index"],symbols:["NSE:NIFTY50"],timeframe:"15m",status:"draft",nodes:[{id:"source-1",kind:"source",label:"NIFTY 50",x:40,y:120,config:{symbol:"NSE:NIFTY50"}},{id:"indicator-1",kind:"indicator",label:"EMA 20",x:260,y:80,config:{period:20}},{id:"condition-1",kind:"condition",label:"Close > EMA",x:470,y:100,config:{operator:"gt"}},{id:"risk-1",kind:"risk",label:"1% Risk",x:680,y:160,config:{riskPct:1}},{id:"entry-1",kind:"entry",label:"Paper Entry",x:890,y:100,config:{side:"long"}},{id:"exit-1",kind:"exit",label:"2R Exit",x:1090,y:100,config:{riskMultiple:2}}],edges:[{id:"e1",source:"source-1",target:"indicator-1"},{id:"e2",source:"indicator-1",target:"condition-1"},{id:"e3",source:"condition-1",target:"risk-1"},{id:"e4",source:"risk-1",target:"entry-1"},{id:"e5",source:"entry-1",target:"exit-1"}],risk:{...DEFAULT_RISK_RULES},tags:["momentum","educational"],version:1,createdAt:now(),updatedAt:now()}];
+const versions:StrategyVersion[]=[];
+export function listStrategies(){return structuredClone(strategies)}
+export function getStrategy(id:string){const item=strategies.find(s=>s.id===id);return item?structuredClone(item):undefined}
+export function saveStrategy(input:StrategyDefinition){const index=strategies.findIndex(s=>s.id===input.id);const value={...input,updatedAt:now()};if(index>=0)strategies[index]=value;else strategies.push(value);return structuredClone(value)}
+export function createVersion(strategy:StrategyDefinition,note:string,createdBy:string){const version:StrategyVersion={id:`sv_${crypto.randomUUID()}`,strategyId:strategy.id,version:strategy.version,definition:structuredClone(strategy),note,createdBy,createdAt:now(),checksum:strategyChecksum(strategy)};versions.push(version);return structuredClone(version)}
+export function listVersions(strategyId:string){return structuredClone(versions.filter(v=>v.strategyId===strategyId))}

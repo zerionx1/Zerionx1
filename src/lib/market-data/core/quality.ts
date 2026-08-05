@@ -1,0 +1,2 @@
+import type { FeedQuality } from "@/types/market-data";
+export const resolveFeedQuality=(lagMs:number,isConnected:boolean):FeedQuality=>!isConnected?"unavailable":lagMs>30_000?"stale":lagMs>2_000?"delayed":"live";

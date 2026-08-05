@@ -1,0 +1,1 @@
+export class FlowControl{private paused=false;pause(){this.paused=true;}resume(){this.paused=false;}get isPaused(){return this.paused;}accept(){return !this.paused;}}

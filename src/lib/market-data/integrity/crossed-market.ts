@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkCrossedMarket(condition:boolean,message="crossed market check failed"):IntegrityResult{return condition?{valid:true,code:"CROSSED_MARKET",severity:"info"}:{valid:false,code:"CROSSED_MARKET",message,severity:"error"};}

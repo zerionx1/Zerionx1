@@ -1,0 +1,1 @@
+export function throttle<T extends (...args:unknown[])=>void>(fn:T,intervalMs:number){let last=0;let timer:ReturnType<typeof setTimeout>|undefined;return(...args:Parameters<T>)=>{const now=Date.now();const remaining=intervalMs-(now-last);if(remaining<=0){last=now;fn(...args);}else if(!timer)timer=setTimeout(()=>{timer=undefined;last=Date.now();fn(...args);},remaining);};}

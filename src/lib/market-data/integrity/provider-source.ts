@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkProviderSource(condition:boolean,message="provider source check failed"):IntegrityResult{return condition?{valid:true,code:"PROVIDER_SOURCE",severity:"info"}:{valid:false,code:"PROVIDER_SOURCE",message,severity:"error"};}

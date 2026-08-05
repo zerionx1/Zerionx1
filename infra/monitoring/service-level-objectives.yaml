@@ -1,0 +1,4 @@
+availability: 99.9
+api_p95_ms: 1000
+market_data_staleness_seconds: 10
+order_duplicate_tolerance: 0

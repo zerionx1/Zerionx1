@@ -1,0 +1,1 @@
+import type { MarketCandle } from "@/types/market-data"; export class MarketReplayService{private cursor=0;constructor(private candles:MarketCandle[]){}seek(index:number){this.cursor=Math.max(0,Math.min(index,this.candles.length));}next(){return this.candles[this.cursor++];}reset(){this.cursor=0;}get progress(){return this.candles.length?this.cursor/this.candles.length:1;}}

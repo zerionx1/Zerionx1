@@ -1,0 +1,1 @@
+export class EventDedupe { private seen=new Map<string,number>(); constructor(private readonly ttlMs=60_000){} has(id:string,now=Date.now()){this.cleanup(now);return this.seen.has(id);} add(id:string,now=Date.now()){this.cleanup(now);this.seen.set(id,now+this.ttlMs);} private cleanup(now:number){for(const [id,expiry] of this.seen)if(expiry<=now)this.seen.delete(id);} }

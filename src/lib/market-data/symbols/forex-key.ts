@@ -1,0 +1,1 @@
+export const forexPairKey=(base:string,quote:string)=>`${base.toUpperCase()}/${quote.toUpperCase()}`;

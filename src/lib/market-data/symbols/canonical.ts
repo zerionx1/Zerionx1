@@ -1,0 +1,1 @@
+export const canonicalSymbol=(venue:string,symbol:string)=>`${venue.trim().toUpperCase()}:${symbol.trim().toUpperCase().replace(/\s+/g,"-")}`;

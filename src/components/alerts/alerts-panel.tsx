@@ -1,0 +1,2 @@
+import { alertStore } from "@/lib/alerts/alert-store";
+export async function AlertsPanel(){const alerts=await alertStore.list();return <section className="panel compact"><div className="panel-header"><div><p className="eyebrow">Alerts</p><h2>Active conditions</h2></div><span>{alerts.length}</span></div>{alerts.map(a=><div className="alert-row" key={a.id}><strong>{a.symbol}</strong><span>{a.operator} {a.threshold}</span><small>{a.status}</small></div>)}</section>}

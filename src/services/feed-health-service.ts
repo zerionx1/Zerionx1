@@ -1,0 +1,1 @@
+import type { FeedHealth } from "@/types/market-data"; export const summarizeFeedHealth=(items:FeedHealth[])=>({healthy:items.filter(x=>x.state==="connected"&&Number(x.lagMs??0)<2_000).length,degraded:items.filter(x=>x.state==="degraded"||Number(x.lagMs??0)>=2_000).length,down:items.filter(x=>["disconnected","blocked"].includes(x.state)).length,total:items.length});

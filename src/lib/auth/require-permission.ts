@@ -1,0 +1,1 @@
+import { redirect } from "next/navigation"; import { getDemoSession } from "./demo-session"; import { hasPermission,type Permission } from "./permissions"; export async function requirePermission(permission:Permission){const session=await getDemoSession(); if(!hasPermission(session.user.role,permission))redirect("/unauthorized"); return session;}

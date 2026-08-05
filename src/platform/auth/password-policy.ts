@@ -1,0 +1,1 @@
+export function validatePassword(value:string):readonly string[]{const e:string[]=[];if(value.length<12)e.push('minimum 12 characters');if(!/[A-Z]/.test(value))e.push('uppercase required');if(!/[a-z]/.test(value))e.push('lowercase required');if(!/\d/.test(value))e.push('number required');if(!/[^A-Za-z0-9]/.test(value))e.push('symbol required');return e}

@@ -1,0 +1,1 @@
+import { describe,expect,it } from "vitest"; import { rateLimit } from "./rate-limit"; describe("rateLimit",()=>{it("blocks over limit",()=>{const key=crypto.randomUUID();expect(rateLimit(key,1).allowed).toBe(true);expect(rateLimit(key,1).allowed).toBe(false);});});

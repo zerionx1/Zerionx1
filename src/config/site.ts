@@ -1,0 +1,1 @@
+export const siteConfig={name:"Zerion X1",tagline:"Intelligence before execution.",description:"Build, test and operate risk-defined strategies across markets without profit guarantees.",links:{privacy:"/legal/privacy",terms:"/legal/terms",risk:"/legal/risk-disclosure"}} as const;

@@ -1,0 +1,1 @@
+export interface GenericForexProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultGenericForexConfig:GenericForexProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

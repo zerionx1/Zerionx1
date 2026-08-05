@@ -1,0 +1,1 @@
+export interface Metrics{increment(name:string,value?:number,tags?:Readonly<Record<string,string>>):void;gauge(name:string,value:number,tags?:Readonly<Record<string,string>>):void;timing(name:string,milliseconds:number,tags?:Readonly<Record<string,string>>):void}

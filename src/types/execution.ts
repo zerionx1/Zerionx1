@@ -1,0 +1,5 @@
+import type { MarketKind } from "@/types/market";
+export type OrderSide="buy"|"sell"; export type OrderType="market"|"limit"|"stop"|"stop-limit"; export type OrderStatus="draft"|"awaiting-confirmation"|"approved"|"queued"|"submitted"|"partially-filled"|"filled"|"cancelled"|"rejected"|"expired"|"reconciliation-required";
+export interface LiveOrderIntent { id:string; userId:string; connectionId:string; market:MarketKind; symbol:string; side:OrderSide; type:OrderType; quantity:number; limitPrice?:number; stopPrice?:number; product?:string; strategyId?:string; signalId?:string; status:OrderStatus; createdAt:string; expiresAt:string; idempotencyKey:string; riskSnapshotId:string; }
+export interface ExecutionReceipt { intentId:string; brokerOrderId?:string; status:OrderStatus; submittedAt?:string; averagePrice?:number; filledQuantity:number; message?:string; }
+export interface UserTradeApproval { intentId:string; userId:string; decision:"approved"|"rejected"; approvedAt:string; challengeId:string; }

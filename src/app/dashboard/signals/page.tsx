@@ -1,0 +1,2 @@
+import { SignalFeed } from "@/components/signals/signal-feed";import { DisclaimerStrip } from "@/components/dashboard/disclaimer-strip";
+export default function SignalsPage(){return <main className="dashboard-page"><div className="page-heading"><div><p className="eyebrow">Probability intelligence</p><h1>Signal Center</h1><p>Explainable, time-bound market observations. No guaranteed outcome and no automatic live order.</p></div></div><DisclaimerStrip/><SignalFeed/></main>}

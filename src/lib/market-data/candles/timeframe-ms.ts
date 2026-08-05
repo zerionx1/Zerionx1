@@ -1,0 +1,1 @@
+import type { Timeframe } from "@/types/market-data"; const values:Record<Timeframe,number>={"1s":1000,"5s":5000,"15s":15000,"1m":60000,"3m":180000,"5m":300000,"15m":900000,"30m":1800000,"1h":3600000,"4h":14400000,"1d":86400000,"1w":604800000}; export const timeframeMs=(value:Timeframe)=>values[value];

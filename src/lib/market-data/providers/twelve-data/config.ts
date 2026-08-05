@@ -1,0 +1,1 @@
+export interface TwelveDataProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultTwelveDataConfig:TwelveDataProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

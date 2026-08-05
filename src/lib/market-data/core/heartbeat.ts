@@ -1,0 +1,1 @@
+export class HeartbeatMonitor { private last=0; beat(at=Date.now()){this.last=at;} isAlive(now=Date.now(),timeoutMs=15_000){return this.last>0&&now-this.last<=timeoutMs;} age(now=Date.now()){return this.last===0?Infinity:now-this.last;} }

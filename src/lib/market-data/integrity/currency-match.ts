@@ -1,0 +1,2 @@
+export interface IntegrityResult { valid:boolean; code:string; message?:string; severity:"info"|"warning"|"error"; }
+export function checkCurrencyMatch(condition:boolean,message="currency match check failed"):IntegrityResult{return condition?{valid:true,code:"CURRENCY_MATCH",severity:"info"}:{valid:false,code:"CURRENCY_MATCH",message,severity:"error"};}

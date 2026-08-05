@@ -1,0 +1,1 @@
+export function buildObjectKey(tenantId:string,category:string,id:string,extension:string):string{for(const v of [tenantId,category,id,extension])if(!/^[a-zA-Z0-9_-]+$/.test(v))throw new Error('Unsafe object key segment');return `${tenantId}/${category}/${id}.${extension}`}

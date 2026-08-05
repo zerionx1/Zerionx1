@@ -1,0 +1,1 @@
+import { reconnectDelay } from "../core/backoff"; export class ReconnectController{attempt=0;reset(){this.attempt=0;}next(){this.attempt+=1;return reconnectDelay(this.attempt);}canRetry(limit:number){return this.attempt<limit;}}

@@ -1,0 +1,1 @@
+export interface KrakenProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultKrakenConfig:KrakenProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

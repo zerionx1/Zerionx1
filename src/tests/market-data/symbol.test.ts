@@ -1,0 +1,1 @@
+import { describe,it,expect } from "vitest"; import { canonicalSymbol } from "@/lib/market-data/symbols/canonical"; describe("canonicalSymbol",()=>{it("normalizes symbols",()=>expect(canonicalSymbol("nse"," nifty 50 ")).toBe("NSE:NIFTY-50"));});

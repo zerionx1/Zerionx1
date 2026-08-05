@@ -1,0 +1,1 @@
+import { Card } from "./card"; export function StatCard({label,value,note}:{label:string;value:string;note?:string}){return <Card><p className="text-sm text-[var(--mist)]">{label}</p><p className="mt-3 text-3xl font-semibold">{value}</p>{note ? <p className="mt-2 text-xs text-[var(--gold)]">{note}</p> : null}</Card>}

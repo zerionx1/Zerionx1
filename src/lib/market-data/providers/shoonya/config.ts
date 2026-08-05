@@ -1,0 +1,1 @@
+export interface ShoonyaProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultShoonyaConfig:ShoonyaProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

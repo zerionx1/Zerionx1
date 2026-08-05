@@ -1,0 +1,1 @@
+export function calculatePlanAmount(monthlyPriceInr:number,months:number,discountPercent=0){if(months<1)throw new Error("Months must be positive");const gross=monthlyPriceInr*months;return Math.round(gross*(1-Math.min(Math.max(discountPercent,0),100)/100));}

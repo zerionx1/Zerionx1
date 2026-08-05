@@ -1,0 +1,1 @@
+export interface MarketDataConfig{primaryProvider:string;fallbackProviders:string[];staleAfterMs:number;reconnectLimit:number;persistRawEvents:boolean;enableReplay:boolean;} export const defaultMarketDataConfig:MarketDataConfig={primaryProvider:"",fallbackProviders:[],staleAfterMs:5_000,reconnectLimit:10,persistRawEvents:false,enableReplay:true};

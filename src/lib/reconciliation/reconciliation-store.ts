@@ -1,0 +1,1 @@
+import type {ReconciliationItem} from "@/types/reconciliation"; const rows=new Map<string,ReconciliationItem>(); export const reconciliationStore={saveMany:(xs:ReconciliationItem[])=>xs.forEach(x=>rows.set(x.id,x)),open:()=>[...rows.values()].filter(x=>!x.resolvedAt),resolve:(id:string)=>{const x=rows.get(id);if(x){x.resolvedAt=new Date().toISOString();rows.set(id,x)}}};

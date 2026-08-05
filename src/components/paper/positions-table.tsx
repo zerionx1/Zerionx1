@@ -1,0 +1,2 @@
+import type { PaperPosition } from "@/types/paper-trading";
+export function PositionsTable({positions}:{positions:PaperPosition[]}){return <div className="table-wrap"><table><thead><tr><th>Symbol</th><th>Qty</th><th>Average</th><th>Mark</th><th>Unrealised P&L</th></tr></thead><tbody>{positions.map(p=><tr key={p.id}><td>{p.symbol}</td><td>{p.quantity}</td><td>{p.averagePrice.toLocaleString()}</td><td>{p.markPrice.toLocaleString()}</td><td className={p.unrealizedPnl>=0?"positive":"negative"}>₹{p.unrealizedPnl.toLocaleString()}</td></tr>)}</tbody></table></div>}

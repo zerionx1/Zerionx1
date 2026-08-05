@@ -1,0 +1,1 @@
+import type { Role } from "./roles"; export type SessionUser={id:string;email:string;name:string;role:Role;mfaVerified:boolean}; export type AppSession={user:SessionUser;expiresAt:string};

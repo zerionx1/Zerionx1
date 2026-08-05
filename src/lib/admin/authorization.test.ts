@@ -1,0 +1,1 @@
+import{describe,it,expect}from"vitest";import{canAdmin}from"./authorization";describe("admin authorization",()=>{it("allows founder all permissions",()=>expect(canAdmin("founder","execution:stop")).toBe(true));it("limits analyst",()=>expect(canAdmin("analyst","users:write")).toBe(false))});

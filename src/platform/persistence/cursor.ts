@@ -1,0 +1,2 @@
+export function encodeCursor(value:Record<string,string|number>):string{return Buffer.from(JSON.stringify(value)).toString('base64url')}
+export function decodeCursor(value:string):Record<string,string|number>{const parsed:unknown=JSON.parse(Buffer.from(value,'base64url').toString('utf8')); if(!parsed||typeof parsed!=='object')throw new Error('Invalid cursor'); return parsed as Record<string,string|number>}

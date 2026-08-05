@@ -1,0 +1,3 @@
+export interface PriceNormalizationInput { value: unknown; provider: string; receivedAt?: number; }
+export interface PriceNormalizationResult<T> { ok:boolean; value?:T; errors:string[]; provider:string; }
+export function normalizePrice<T>(input:PriceNormalizationInput, mapper:(value:unknown)=>T):PriceNormalizationResult<T>{try{const value=mapper(input.value);return{ok:true,value,errors:[],provider:input.provider};}catch(error){return{ok:false,errors:[error instanceof Error?error.message:"Normalization failed"],provider:input.provider};}}

@@ -1,0 +1,1 @@
+export const roles=["visitor","free_user","indian_pro","multi_market_pro","global_elite","creator","support","compliance","operations","founder"] as const; export type Role=(typeof roles)[number]; export const privilegedRoles:Role[]=["support","compliance","operations","founder"];

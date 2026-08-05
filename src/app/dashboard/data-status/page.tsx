@@ -1,0 +1,1 @@
+import { MarketDataEmptyState } from "@/components/market-data/MarketDataEmptyState"; export default function DataStatusPage(){return <main className="space-y-6 p-6"><h1>Market Data Status</h1><MarketDataEmptyState/></main>}

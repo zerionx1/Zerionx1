@@ -1,0 +1,1 @@
+import { EmptyState } from "@/components/ui/empty-state"; export default function Page(){return <><h1 className="mb-6 text-4xl font-semibold">Trade Journal</h1><EmptyState title="Foundation ready" description="Automatic trade capture and review analytics arrive with paper trading."/></>}

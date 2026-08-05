@@ -1,0 +1,1 @@
+export interface BinanceProviderConfig{baseUrl:string;streamUrl?:string;apiKeyEnv?:string;enabled:boolean;requestTimeoutMs:number;} export const defaultBinanceConfig:BinanceProviderConfig={baseUrl:"",streamUrl:"",enabled:false,requestTimeoutMs:10_000};

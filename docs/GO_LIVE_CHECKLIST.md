@@ -1,0 +1,11 @@
+# Go-Live Checklist
+- CI, typecheck, tests and build pass
+- Staging E2E passes
+- Secrets rotated
+- Backups restored successfully
+- Monitoring and alerts active
+- Admin MFA and least privilege enabled
+- Kill switches tested
+- Broker reconciliation tested
+- Legal/compliance sign-off recorded
+- Live execution remains off until separately approved

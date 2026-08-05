@@ -1,0 +1,1 @@
+export type ReportFormat="json"|"csv"|"pdf";export interface ReportRequest { id:string;userId:string;type:string;format:ReportFormat;from:string;to:string;timezone:string;filters:Record<string,string|number|boolean>; } export interface ReportArtifact {id:string;requestId:string;status:"queued"|"processing"|"ready"|"failed";storageKey?:string;checksum?:string;expiresAt?:string;}

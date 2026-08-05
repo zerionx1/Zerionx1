@@ -1,0 +1,3 @@
+database: {frequency: hourly, retention_days: 35, encrypted: true}
+audit: {frequency: daily, retention_days: 2555, immutable: true}
+restore_test: {frequency: monthly}
