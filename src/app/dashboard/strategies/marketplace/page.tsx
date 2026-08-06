@@ -1,0 +1,2 @@
+import { StrategyMarketplace } from "@/components/strategies/strategy-marketplace";
+export default function Page(){return <main className="dashboard-page"><div className="mb-8"><p className="eyebrow">Discover and customize</p><h1 className="mt-2 text-4xl font-semibold md:text-5xl">Strategy Marketplace</h1><p className="mt-3 max-w-2xl text-white/55">Curated multi-market blueprints install into your private workspace. No performance guarantee is implied.</p></div><StrategyMarketplace/></main>}

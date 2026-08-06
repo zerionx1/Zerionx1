@@ -1,2 +1,17 @@
-import { AccountSummary } from "@/components/paper/account-summary";import { OrderTicket } from "@/components/paper/order-ticket";import { PositionsTable } from "@/components/paper/positions-table";import { paperStore } from "@/lib/paper/paper-store";
-export default async function PaperPage(){const [account,positions]=await Promise.all([paperStore.getAccount(),paperStore.listPositions()]);return <main className="dashboard-page"><div className="page-heading"><div><p className="eyebrow">Zero-real-money environment</p><h1>Paper Trading</h1><p>Practice order lifecycle, risk limits, slippage and portfolio behaviour before any broker connection.</p></div><span className="status-pill">Simulation only</span></div><AccountSummary account={account}/><div className="workspace-grid paper-grid"><section className="panel"><div className="panel-header"><h2>Open paper positions</h2></div><PositionsTable positions={positions}/></section><OrderTicket/></div></main>}
+import { PaperTradingWorkspace } from "@/components/paper/paper-trading-workspace";
+
+export default function PaperPage() {
+  return (
+    <main className="dashboard-page">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Risk-contained execution laboratory</p>
+          <h1>Paper Trading Terminal</h1>
+          <p>Practice multi-market orders, review fills, positions and P&amp;L with persistent account state.</p>
+        </div>
+        <span className="status-pill">No real money</span>
+      </div>
+      <PaperTradingWorkspace />
+    </main>
+  );
+}

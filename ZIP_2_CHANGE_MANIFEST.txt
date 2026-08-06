@@ -1,0 +1,14 @@
+MODIFIED src/types/market.ts
+MODIFIED src/types/watchlist.ts
+NEW src/config/market-universe.ts
+NEW src/lib/market/market-catalog.ts
+MODIFIED src/lib/watchlists/watchlist-store.ts
+NEW src/app/api/markets/search/route.ts
+NEW src/app/api/markets/overview/route.ts
+MODIFIED src/app/api/watchlists/route.ts
+NEW src/components/markets/global-market-search.tsx
+NEW src/components/markets/multi-market-explorer.tsx
+NEW src/components/watchlists/watchlist-workspace.tsx
+MODIFIED src/app/dashboard/markets/page.tsx
+MODIFIED src/app/dashboard/watchlists/page.tsx
+NEW supabase/migrations/20260806_zip2_multi_market_watchlists.sql

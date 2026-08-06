@@ -1,0 +1,10 @@
+ZIP_3_STRATEGY_RESEARCH_README.md
+src/app/dashboard/backtests/page.tsx
+src/app/dashboard/optimization/page.tsx
+src/app/dashboard/strategies/marketplace/page.tsx
+src/app/dashboard/strategies/page.tsx
+src/components/backtests/backtest-lab.tsx
+src/components/optimization/optimization-lab.tsx
+src/components/strategies/strategy-marketplace.tsx
+src/components/strategies/strategy-workspace-tabs.tsx
+supabase/migrations/20260806_zip3_strategy_research.sql

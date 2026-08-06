@@ -1,0 +1,12 @@
+src/app/dashboard/paper/page.tsx
+src/app/dashboard/brokers/page.tsx
+src/app/dashboard/execution/page.tsx
+src/app/dashboard/intelligence/page.tsx
+src/components/paper/paper-trading-workspace.tsx
+src/components/brokers/broker-connection-center.tsx
+src/components/execution/execution-command-center.tsx
+src/components/intelligence/chart-intelligence-lab.tsx
+src/app/api/algo/deployments/route.ts
+src/app/api/execution/approvals/route.ts
+src/app/api/intelligence/chart-analysis/route.ts
+supabase/migrations/20260806_zip4_execution_ai.sql
