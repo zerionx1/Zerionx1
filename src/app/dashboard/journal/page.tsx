@@ -1,1 +1,2 @@
-import { EmptyState } from "@/components/ui/empty-state"; export default function Page(){return <><h1 className="mb-6 text-4xl font-semibold">Trade Journal</h1><EmptyState title="Foundation ready" description="Automatic trade capture and review analytics arrive with paper trading."/></>}
+import { TradeJournal } from "@/components/journal/trade-journal";
+export default function Page(){return <main className="dashboard-page"><div className="page-heading"><div><p className="eyebrow">Persistent decision review</p><h1>Trade Journal</h1><p>Record entries, exits, reasoning and tags. Every note is stored under your authenticated account.</p></div></div><TradeJournal/></main>;}

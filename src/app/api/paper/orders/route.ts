@@ -1,3 +1,22 @@
-import { paperOrderSchema } from "@/lib/validation/paper-order";import { paperStore } from "@/lib/paper/paper-store";import { quoteStore } from "@/lib/market/quote-store";import { executePaperOrder } from "@/lib/paper/paper-engine";import { createClientOrderId } from "@/lib/paper/order-id";import { fail,ok } from "@/lib/security/api-response";import type { PaperOrder } from "@/types/paper-trading";
-export async function GET(){return ok(await paperStore.listOrders())}
-export async function POST(request:Request){const parsed=paperOrderSchema.safeParse(await request.json().catch(()=>null));if(!parsed.success)return fail("VALIDATION_ERROR","Invalid paper order",400,parsed.error.flatten());const account=await paperStore.getAccount();const quotes=await quoteStore.list();const quote=quotes.find(q=>q.symbol===parsed.data.symbol);if(!quote)return fail("QUOTE_UNAVAILABLE","No quote available for symbol",409);const now=new Date().toISOString();const order:PaperOrder={id:crypto.randomUUID(),accountId:account.id,...parsed.data,filledQuantity:0,status:"pending",createdAt:now,updatedAt:now,clientOrderId:createClientOrderId()};const result=executePaperOrder({account,quote,order});await paperStore.addOrder(result.order);if(result.accepted&&result.order.averageFillPrice)await paperStore.applyFill(result.order,result.order.averageFillPrice);return result.accepted?ok(result, 201):fail("ORDER_REJECTED",result.reason??"Paper order rejected",422,result.order)}
+import { paperOrderSchema } from "@/lib/validation/paper-order";
+import { paperStore } from "@/lib/paper/paper-store";
+import { quoteStore } from "@/lib/market/quote-store";
+import { executePaperOrder } from "@/lib/paper/paper-engine";
+import { createClientOrderId } from "@/lib/paper/order-id";
+import { fail,ok } from "@/lib/security/api-response";
+import type { PaperOrder } from "@/types/paper-trading";
+
+export async function GET(){return ok(await paperStore.listOrders());}
+export async function POST(request:Request){
+  const parsed=paperOrderSchema.safeParse(await request.json().catch(()=>null));
+  if(!parsed.success)return fail("VALIDATION_ERROR","Invalid paper order",400,parsed.error.flatten());
+  const account=await paperStore.getAccount();
+  const quote=await quoteStore.get(parsed.data.symbol);
+  if(!quote)return fail("QUOTE_UNAVAILABLE",`No live quote configured for ${parsed.data.symbol}`,409);
+  const now=new Date().toISOString();
+  const order:PaperOrder={id:crypto.randomUUID(),accountId:account.id,...parsed.data,filledQuantity:0,status:"pending",createdAt:now,updatedAt:now,clientOrderId:createClientOrderId()};
+  const result=executePaperOrder({account,quote,order});
+  await paperStore.addOrder(result.order);
+  if(result.accepted&&result.order.averageFillPrice)await paperStore.applyFill(result.order,result.order.averageFillPrice);
+  return result.accepted?ok(result,201):fail("ORDER_REJECTED",result.reason??"Paper order rejected",422,result.order);
+}

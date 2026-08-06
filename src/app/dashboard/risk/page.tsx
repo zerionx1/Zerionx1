@@ -1,2 +1,12 @@
-import { PositionSizeCalculator } from "@/components/risk/position-size-calculator"; import { RiskScorecard } from "@/components/risk/risk-scorecard"; import { KillSwitchCard } from "@/components/risk/kill-switch-card"; import { classifyRisk } from "@/lib/risk/risk-engine";
-export default function Page(){const base={accountId:"paper-main",equity:108450,cash:74400,grossExposure:34050,netExposure:34050,leverage:.31,dailyLossPct:.4,drawdownPct:2.1,openRiskAmount:1250,concentrationPct:22,correlatedExposurePct:18,calculatedAt:new Date().toISOString()};const snapshot={...base,level:classifyRisk(base)};return <><h1 className="text-4xl font-semibold">Risk OS</h1><p className="mt-2 text-white/55">Position sizing, exposure controls, drawdown protection and emergency blocking.</p><div className="mt-8"><RiskScorecard snapshot={snapshot}/></div><div className="mt-6 grid gap-6 xl:grid-cols-2"><PositionSizeCalculator/><KillSwitchCard/></div></>}
+import { PositionSizeCalculator } from "@/components/risk/position-size-calculator";
+import { RiskScorecard } from "@/components/risk/risk-scorecard";
+import { KillSwitchCard } from "@/components/risk/kill-switch-card";
+import { classifyRisk } from "@/lib/risk/risk-engine";
+import { paperStore } from "@/lib/paper/paper-store";
+export default async function Page(){
+ const [account,positions]=await Promise.all([paperStore.getAccount(),paperStore.listPositions()]);
+ const grossExposure=positions.reduce((sum,p)=>sum+Math.abs(p.quantity*p.markPrice),0);const netExposure=positions.reduce((sum,p)=>sum+p.quantity*p.markPrice,0);const maxPosition=Math.max(0,...positions.map(p=>Math.abs(p.quantity*p.markPrice)));
+ const dailyLossPct=account.equity>0?Math.max(0,-account.dailyPnl/account.equity*100):0;const drawdownPct=account.startingBalance>0?Math.max(0,(account.startingBalance-account.equity)/account.startingBalance*100):0;
+ const base={accountId:account.id,equity:account.equity,cash:account.cashBalance,grossExposure,netExposure,leverage:account.equity>0?grossExposure/account.equity:0,dailyLossPct,drawdownPct,openRiskAmount:positions.reduce((sum,p)=>sum+Math.abs(p.unrealizedPnl),0),concentrationPct:grossExposure>0?maxPosition/grossExposure*100:0,correlatedExposurePct:0,calculatedAt:new Date().toISOString()};const snapshot={...base,level:classifyRisk(base)};
+ return <main className="dashboard-page"><div className="page-heading"><div><p className="eyebrow">Live paper-account controls</p><h1>Risk OS</h1><p>Metrics are calculated from your persisted paper account and positions.</p></div></div><RiskScorecard snapshot={snapshot}/><div className="mt-6 grid gap-6 xl:grid-cols-2"><PositionSizeCalculator/><KillSwitchCard/></div></main>;
+}
