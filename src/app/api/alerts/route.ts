@@ -1,2 +1,5 @@
-import { alertStore } from "@/lib/alerts/alert-store";import { ok } from "@/lib/security/api-response";
+import { alertStore } from "@/lib/alerts/alert-store";import { fail,ok } from "@/lib/security/api-response";import type { PriceAlert } from "@/types/alert";
 export async function GET(){return ok(await alertStore.list())}
+export async function POST(request:Request){const body=await request.json().catch(()=>null) as Partial<PriceAlert>|null;if(!body?.symbol||!body.operator||!Number.isFinite(Number(body.threshold)))return fail("VALIDATION_ERROR","symbol, operator and threshold are required",400);return ok(await alertStore.create({symbol:body.symbol,operator:body.operator,threshold:Number(body.threshold),status:"active",channels:body.channels?.length?body.channels:["in-app"]}),201);}
+export async function PATCH(request:Request){const body=await request.json().catch(()=>null) as {id?:string,status?:PriceAlert["status"]}|null;if(!body?.id||!body.status)return fail("VALIDATION_ERROR","id and status are required",400);return ok(await alertStore.setStatus(body.id,body.status));}
+export async function DELETE(request:Request){const id=new URL(request.url).searchParams.get("id");if(!id)return fail("VALIDATION_ERROR","id is required",400);await alertStore.delete(id);return ok({deleted:true});}

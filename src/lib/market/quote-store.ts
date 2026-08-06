@@ -1,8 +1,7 @@
-import { sampleQuotes } from "@/lib/market/sample-data";
 import type { MarketQuote } from "@/types/market";
-export interface QuoteStore { list(): Promise<MarketQuote[]>; get(instrumentId:string): Promise<MarketQuote|null>; }
-export class SampleQuoteStore implements QuoteStore {
- async list(){ return structuredClone(sampleQuotes); }
- async get(instrumentId:string){ return structuredClone(sampleQuotes.find(q=>q.instrumentId===instrumentId) ?? null); }
-}
-export const quoteStore: QuoteStore = new SampleQuoteStore();
+export interface QuoteStore { list(symbols?:string[]):Promise<MarketQuote[]>; get(instrumentId:string):Promise<MarketQuote|null>; }
+function direction(change:number):MarketQuote["direction"]{return change>0?"up":change<0?"down":"flat";}
+async function binance(symbol:string):Promise<MarketQuote|null>{const pair=symbol.replace(/[^A-Za-z0-9]/g,"").toUpperCase();if(!pair.endsWith("USDT"))return null;const r=await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`,{cache:"no-store"});if(!r.ok)return null;const x=await r.json() as Record<string,string>;const price=Number(x.lastPrice),prev=Number(x.prevClosePrice),change=price-prev;return {instrumentId:`binance:${pair}`,symbol:pair.replace("USDT","/USDT"),price,change,changePercent:Number(x.priceChangePercent),open:Number(x.openPrice),high:Number(x.highPrice),low:Number(x.lowPrice),previousClose:prev,volume:Number(x.volume),timestamp:new Date().toISOString(),direction:direction(change),source:"provider",delayed:false};}
+async function generic(symbol:string):Promise<MarketQuote|null>{const base=process.env.ZERION_MARKET_DATA_BASE_URL;const key=process.env.ZERION_MARKET_DATA_API_KEY;if(!base)return null;const r=await fetch(`${base.replace(/\/$/,"")}/quote?symbol=${encodeURIComponent(symbol)}`,{headers:key?{Authorization:`Bearer ${key}`}:{},cache:"no-store"});if(!r.ok)return null;const x=await r.json() as Partial<MarketQuote>;if(typeof x.price!=="number")return null;const change=Number(x.change??0);return {instrumentId:String(x.instrumentId??symbol),symbol:String(x.symbol??symbol),price:x.price,change,changePercent:Number(x.changePercent??0),open:Number(x.open??x.price),high:Number(x.high??x.price),low:Number(x.low??x.price),previousClose:Number(x.previousClose??x.price-change),volume:x.volume,timestamp:String(x.timestamp??new Date().toISOString()),direction:direction(change),source:"provider",delayed:Boolean(x.delayed)};}
+class LiveQuoteStore implements QuoteStore{async list(symbols=["BTCUSDT","ETHUSDT"]){const rows=await Promise.all(symbols.map(async s=>(await generic(s))??(await binance(s))));return rows.filter((x):x is MarketQuote=>Boolean(x));}async get(instrumentId:string){return (await generic(instrumentId))??(await binance(instrumentId));}}
+export const quoteStore:QuoteStore=new LiveQuoteStore();

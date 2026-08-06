@@ -1,3 +1,8 @@
-import type { Watchlist } from "@/types/watchlist";
-const list:Watchlist={id:"watch-default",userId:"demo-user",name:"Primary Watchlist",isDefault:true,items:[{id:"w1",instrumentId:"nse-nifty50",symbol:"NIFTY 50",addedAt:"2026-08-01T00:00:00.000Z"},{id:"w2",instrumentId:"crypto-btcusdt",symbol:"BTC/USDT",addedAt:"2026-08-01T00:00:00.000Z"}],createdAt:"2026-08-01T00:00:00.000Z",updatedAt:"2026-08-01T00:00:00.000Z"};
-export const watchlistStore={async getDefault(){return structuredClone(list)}};
+import type { Watchlist, WatchlistItem } from "@/types/watchlist";
+import { currentUser, insert, select, update } from "@/lib/supabase/rest";
+type Row=Record<string,unknown>;
+const map=(r:Row):Watchlist=>({id:String(r.id),userId:String(r.owner_id),name:String(r.name),isDefault:Boolean(r.is_default),items:(r.items??[]) as WatchlistItem[],createdAt:String(r.created_at),updatedAt:String(r.updated_at)});
+export const watchlistStore={
+ async getDefault(){const u=await currentUser();let rows=await select("watchlists",`owner_id=eq.${u.id}&is_default=eq.true&limit=1`);if(!rows[0])rows=await insert<Row>("watchlists",{owner_id:u.id,name:"Primary Watchlist",is_default:true,items:[]});return map(rows[0]!);},
+ async saveItems(items:WatchlistItem[]){const list=await this.getDefault();const rows=await update<Row>("watchlists",`id=eq.${list.id}`,{items,updated_at:new Date().toISOString()});return map(rows[0]!);}
+};
