@@ -1,0 +1,27 @@
+Zerion X1 ZIP 1 — Luxury Core Workspace
+
+NEW
+src/components/navigation/mobile-bottom-nav.tsx
+src/components/account/account-hub.tsx
+src/components/notifications/notification-preferences.tsx
+src/components/reports/reports-center.tsx
+src/app/dashboard/account/page.tsx
+src/app/api/account/preferences/route.ts
+ZIP_1_LUXURY_CORE_README.md
+
+UPGRADED
+src/components/dashboard/shell.tsx
+src/components/dashboard/topbar.tsx
+src/components/dashboard/account-command-center.tsx
+src/components/settings/profile-settings.tsx
+src/app/dashboard/page.tsx
+src/app/dashboard/settings/page.tsx
+src/app/dashboard/notifications/page.tsx
+src/app/dashboard/reports/page.tsx
+src/config/dashboard-nav.ts
+src/app/globals.css
+
+Persistence
+- Profile: public.profiles
+- Dashboard: paper_accounts, paper_positions, strategies, price_alerts, watchlists
+- Notification settings: user_documents(kind='notifications')

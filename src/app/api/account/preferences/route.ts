@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { currentUser, insert, select, update } from "@/lib/supabase/rest";
+
+export async function GET(request:Request){const user=await currentUser();const kind=new URL(request.url).searchParams.get("kind")||"workspace";const rows=await select("user_documents",`owner_id=eq.${user.id}&kind=eq.${encodeURIComponent(kind)}&limit=1`);return NextResponse.json({ok:true,data:rows[0]??null});}
+export async function PUT(request:Request){const user=await currentUser();const body=await request.json().catch(()=>null) as {kind?:string;payload?:unknown}|null;if(!body?.kind||typeof body.kind!=="string")return NextResponse.json({ok:false,error:"INVALID_KIND"},{status:400});const rows=await select("user_documents",`owner_id=eq.${user.id}&kind=eq.${encodeURIComponent(body.kind)}&limit=1`);const payload={payload:body.payload??{},updated_at:new Date().toISOString()};const saved=rows[0]?await update("user_documents",`id=eq.${rows[0].id}&owner_id=eq.${user.id}`,payload):await insert("user_documents",{owner_id:user.id,kind:body.kind,...payload});return NextResponse.json({ok:true,data:saved[0]??null});}

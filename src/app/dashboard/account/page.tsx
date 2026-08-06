@@ -1,0 +1,2 @@
+import { AccountHub } from "@/components/account/account-hub";
+export default function AccountPage(){return <main className="dashboard-page x1-page-enter"><div className="page-heading x1-page-heading"><div><p className="eyebrow">Account center</p><h1>Profile & Workspace</h1><p>Manage your identity, preferences, providers, security and reports from one premium account hub.</p></div></div><AccountHub/></main>}

@@ -1,4 +1,4 @@
-import { Activity, BarChart3, Bell, BookOpen, BrainCircuit, ChartCandlestick, Gauge, ListFilter, NotebookTabs, Settings, ShieldCheck, SlidersHorizontal, TestTube2, WalletCards } from "lucide-react";
+import { Activity, BarChart3, Bell, BookOpen, BrainCircuit, ChartCandlestick, FileBarChart, Gauge, ListFilter, NotebookTabs, Settings, ShieldCheck, SlidersHorizontal, TestTube2, UserRound, WalletCards } from "lucide-react";
 
 import type { NavigationItem } from "@/types/navigation";
 
@@ -16,6 +16,9 @@ export const dashboardNav: NavigationItem[] = [
   { label: "Risk OS", href: "/dashboard/risk", icon: ShieldCheck },
   { label: "Journal", href: "/dashboard/journal", icon: NotebookTabs },
   { label: "Learn", href: "/dashboard/learn", icon: BookOpen },
+  { label: "Reports", href: "/dashboard/reports", icon: FileBarChart },
+  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
+  { label: "Account", href: "/dashboard/account", icon: UserRound },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "Execution", href: "/dashboard/execution", icon: Activity },
   { label: "Brokers", href: "/dashboard/brokers", icon: Activity },
