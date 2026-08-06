@@ -34,6 +34,16 @@ export default function LoginPage() {
         throw error;
       }
 
+      const sessionResult = await supabase.auth.getSession();
+      const accessToken = sessionResult.data.session?.access_token;
+      if (!accessToken) throw new Error("Supabase did not return an authenticated session.");
+      const syncResponse = await fetch("/api/auth/sync", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ accessToken }),
+      });
+      if (!syncResponse.ok) throw new Error("Unable to establish the Zerion session.");
+
       router.push("/dashboard");
       router.refresh();
     } catch (error) {
@@ -57,7 +67,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 

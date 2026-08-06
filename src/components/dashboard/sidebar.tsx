@@ -19,6 +19,7 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
   async function handleLogout() {
     const supabase = createBrowserSupabaseClient();
     await supabase.auth.signOut();
+    await fetch("/api/auth/sync", { method: "DELETE" });
     router.replace("/login");
     router.refresh();
   }

@@ -57,6 +57,12 @@ export default function SignupPage() {
       }
 
       if (data.session) {
+        const syncResponse = await fetch("/api/auth/sync", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ accessToken: data.session.access_token }),
+        });
+        if (!syncResponse.ok) throw new Error("Unable to establish the Zerion session.");
         router.push("/dashboard");
         router.refresh();
         return;
@@ -89,7 +95,7 @@ export default function SignupPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
