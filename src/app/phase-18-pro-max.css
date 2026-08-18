@@ -1,15 +1,15 @@
 
 /* Zerion X1 Phase 18 — UI/UX Pro Max design system */
 :root{
-  --zx-graphite:#0B0F14;
-  --zx-graphite-2:#11161D;
-  --zx-oxblood:#151E2A;
-  --zx-bronze:#B78A56;
-  --zx-bronze-2:#D1A66D;
-  --zx-slate:#697586;
-  --zx-slate-2:#95A0AE;
-  --zx-text:#EEE6D8;
-  --zx-muted:#A6ADB7;
+  --zx-graphite:#2F2A25;
+  --zx-graphite-2:#2F2A25;
+  --zx-oxblood:#2F2A25;
+  --zx-bronze:#E6D8C3;
+  --zx-bronze-2:#E6D8C3;
+  --zx-slate:#8C8A81;
+  --zx-slate-2:#8C8A81;
+  --zx-text:#E4E0DF;
+  --zx-muted:#8C8A81;
   --zx-border:rgba(149,160,174,.18);
   --zx-panel:rgba(11,15,20,.82);
   --zx-panel-2:rgba(17,22,29,.76);
@@ -22,7 +22,7 @@ html,body{
     radial-gradient(circle at 12% 4%,rgba(183,138,86,.13),transparent 28rem),
     radial-gradient(circle at 84% 0%,rgba(105,117,134,.16),transparent 35rem),
     radial-gradient(circle at 80% 70%,rgba(118,151,184,.08),transparent 30rem),
-    linear-gradient(145deg,#080B0F 0%,#0B0F14 48%,#11161D 100%) !important;
+    linear-gradient(145deg,#2F2A25 0%,#2F2A25 48%,#2F2A25 100%) !important;
   color:var(--zx-text);
 }
 
@@ -56,8 +56,8 @@ body::before{
 .eyebrow,.x1-kicker{color:var(--zx-bronze-2)!important}
 
 .zx-primary-action{
-  background:linear-gradient(135deg,#D1A66D,#A87843)!important;
-  color:#0B0F14!important;
+  background:linear-gradient(135deg,#E6D8C3,#E6D8C3)!important;
+  color:#2F2A25!important;
   border:1px solid rgba(238,230,216,.18)!important;
   box-shadow:0 10px 28px rgba(183,138,86,.16);
 }
@@ -72,12 +72,12 @@ body::before{
 .status-pill,.data-badge,.x1-safe-pill{
   background:rgba(183,138,86,.09)!important;
   border-color:rgba(183,138,86,.24)!important;
-  color:#D1A66D!important;
+  color:#E6D8C3!important;
 }
 
 .x1-menu-icon,.x1-icon-button,.x1-avatar{
   background:linear-gradient(145deg,rgba(105,117,134,.14),rgba(118,151,184,.07))!important;
-  color:#D1A66D!important;
+  color:#E6D8C3!important;
 }
 
 .x1-mobile-nav{
@@ -115,7 +115,7 @@ body::before{
   letter-spacing:-.055em;
 }
 .zx18-title span{
-  background:linear-gradient(90deg,#EEE6D8,#D1A66D 45%,#95A0AE);
+  background:linear-gradient(90deg,#E4E0DF,#E6D8C3 45%,#8C8A81);
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .zx18-lead{max-width:720px;margin:26px 0 0;color:var(--zx-muted);font-size:clamp(1rem,1.4vw,1.17rem);line-height:1.75}
@@ -134,8 +134,8 @@ body::before{
 }
 .zx18-command-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:6px 4px 17px;border-bottom:1px solid rgba(149,160,174,.13)}
 .zx18-command-head strong{font-size:.92rem}
-.zx18-live-dot{display:inline-flex;align-items:center;gap:7px;color:#9AC7A1;font-size:.7rem}
-.zx18-live-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:#71B77E;box-shadow:0 0 16px #71B77E}
+.zx18-live-dot{display:inline-flex;align-items:center;gap:7px;color:#6B8F7A;font-size:.7rem}
+.zx18-live-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:#6B8F7A;box-shadow:0 0 16px #6B8F7A}
 .zx18-command-chart{height:170px;margin-top:16px;position:relative;overflow:hidden;border-radius:18px;background:linear-gradient(180deg,rgba(105,117,134,.09),rgba(11,15,20,.12))}
 .zx18-command-chart::before{
   content:"";position:absolute;inset:0;
@@ -144,7 +144,7 @@ body::before{
     linear-gradient(90deg,rgba(149,160,174,.07) 1px,transparent 1px);
   background-size:36px 36px;
 }
-.zx18-line{position:absolute;left:5%;right:5%;top:52%;height:2px;background:linear-gradient(90deg,transparent,#697586,#D1A66D,#697586,transparent);transform:skewY(-6deg);box-shadow:0 0 24px rgba(209,166,109,.22)}
+.zx18-line{position:absolute;left:5%;right:5%;top:52%;height:2px;background:linear-gradient(90deg,transparent,#8C8A81,#E6D8C3,#8C8A81,transparent);transform:skewY(-6deg);box-shadow:0 0 24px rgba(209,166,109,.22)}
 .zx18-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 .zx18-metric{padding:14px;border:1px solid rgba(149,160,174,.13);border-radius:15px;background:rgba(105,117,134,.045)}
 .zx18-metric span{display:block;color:var(--zx-muted);font-size:.63rem}
@@ -160,7 +160,7 @@ body::before{
 .zx18-bento article:first-child{grid-row:span 2;min-height:474px}
 .zx18-bento h3{margin:16px 0 8px;font-size:1.35rem}
 .zx18-bento p{color:var(--zx-muted);line-height:1.65}
-.zx18-bento svg{color:#D1A66D}
+.zx18-bento svg{color:#E6D8C3}
 
 input,select,textarea{
   border-color:rgba(149,160,174,.22)!important;
@@ -169,7 +169,7 @@ input,select,textarea{
 }
 button,a,input,select,textarea{transition:transform .18s ease,border-color .18s ease,background .18s ease,filter .18s ease}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
-  outline:2px solid #D1A66D!important;outline-offset:3px!important;
+  outline:2px solid #E6D8C3!important;outline-offset:3px!important;
 }
 
 @media(max-width:900px){

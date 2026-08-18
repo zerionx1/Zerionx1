@@ -2,27 +2,27 @@
   Zerion X1 Phase 13 visual system
 
   Main surface palette:
-  1. Graphite      #101419
-  2. Oxblood       #48202A
-  3. Antique bronze#9A744B
-  4. Slate         #687078
+  1. Graphite      #2F2A25
+  2. Oxblood       #2F2A25
+  3. Antique bronze#E6D8C3
+  4. Slate         #8C8A81
 
   The old maroon-heavy look is intentionally reduced. Warm sand is used only
   for readable text, not as a fifth surface colour.
 */
 :root {
-  --zx-graphite: #101419;
-  --zx-oxblood: #48202A;
-  --zx-bronze: #9A744B;
-  --zx-slate: #687078;
-  --zx-sand: #D2C6AF;
+  --zx-graphite: #2F2A25;
+  --zx-oxblood: #2F2A25;
+  --zx-bronze: #E6D8C3;
+  --zx-slate: #8C8A81;
+  --zx-sand: #E4E0DF;
 
   --zx-ink: var(--zx-graphite);
   --zx-wine: var(--zx-oxblood);
   --zx-mauve: var(--zx-slate);
   --zx-stone: var(--zx-bronze);
   --zx-text: var(--zx-sand);
-  --zx-muted: #9A978F;
+  --zx-muted: #8C8A81;
   --zx-border: rgba(154, 116, 75, .27);
   --zx-panel: rgba(16, 20, 25, .88);
   --zx-panel-2: rgba(72, 32, 42, .34);
@@ -34,7 +34,7 @@ body {
   background:
     radial-gradient(circle at 12% 0%, rgba(154, 116, 75, .16), transparent 32rem),
     radial-gradient(circle at 92% 8%, rgba(104, 112, 120, .15), transparent 34rem),
-    linear-gradient(145deg, #0D1115, #101419 52%, #17191D);
+    linear-gradient(145deg, #2F2A25, #2F2A25 52%, #2F2A25);
 }
 
 .x1-app-shell {
@@ -69,8 +69,8 @@ body {
 
 .zx-primary-action {
   background:
-    linear-gradient(135deg, var(--zx-bronze), #B08A60);
-  color: #101419;
+    linear-gradient(135deg, var(--zx-bronze), #E6D8C3);
+  color: #2F2A25;
   border: 1px solid rgba(210, 198, 175, .18);
 }
 
@@ -83,7 +83,7 @@ body {
 
 .eyebrow,
 .x1-kicker {
-  color: #B89266 !important;
+  color: #E6D8C3 !important;
 }
 
 .status-pill,
@@ -91,7 +91,7 @@ body {
 .x1-safe-pill {
   border-color: rgba(154, 116, 75, .32);
   background: rgba(154, 116, 75, .10);
-  color: #C19B70;
+  color: #E6D8C3;
 }
 
 .x1-menu-icon,
@@ -103,7 +103,7 @@ body {
       rgba(72, 32, 42, .40),
       rgba(104, 112, 120, .10)
     );
-  color: #BC9468;
+  color: #E6D8C3;
 }
 
 .zx-provider-intro {
@@ -164,7 +164,7 @@ body {
 }
 
 .zx-market-tabs small {
-  color: #B89266;
+  color: #E6D8C3;
   font-size: .65rem;
 }
 
@@ -207,7 +207,7 @@ body {
   border-radius: 999px;
   padding: 6px 9px;
   background: rgba(104, 112, 120, .08);
-  color: #AAA9A2;
+  color: #8C8A81;
   font-size: .68rem;
 }
 
@@ -221,7 +221,7 @@ body {
 
 .zx-setup-note {
   margin: 14px 0 0 !important;
-  color: #B89266 !important;
+  color: #E6D8C3 !important;
   font-size: .72rem;
 }
 

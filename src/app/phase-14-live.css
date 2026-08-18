@@ -52,7 +52,7 @@
 .zx-command-orb svg {
   width: 34%;
   height: 34%;
-  color: #c39a6c;
+  color: #E6D8C3;
 }
 
 .zx-switch-grid {
@@ -81,7 +81,7 @@
 }
 
 .zx-switch-grid small {
-  color: #b89266;
+  color: #E6D8C3;
 }
 
 .zx-live-panel {
@@ -111,7 +111,7 @@
 }
 
 .zx-empty-state svg {
-  color: #b89266;
+  color: #E6D8C3;
 }
 
 .zx-empty-state h3 {
@@ -152,7 +152,7 @@
   border: 1px solid rgba(184,81,67,.32);
   border-radius: 14px;
   background: rgba(184,81,67,.1);
-  color: #d7a39b;
+  color: #8C8A81;
 }
 
 @keyframes zxBreathe {

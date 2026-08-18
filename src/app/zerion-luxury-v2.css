@@ -1,0 +1,44 @@
+:root{
+ --zx-c1:#E4E0DF;--zx-c2:#F7F4ED;--zx-c3:#8C8A81;--zx-c4:#F3F1EC;
+ --zx-c5:#6B8F7A;--zx-c6:#2F2A25;--zx-c7:#3E4A3F;--zx-c8:#E6D8C3;
+ --ink:#2F2A25;--espresso:#3E4A3F;--walnut:#8C8A81;--bronze:#8C8A81;
+ --gold:#E6D8C3;--ivory:#F7F4ED;--mist:#E4E0DF;--success:#6B8F7A;--danger:#8C8A81;
+ --x1-black:#2F2A25;--x1-espresso:#3E4A3F;--x1-walnut:#8C8A81;--x1-champagne:#E6D8C3;
+ --x1-gold:#E6D8C3;--x1-ivory:#F7F4ED;--x1-muted:#E4E0DF;--x1-border:rgba(230,216,195,.18)
+}
+html,body,.x1-app-shell,.marketing-page{background:linear-gradient(145deg,#2F2A25 0%,#3E4A3F 58%,#2F2A25 100%)!important;color:#F7F4ED!important}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+h1,h2,h3,.brand-mark__name,.gold-text{font-family:Georgia,"Times New Roman",serif;letter-spacing:-.015em}
+.gold-text{background:none!important;color:#E6D8C3!important;-webkit-text-fill-color:#E6D8C3!important}
+.panel,.zx-strategy-card,.zx-live-panel,.zx-terminal-shell,.zx-billing-summary,.zx-payment-card,.zx-plan-picker,.marketing-card,.pricing-card{
+ background:linear-gradient(150deg,rgba(62,74,63,.94),rgba(47,42,37,.97))!important;
+ border:1px solid rgba(230,216,195,.16)!important;box-shadow:0 24px 70px rgba(47,42,37,.28)!important;
+ backdrop-filter:blur(20px);border-radius:22px!important
+}
+.x1-sidebar{background:linear-gradient(180deg,#2F2A25,#3E4A3F)!important;border-color:rgba(230,216,195,.14)!important}
+.x1-sidebar-link{color:#E4E0DF!important}.x1-sidebar-link:hover,.x1-sidebar-link.is-active{background:rgba(107,143,122,.18)!important;color:#F7F4ED!important}
+.x1-sidebar-link.is-active{box-shadow:inset 3px 0 0 #E6D8C3}
+input,select,textarea{width:100%;max-width:100%;min-width:0;background:#2F2A25!important;color:#F7F4ED!important;border:1px solid rgba(230,216,195,.18)!important;border-radius:14px!important;padding:.8rem .9rem!important;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#6B8F7A!important;box-shadow:0 0 0 3px rgba(107,143,122,.14)!important}
+button,a{transition:transform .18s ease,background-color .18s ease,border-color .18s ease,opacity .18s ease}
+button:active,a:active{transform:scale(.985)}
+.zx-primary-action{background:linear-gradient(135deg,#E6D8C3,#F3F1EC)!important;color:#2F2A25!important;border:1px solid #E6D8C3!important}
+.zx-secondary-action,.data-badge,.status-pill{background:rgba(107,143,122,.13)!important;color:#F7F4ED!important;border-color:rgba(107,143,122,.3)!important}
+.positive{color:#E6D8C3!important}.negative{color:#E4E0DF!important}
+.x1-mobile-header{background:rgba(47,42,37,.94)!important;border-bottom:1px solid rgba(230,216,195,.14)!important;backdrop-filter:blur(18px)}
+.x1-mobile-nav{background:rgba(47,42,37,.97)!important;border:1px solid rgba(230,216,195,.14)!important;box-shadow:0 -18px 48px rgba(47,42,37,.25)!important}
+.x1-mobile-nav__item{color:#8C8A81!important}.x1-mobile-nav__item.is-active{color:#F7F4ED!important}.x1-mobile-nav__item.is-active .x1-mobile-nav__icon{background:rgba(230,216,195,.12)!important;border-color:rgba(230,216,195,.18)!important}
+.zx-page-back{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;border:1px solid rgba(230,216,195,.16);background:rgba(62,74,63,.7);color:#F7F4ED}
+.dashboard-page{animation:zxPageIn .34s ease both}.panel,.zx-strategy-card,.zx-terminal-shell{animation:zxLiftIn .42s ease both}
+@keyframes zxPageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@keyframes zxLiftIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+.zx-journal-form{min-width:0}.zx-journal-form .grid{min-width:0}.zx-journal-form label{min-width:0;display:grid;gap:7px}.zx-journal-form textarea{resize:vertical}
+@media(max-width:760px){
+ .dashboard-page{padding-left:14px!important;padding-right:14px!important;padding-bottom:110px!important}
+ .panel{padding:16px!important;border-radius:18px!important}
+ .page-heading h1{font-size:clamp(1.7rem,8vw,2.35rem)!important}
+ .zx-mobile-stack{grid-template-columns:1fr!important}
+ .zx-journal-form .grid.grid-cols-2{grid-template-columns:1fr!important}
+ .zx-journal-form input,.zx-journal-form select,.zx-journal-form textarea{font-size:16px!important}
+ table{font-size:.82rem}
+}

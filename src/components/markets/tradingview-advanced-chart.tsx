@@ -1,26 +1,25 @@
 "use client";
-
 import { memo, useEffect, useId, useRef } from "react";
-
 type Props = { symbol: string; interval?: string; height?: number };
-
-function TradingViewAdvancedChartImpl({ symbol, interval = "15", height = 800 }: Props) {
+function TradingViewAdvancedChartImpl({
+  symbol,
+  interval = "15",
+  height = 800,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const id = useId().replace(/:/g, "");
-
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
     node.innerHTML = "";
-
     const widget = document.createElement("div");
     widget.className = "tradingview-widget-container__widget";
     widget.style.height = "100%";
     widget.style.width = "100%";
     node.appendChild(widget);
-
     const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.src =
+      "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
     script.type = "text/javascript";
     script.async = true;
     script.innerHTML = JSON.stringify({
@@ -29,8 +28,8 @@ function TradingViewAdvancedChartImpl({ symbol, interval = "15", height = 800 }:
       interval,
       timezone: "exchange",
       theme: "dark",
-      backgroundColor: "rgba(7,11,17,1)",
-      gridColor: "rgba(118,151,184,.14)",
+      backgroundColor: "rgba(47,42,37,1)",
+      gridColor: "rgba(230,216,195,.10)",
       style: "1",
       locale: "en",
       withdateranges: true,
@@ -45,9 +44,10 @@ function TradingViewAdvancedChartImpl({ symbol, interval = "15", height = 800 }:
       support_host: "https://www.tradingview.com",
     });
     node.appendChild(script);
-    return () => { node.innerHTML = ""; };
+    return () => {
+      node.innerHTML = "";
+    };
   }, [symbol, interval]);
-
   return (
     <div
       id={`tv-${id}`}
@@ -57,5 +57,4 @@ function TradingViewAdvancedChartImpl({ symbol, interval = "15", height = 800 }:
     />
   );
 }
-
 export const TradingViewAdvancedChart = memo(TradingViewAdvancedChartImpl);

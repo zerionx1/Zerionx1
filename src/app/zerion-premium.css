@@ -1,18 +1,18 @@
 /*
   Zerion X1 Premium Workspace Layer
   Palette distribution:
-  - Deep Ink #1E0B10 ~55%
-  - Wine #50212B ~25%
-  - Dust Mauve #755058 ~14%
-  - Platinum Stone #C4C1B9 ~6%
+  - Deep Ink #2F2A25 ~55%
+  - Wine #2F2A25 ~25%
+  - Dust Mauve #2F2A25 ~14%
+  - Platinum Stone #E4E0DF ~6%
 */
 :root {
-  --zx-ink: #1E0B10;
-  --zx-wine: #50212B;
-  --zx-mauve: #755058;
-  --zx-stone: #C4C1B9;
-  --zx-text: #DED9D2;
-  --zx-muted: #AFA5A5;
+  --zx-ink: #2F2A25;
+  --zx-wine: #2F2A25;
+  --zx-mauve: #2F2A25;
+  --zx-stone: #E4E0DF;
+  --zx-text: #E4E0DF;
+  --zx-muted: #8C8A81;
   --zx-border: color-mix(in srgb, var(--zx-mauve) 54%, transparent);
   --zx-panel: color-mix(in srgb, var(--zx-wine) 58%, var(--zx-ink));
   --zx-panel-2: color-mix(in srgb, var(--zx-mauve) 22%, var(--zx-ink));

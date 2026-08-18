@@ -206,13 +206,13 @@ export default function SignupPage() {
         </label>
 
         {errorMessage ? (
-          <p role="alert" style={{ color: "#ffb4b4", margin: 0 }}>
+          <p role="alert" style={{ color: "#8C8A81", margin: 0 }}>
             {errorMessage}
           </p>
         ) : null}
 
         {successMessage ? (
-          <p role="status" style={{ color: "#c4c1b9", margin: 0 }}>
+          <p role="status" style={{ color: "#E4E0DF", margin: 0 }}>
             {successMessage}
           </p>
         ) : null}

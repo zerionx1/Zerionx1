@@ -152,7 +152,7 @@ export default function LoginPage() {
         </div>
 
         {errorMessage ? (
-          <p role="alert" style={{ color: "#ffb4b4", margin: 0 }}>
+          <p role="alert" style={{ color: "#8C8A81", margin: 0 }}>
             {errorMessage}
           </p>
         ) : null}
