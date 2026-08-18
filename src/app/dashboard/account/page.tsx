@@ -1,2 +1,18 @@
 import { AccountHub } from "@/components/account/account-hub";
-export default function AccountPage(){return <main className="dashboard-page x1-page-enter"><div className="page-heading x1-page-heading"><div><p className="eyebrow">Account center</p><h1>Profile & Workspace</h1><p>Manage your identity, preferences, providers, security and reports from one premium account hub.</p></div></div><AccountHub/></main>}
+
+export default function AccountPage() {
+  return (
+    <main className="dashboard-page">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Account command center</p>
+          <h1 className="mt-2 text-4xl font-semibold md:text-5xl">Your Zerion Workspace</h1>
+          <p className="mt-3 max-w-2xl">
+            Complete your profile, connect providers, secure your account and move through the platform in a clear order.
+          </p>
+        </div>
+      </div>
+      <AccountHub />
+    </main>
+  );
+}

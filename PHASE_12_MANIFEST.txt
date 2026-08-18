@@ -1,0 +1,13 @@
+APPLY_PHASE_12.sh
+PHASE_12_README.md
+src/app/api/markets/quotes/route.ts
+src/app/api/paper/positions/route.ts
+src/app/dashboard/brokers/page.tsx
+src/app/dashboard/strategies/page.tsx
+src/components/brokers/broker-connection-center.tsx
+src/components/markets/tradingview-advanced-chart.tsx
+src/components/paper/paper-trading-workspace.tsx
+src/components/strategies/strategy-template-gallery.tsx
+src/config/brokers.ts
+src/config/strategy-templates.ts
+src/hooks/use-binance-market-stream.ts
