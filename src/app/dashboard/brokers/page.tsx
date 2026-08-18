@@ -5,14 +5,18 @@ export default function BrokersPage() {
     <main className="dashboard-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Data and execution connectivity</p>
-          <h1 className="mt-2 text-4xl font-semibold md:text-5xl">Broker & Provider Hub</h1>
+          <p className="eyebrow">Connect your trading account</p>
+          <h1 className="mt-2 text-4xl font-semibold md:text-5xl">
+            Trading Connections
+          </h1>
           <p className="mt-3 max-w-2xl">
-            Connect supported Indian, crypto and FX providers. Live order execution remains disabled until authorization and risk checks pass.
+            Already have an account? Link it securely. New to a provider?
+            Create an account first, then return here and connect it.
           </p>
         </div>
-        <span className="status-pill">Fail closed</span>
+        <span className="status-pill">User-authorized access</span>
       </div>
+
       <BrokerConnectionCenter />
     </main>
   );

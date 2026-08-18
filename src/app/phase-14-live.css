@@ -1,0 +1,173 @@
+/* Phase 14 — live trading UI */
+.zx-command-hero,
+.zx-live-panel {
+  border: 1px solid var(--zx-border);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(154,116,75,.15), transparent 26rem),
+    linear-gradient(145deg, rgba(16,20,25,.95), rgba(27,31,35,.86) 58%, rgba(72,32,42,.26));
+  box-shadow: var(--zx-shadow);
+  backdrop-filter: blur(24px);
+}
+
+.zx-command-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 30px;
+  align-items: center;
+  overflow: hidden;
+  min-height: 260px;
+  border-radius: 28px;
+  padding: clamp(26px,5vw,56px);
+}
+
+.zx-command-hero h1 {
+  max-width: 780px;
+  margin: 12px 0;
+  font-family: Georgia,"Times New Roman",serif;
+  font-size: clamp(2.4rem,5vw,5rem);
+  font-weight: 500;
+  letter-spacing: -.035em;
+  line-height: .98;
+}
+
+.zx-command-hero p:last-child {
+  max-width: 660px;
+  color: var(--zx-muted);
+  line-height: 1.75;
+}
+
+.zx-command-orb {
+  width: clamp(92px,15vw,170px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(154,116,75,.4);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(154,116,75,.26), rgba(104,112,120,.05) 55%, transparent 70%);
+  animation: zxBreathe 5s ease-in-out infinite;
+}
+
+.zx-command-orb svg {
+  width: 34%;
+  height: 34%;
+  color: #c39a6c;
+}
+
+.zx-switch-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 12px;
+}
+
+.zx-switch-grid button {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 13px;
+  align-items: center;
+  min-height: 72px;
+  padding: 0 20px;
+  border: 1px solid rgba(104,112,120,.3);
+  border-radius: 18px;
+  background: rgba(104,112,120,.07);
+  color: var(--zx-muted);
+}
+
+.zx-switch-grid button.is-active {
+  border-color: rgba(154,116,75,.55);
+  background: linear-gradient(135deg,rgba(154,116,75,.15),rgba(72,32,42,.2));
+  color: var(--zx-text);
+}
+
+.zx-switch-grid small {
+  color: #b89266;
+}
+
+.zx-live-panel {
+  border-radius: 26px;
+  padding: 26px;
+}
+
+.zx-live-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.zx-live-panel__head h2 {
+  margin: 7px 0 0;
+  font-size: 1.6rem;
+}
+
+.zx-empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  margin-top: 20px;
+  text-align: center;
+  color: var(--zx-muted);
+}
+
+.zx-empty-state svg {
+  color: #b89266;
+}
+
+.zx-empty-state h3 {
+  margin: 15px 0 5px;
+  color: var(--zx-text);
+}
+
+.zx-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.zx-stat-grid article {
+  min-height: 130px;
+  padding: 20px;
+  border: 1px solid rgba(104,112,120,.25);
+  border-radius: 18px;
+  background: rgba(104,112,120,.06);
+}
+
+.zx-stat-grid span {
+  color: var(--zx-muted);
+  font-size: .76rem;
+}
+
+.zx-stat-grid strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--zx-text);
+  font-size: 1.7rem;
+}
+
+.zx-error-banner {
+  margin-top: 18px;
+  padding: 13px 15px;
+  border: 1px solid rgba(184,81,67,.32);
+  border-radius: 14px;
+  background: rgba(184,81,67,.1);
+  color: #d7a39b;
+}
+
+@keyframes zxBreathe {
+  0%,100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.045); filter: brightness(1.12); }
+}
+
+@media (max-width: 720px) {
+  .zx-command-hero { grid-template-columns: 1fr; }
+  .zx-command-orb { width: 100px; }
+  .zx-switch-grid { grid-template-columns: 1fr; }
+  .zx-stat-grid { grid-template-columns: 1fr; }
+  .zx-live-panel__head { align-items: stretch; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zx-command-orb { animation: none; }
+}

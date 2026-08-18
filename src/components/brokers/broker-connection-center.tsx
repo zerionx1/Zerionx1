@@ -1,7 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Cable, CheckCircle2, ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  ArrowRight,
+  Cable,
+  CheckCircle2,
+  ExternalLink,
+  LockKeyhole,
+  RefreshCw,
+  ShieldAlert,
+  Sparkles,
+} from "lucide-react";
 
 type Broker = {
   key: string;
@@ -9,6 +23,10 @@ type Broker = {
   kind: "india" | "crypto" | "forex";
   authMode: "oauth" | "api-key" | "session";
   supportsSandbox: boolean;
+  availability?: "available" | "coming-soon";
+  description?: string;
+  createAccountUrl?: string;
+  configured?: boolean;
   capabilities: {
     marketData: boolean;
     orders: boolean;
@@ -26,10 +44,26 @@ type Connection = {
   display_name?: string;
 };
 
+const marketCopy = {
+  india: {
+    title: "Indian Markets",
+    copy: "Connect Upstox for Indian equities, indices, F&O and supported exchange segments.",
+  },
+  forex: {
+    title: "Forex",
+    copy: "Connect a cTrader account and authorize Zerion X1 for the trading accounts you choose.",
+  },
+  crypto: {
+    title: "Crypto",
+    copy: "Live crypto account connection is not enabled in this release.",
+  },
+} as const;
+
 export function BrokerConnectionCenter() {
   const [catalog, setCatalog] = useState<Broker[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [market, setMarket] = useState<"india" | "crypto" | "forex">("india");
+  const [market, setMarket] =
+    useState<"india" | "crypto" | "forex">("india");
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
@@ -58,18 +92,20 @@ export function BrokerConnectionCenter() {
   async function connect(broker: Broker) {
     setBusy(broker.key);
     setMessage("");
+
     try {
       const response = await fetch("/api/brokers", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ brokerKey: broker.key }),
       });
+
       const json = await response.json();
 
       if (!response.ok) {
         setMessage(
           json.error?.message ??
-            `${broker.name} is not configured on the server yet.`,
+            `${broker.name} could not start account linking.`,
         );
         return;
       }
@@ -79,87 +115,179 @@ export function BrokerConnectionCenter() {
         return;
       }
 
-      setMessage(`${broker.name} authorization started.`);
+      setMessage(`${broker.name} account linking started.`);
       await load();
     } finally {
       setBusy(null);
     }
   }
 
+  const currentCopy = marketCopy[market];
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap gap-2">
-        {(["india", "crypto", "forex"] as const).map((value) => (
+    <div className="space-y-6">
+      <section className="zx-provider-intro">
+        <div>
+          <p className="eyebrow">Choose where you trade</p>
+          <h2>{currentCopy.title}</h2>
+          <p>{currentCopy.copy}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="zx-secondary-action"
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh status
+        </button>
+      </section>
+
+      <div className="zx-market-tabs">
+        {(["india", "forex", "crypto"] as const).map((value) => (
           <button
             key={value}
             type="button"
             onClick={() => setMarket(value)}
-            className={market === value ? "zx-primary-action" : "zx-secondary-action"}
+            className={market === value ? "is-active" : ""}
           >
-            {value === "india" ? "Indian Markets" : value === "crypto" ? "Crypto" : "Forex / FX"}
+            <span>
+              {value === "india"
+                ? "Indian Markets"
+                : value === "forex"
+                  ? "Forex"
+                  : "Crypto"}
+            </span>
+            {value === "crypto" ? <small>Coming soon</small> : null}
           </button>
         ))}
-        <button type="button" onClick={() => void load()} className="zx-secondary-action ml-auto">
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-        </button>
       </div>
 
       {message ? (
         <div className="panel flex items-start gap-3 text-sm">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--zx-stone)]" />
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--zx-bronze)]" />
           <p>{message}</p>
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-5 lg:grid-cols-2">
         {visible.map((broker) => {
           const connection = connectionFor(broker.key);
           const connected = connection?.status === "connected";
+          const comingSoon = broker.availability === "coming-soon";
 
           return (
-            <article className="panel" key={broker.key}>
-              <div className="flex items-start justify-between gap-3">
-                <span className="x1-menu-icon"><Cable className="h-4 w-4" /></span>
+            <article className="zx-broker-card" key={broker.key}>
+              <div className="zx-broker-card__top">
+                <span className="x1-menu-icon">
+                  {comingSoon ? (
+                    <Sparkles className="h-4 w-4" />
+                  ) : (
+                    <Cable className="h-4 w-4" />
+                  )}
+                </span>
+
                 <span className="data-badge">
-                  {connected ? "Connected" : broker.authMode}
+                  {comingSoon
+                    ? "Coming soon"
+                    : connected
+                      ? "Connected"
+                      : broker.configured
+                        ? "Ready to link"
+                        : "Needs app credentials"}
                 </span>
               </div>
 
-              <h3 className="mt-5 text-lg font-semibold">{broker.name}</h3>
-              <p className="mt-2 text-sm text-white/50">
-                {broker.capabilities.marketData ? "Market data" : "No data"} ·{" "}
-                {broker.capabilities.orders ? "Orders" : "Read only"} ·{" "}
-                {broker.capabilities.websocket ? "Streaming" : "REST"}
-              </p>
+              <h3>{broker.name}</h3>
+              <p>{broker.description}</p>
 
-              <p className="mt-3 text-xs text-white/40">
-                {broker.supportsSandbox
-                  ? "Sandbox/demo path supported by this adapter."
-                  : "Production credentials/account may be required."}
-              </p>
+              {!comingSoon ? (
+                <>
+                  <div className="zx-capability-row">
+                    <span>Live data</span>
+                    <span>Orders</span>
+                    <span>Positions</span>
+                    <span>Risk checks</span>
+                  </div>
 
-              <button
-                type="button"
-                disabled={busy === broker.key || connected}
-                onClick={() => void connect(broker)}
-                className="zx-primary-action mt-5 w-full"
-              >
-                {connected ? (
-                  <><CheckCircle2 className="mr-2 h-4 w-4" /> Connected</>
-                ) : busy === broker.key ? (
-                  "Starting…"
-                ) : (
-                  <><ExternalLink className="mr-2 h-4 w-4" /> Connect</>
-                )}
-              </button>
+                  <div className="zx-broker-actions">
+                    <button
+                      type="button"
+                      disabled={
+                        busy === broker.key ||
+                        connected ||
+                        !broker.configured
+                      }
+                      onClick={() => void connect(broker)}
+                      className="zx-primary-action"
+                    >
+                      {connected ? (
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Account linked
+                        </>
+                      ) : busy === broker.key ? (
+                        "Opening secure login…"
+                      ) : (
+                        <>
+                          <LockKeyhole className="mr-2 h-4 w-4" />
+                          Link existing account
+                        </>
+                      )}
+                    </button>
+
+                    {broker.createAccountUrl ? (
+                      <a
+                        href={broker.createAccountUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="zx-secondary-action"
+                      >
+                        Create account
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        className="zx-secondary-action"
+                        title="A cTrader partner/referral signup URL will be added before this action is enabled."
+                      >
+                        Create account
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {!broker.configured ? (
+                    <p className="zx-setup-note">
+                      Zerion code is ready. Add the provider Client ID and
+                      Client Secret on the server to enable secure linking.
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <div className="zx-coming-soon-box">
+                  <strong>Research stays available.</strong>
+                  <p>
+                    Real crypto account linking and live execution will be
+                    enabled only after the production connector is approved.
+                  </p>
+                </div>
+              )}
             </article>
           );
         })}
       </div>
 
-      <p className="text-xs text-white/40">
-        MetaTrader 4/5 are integration bridges, not universal brokers. A compatible broker/terminal and server-side bridge are still required for live execution.
-      </p>
+      <div className="zx-trust-strip">
+        <ShieldAlert />
+        <p>
+          Zerion X1 never asks users to paste broker passwords or OTPs. Supported
+          accounts are linked through the provider&apos;s own authorization
+          screen.
+        </p>
+      </div>
     </div>
   );
 }

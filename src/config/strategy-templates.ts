@@ -1,9 +1,10 @@
 export type ZerionStrategyTemplate = {
   id: string;
   name: string;
-  market: "indian-index" | "indian-equity" | "crypto" | "forex";
+  market: "indian-index" | "indian-equity" | "forex";
   style: string;
-  timeframe: string;
+  timeframe: "5m" | "15m" | "30m" | "1h";
+  symbol: string;
   description: string;
   rules: string[];
   risk: string;
@@ -11,63 +12,123 @@ export type ZerionStrategyTemplate = {
 
 export const zerionStrategyTemplates: ZerionStrategyTemplate[] = [
   {
-    id: "trend-pullback",
-    name: "Trend Pullback Guard",
+    id: "nifty-trend-pullback",
+    name: "NIFTY Trend Pullback",
     market: "indian-index",
-    style: "Trend following",
-    timeframe: "15m / 1h",
-    description: "Waits for aligned higher-timeframe trend and a controlled pullback before considering entry.",
-    rules: ["EMA trend alignment", "ADX trend quality", "VWAP reclaim", "ATR-based invalidation"],
-    risk: "Default risk cap 0.75% per paper trade",
+    style: "Trend",
+    timeframe: "15m",
+    symbol: "NSE:NIFTY50",
+    description:
+      "Follows the main trend and waits for a controlled pullback before a setup is considered.",
+    rules: ["EMA trend", "ADX strength", "VWAP reclaim", "ATR stop"],
+    risk: "Default risk cap: 0.75% per trade",
   },
   {
-    id: "breakout-volume",
-    name: "Volume Breakout Confirm",
+    id: "banknifty-breakout",
+    name: "BANK NIFTY Breakout",
+    market: "indian-index",
+    style: "Breakout",
+    timeframe: "5m",
+    symbol: "NSE:BANKNIFTY",
+    description:
+      "Looks for a clean range break with momentum and confirmation instead of chasing every move.",
+    rules: ["Range break", "Volume confirmation", "Momentum filter", "ATR stop"],
+    risk: "Avoid weak or low-volume breakouts",
+  },
+  {
+    id: "nifty-vwap-reversal",
+    name: "NIFTY VWAP Reversal",
+    market: "indian-index",
+    style: "Intraday reversal",
+    timeframe: "5m",
+    symbol: "NSE:NIFTY50",
+    description:
+      "Looks for an extended move, rejection and return toward VWAP with strict invalidation.",
+    rules: ["VWAP distance", "RSI stretch", "Rejection candle", "Structure stop"],
+    risk: "Disabled when trend strength is extreme",
+  },
+  {
+    id: "equity-volume-breakout",
+    name: "Equity Volume Breakout",
     market: "indian-equity",
     style: "Breakout",
-    timeframe: "5m / 15m",
-    description: "Requires range expansion and volume confirmation instead of buying every visible breakout.",
-    rules: ["Range compression", "Relative volume expansion", "Close outside structure", "Retest optional"],
-    risk: "Avoid low-liquidity instruments",
+    timeframe: "15m",
+    symbol: "NSE:RELIANCE",
+    description:
+      "Uses price structure and relative volume to filter stronger equity breakouts.",
+    rules: ["Compression", "Relative volume", "Close above range", "Retest check"],
+    risk: "Skip poor-liquidity symbols",
   },
   {
-    id: "crypto-momentum",
-    name: "Crypto Momentum Pulse",
-    market: "crypto",
+    id: "index-momentum",
+    name: "Index Momentum Guard",
+    market: "indian-index",
     style: "Momentum",
-    timeframe: "5m / 15m",
-    description: "Uses live crypto data to filter momentum bursts by volatility and confirmation.",
-    rules: ["EMA slope", "RSI regime", "Volume impulse", "ATR stop distance"],
-    risk: "Maximum 1% simulated account risk",
+    timeframe: "15m",
+    symbol: "NSE:NIFTY50",
+    description:
+      "Combines momentum, trend direction and volatility before generating a trade proposal.",
+    rules: ["EMA slope", "RSI regime", "ADX filter", "ATR sizing"],
+    risk: "Maximum 1% configured strategy risk",
   },
   {
-    id: "mean-reversion",
-    name: "Mean Reversion Discipline",
-    market: "crypto",
-    style: "Mean reversion",
-    timeframe: "15m / 1h",
-    description: "Looks for statistically stretched moves and requires re-entry into value before acting.",
-    rules: ["Z-score stretch", "Bollinger excursion", "Momentum deceleration", "Value re-entry"],
-    risk: "Disabled during extreme trend regime",
-  },
-  {
-    id: "forex-session",
-    name: "FX Session Structure",
+    id: "eurusd-session-break",
+    name: "EUR/USD Session Break",
     market: "forex",
     style: "Session breakout",
-    timeframe: "15m / 1h",
-    description: "Models London/New York session structure with volatility, spread and event-risk gates.",
-    rules: ["Session window", "Prior range", "ATR expansion", "Event-risk gate"],
-    risk: "Requires licensed/connected FX price feed",
+    timeframe: "15m",
+    symbol: "EUR/USD",
+    description:
+      "Tracks session range structure and waits for a confirmed break with volatility support.",
+    rules: ["Session range", "ATR expansion", "Trend filter", "Retest option"],
+    risk: "Block entries during abnormal spread conditions",
   },
   {
-    id: "no-trade-defense",
-    name: "No-Trade Defense",
-    market: "indian-index",
+    id: "gbpusd-trend",
+    name: "GBP/USD Trend Follow",
+    market: "forex",
+    style: "Trend",
+    timeframe: "30m",
+    symbol: "GBP/USD",
+    description:
+      "Uses higher-timeframe direction and momentum confirmation for trend continuation setups.",
+    rules: ["EMA alignment", "ADX strength", "Momentum confirm", "ATR stop"],
+    risk: "Reduce risk around major scheduled events",
+  },
+  {
+    id: "xauusd-momentum",
+    name: "Gold Momentum Guard",
+    market: "forex",
+    style: "Momentum",
+    timeframe: "15m",
+    symbol: "XAU/USD",
+    description:
+      "Filters gold momentum setups through trend, volatility and structure confirmation.",
+    rules: ["Trend direction", "ATR regime", "Structure break", "Risk-reward gate"],
+    risk: "Stricter size cap for high-volatility gold moves",
+  },
+  {
+    id: "eurusd-mean-reversion",
+    name: "EUR/USD Mean Reversion",
+    market: "forex",
+    style: "Mean reversion",
+    timeframe: "30m",
+    symbol: "EUR/USD",
+    description:
+      "Waits for a stretched move to lose momentum and return toward value before considering entry.",
+    rules: ["Bollinger stretch", "RSI extreme", "Momentum fade", "Value re-entry"],
+    risk: "Disabled in strong directional regimes",
+  },
+  {
+    id: "forex-no-trade-defense",
+    name: "Forex No-Trade Defense",
+    market: "forex",
     style: "Risk filter",
-    timeframe: "All",
-    description: "A defensive template whose goal is to reject weak setups when evidence conflicts.",
-    rules: ["Data freshness", "Timeframe disagreement", "Low liquidity", "Event-risk conflict"],
+    timeframe: "15m",
+    symbol: "EUR/USD",
+    description:
+      "A defensive template that rejects trades when price, data quality or risk conditions disagree.",
+    rules: ["Fresh data", "Spread check", "Trend conflict", "Risk limit"],
     risk: "Outputs NO TRADE when safety gates fail",
   },
 ];
