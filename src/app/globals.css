@@ -9,6 +9,9 @@
 @import "./phase-18-pro-max.css";
 @import "./phase-19-fno.css";
 @import "./final-prepush.css";
+@import "./zerion-luxury-palette.css";
+@import "./trading-workflow-final.css";
+@import "./payment-upgrade-flow.css";
 :root{--ink:#070B11;--espresso:#151E2A;--walnut:#8996A8;--bronze:#8996A8;--gold:#C4C1B9;--ivory:#C4C1B9;--mist:#C4C1B9;--danger:#151E2A;--success:#8996A8;--radius:22px}
 *{box-sizing:border-box}html{background:var(--ink);color:var(--ivory);scroll-behavior:smooth}body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0%,rgba(167,123,79,.16),transparent 30%),linear-gradient(180deg,#0e0c0a,#15100c 60%,#0d0b09);font-family:Arial,Helvetica,sans-serif}.glass{background:linear-gradient(135deg,rgba(43,27,18,.82),rgba(14,12,10,.72));border:1px solid rgba(215,183,126,.2);box-shadow:0 24px 70px rgba(0,0,0,.35);backdrop-filter:blur(20px)}.gold-text{background:linear-gradient(100deg,#f5e7c7,#d7b77e,#a77b4f);-webkit-background-clip:text;background-clip:text;color:transparent}.focus-ring:focus-visible{outline:2px solid var(--gold);outline-offset:3px}a{text-decoration:none;color:inherit}button,input,select,textarea{font:inherit}
 /* Zerion X1 marketing experience */

@@ -1,0 +1,6 @@
+.zx-upgrade-popover{position:fixed;right:18px;top:86px;z-index:70;width:min(390px,calc(100vw - 36px));padding:18px;border:1px solid rgba(230,216,195,.20);border-radius:20px;background:linear-gradient(145deg,rgba(62,74,63,.97),rgba(47,42,37,.98));box-shadow:0 28px 70px rgba(15,14,12,.34);backdrop-filter:blur(18px)}
+.zx-upgrade-popover__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.zx-upgrade-popover h3{font-size:1.2rem;margin:.3rem 0}.zx-upgrade-popover p{font-size:.86rem;line-height:1.55}.zx-upgrade-popover__actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.zx-proof-preview{margin-top:10px;max-height:240px;width:100%;object-fit:contain;border-radius:14px;border:1px solid rgba(230,216,195,.14);background:rgba(47,42,37,.65)}
+.zx-payment-proof-input{display:grid;gap:8px}.zx-payment-proof-input small{color:#E4E0DF;opacity:.74}
+.zx-admin-proof{display:grid;gap:8px}.zx-admin-proof img{max-width:260px;max-height:220px;object-fit:contain;border-radius:12px;border:1px solid rgba(230,216,195,.16)}
+@media(max-width:760px){.zx-upgrade-popover{left:12px;right:12px;top:auto;bottom:84px;width:auto}}

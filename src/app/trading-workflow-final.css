@@ -1,0 +1,5 @@
+.zx-chart-dedicated{min-height:calc(100vh - 150px)}
+.zx-chart-dedicated .zx-full-tradingview{height:calc(100vh - 240px)!important;min-height:720px!important}
+.zx-history-table{width:100%;min-width:760px}
+.zx-history-table th,.zx-history-table td{padding:12px 10px;text-align:left;border-bottom:1px solid rgba(230,216,195,.10)}
+@media(max-width:760px){.zx-chart-dedicated .zx-full-tradingview{height:680px!important;min-height:680px!important}}

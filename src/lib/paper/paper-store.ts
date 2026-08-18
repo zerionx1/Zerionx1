@@ -27,13 +27,13 @@ export const paperStore={
    const rows=await select("paper_positions",`owner_id=eq.${user.id}&id=eq.${encodeURIComponent(positionId)}&limit=1`);
    const row=rows[0];if(!row)throw new Error("Paper position not found");
    const position=positionFrom(row);if(!position.quantity)throw new Error("Paper position is already closed");
-   const fillPrice=position.markPrice||position.averagePrice;
-   const realizedDelta=(fillPrice-position.averagePrice)*position.quantity;
-   const realizedPnl=position.realizedPnl+realizedDelta;
-   const cash=account.cashBalance+(fillPrice*position.quantity);
-   await update("paper_positions",`id=eq.${position.id}`,{quantity:0,mark_price:fillPrice,unrealized_pnl:0,realized_pnl:realizedPnl,updated_at:new Date().toISOString()});
-   await update("paper_accounts",`id=eq.${account.id}`,{cash_balance:cash,buying_power:cash,equity:cash,daily_pnl:account.dailyPnl+realizedDelta,total_pnl:account.totalPnl+realizedDelta,updated_at:new Date().toISOString()});
-   return {...position,quantity:0,markPrice:fillPrice,unrealizedPnl:0,realizedPnl,exitPrice:fillPrice,realizedDelta};
+   const originalQty=position.quantity;const exitPrice=position.markPrice||position.averagePrice;
+   const realizedDelta=(exitPrice-position.averagePrice)*originalQty;
+   const totalRealized=position.realizedPnl+realizedDelta;
+   const newCash=account.cashBalance+(exitPrice*originalQty);
+   await insert("paper_trade_closures",{owner_id:user.id,account_id:account.id,position_id:position.id,symbol:position.symbol,market:position.market,quantity:originalQty,average_price:position.averagePrice,exit_price:exitPrice,realized_pnl:realizedDelta,closed_at:new Date().toISOString()});
+   await update("paper_positions",`id=eq.${position.id}`,{quantity:0,mark_price:exitPrice,unrealized_pnl:0,realized_pnl:totalRealized,updated_at:new Date().toISOString()});
+   await update("paper_accounts",`id=eq.${account.id}`,{cash_balance:newCash,buying_power:newCash,equity:newCash,daily_pnl:account.dailyPnl+realizedDelta,total_pnl:account.totalPnl+realizedDelta,updated_at:new Date().toISOString()});
+   return {...position,quantity:0,markPrice:exitPrice,unrealizedPnl:0,realizedPnl:totalRealized,exitPrice,realizedDelta};
  }
-
 };
