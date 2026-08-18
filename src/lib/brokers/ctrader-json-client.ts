@@ -8,6 +8,7 @@ const PAYLOAD = {
   ACCOUNT_AUTH_REQ: 2102,
   ACCOUNT_AUTH_RES: 2103,
   NEW_ORDER_REQ: 2106,
+  CLOSE_POSITION_REQ: 2111,
   SYMBOLS_LIST_REQ: 2114,
   SYMBOLS_LIST_RES: 2115,
   TRADER_REQ: 2121,
@@ -269,5 +270,15 @@ export async function placeCTraderOrder(input: {
     );
 
     return response.payload ?? {};
+  });
+}
+
+
+export async function closeCTraderPosition(input:{accountId:string;isLive:boolean;positionId:string;volume:number}){
+  if(!input.positionId||!Number.isFinite(input.volume)||input.volume<=0)throw new Error("A valid cTrader position and close volume are required");
+  return withAuthorizedAccount(input.accountId,input.isLive,async(ws,id)=>{
+    const requestId=send(ws,PAYLOAD.CLOSE_POSITION_REQ,{ctidTraderAccountId:id,positionId:input.positionId,volume:Math.round(input.volume*100)});
+    const response=await waitForMessage(ws,m=>m.clientMsgId===requestId||m.payloadType===PAYLOAD.EXECUTION_EVENT,15000);
+    return response.payload??{};
   });
 }

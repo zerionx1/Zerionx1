@@ -21,4 +21,19 @@ export const paperStore={
    const cashDelta=order.side==="buy"?-(fillPrice*order.filledQuantity):(fillPrice*order.filledQuantity);const cash=account.cashBalance+cashDelta;
    await update("paper_accounts",`id=eq.${account.id}`,{cash_balance:cash,buying_power:cash,equity:cash,updated_at:new Date().toISOString()});
   }
+,
+ async closePosition(positionId:string){
+   const user=await currentUser();const account=await this.getAccount();
+   const rows=await select("paper_positions",`owner_id=eq.${user.id}&id=eq.${encodeURIComponent(positionId)}&limit=1`);
+   const row=rows[0];if(!row)throw new Error("Paper position not found");
+   const position=positionFrom(row);if(!position.quantity)throw new Error("Paper position is already closed");
+   const fillPrice=position.markPrice||position.averagePrice;
+   const realizedDelta=(fillPrice-position.averagePrice)*position.quantity;
+   const realizedPnl=position.realizedPnl+realizedDelta;
+   const cash=account.cashBalance+(fillPrice*position.quantity);
+   await update("paper_positions",`id=eq.${position.id}`,{quantity:0,mark_price:fillPrice,unrealized_pnl:0,realized_pnl:realizedPnl,updated_at:new Date().toISOString()});
+   await update("paper_accounts",`id=eq.${account.id}`,{cash_balance:cash,buying_power:cash,equity:cash,daily_pnl:account.dailyPnl+realizedDelta,total_pnl:account.totalPnl+realizedDelta,updated_at:new Date().toISOString()});
+   return {...position,quantity:0,markPrice:fillPrice,unrealizedPnl:0,realizedPnl,exitPrice:fillPrice,realizedDelta};
+ }
+
 };

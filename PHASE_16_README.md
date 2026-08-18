@@ -1,0 +1,2 @@
+# Phase 16 Pricing & Billing
+Built for Zerion X1 after commit fd37a1f. Adds Free, Starter, Pro, Elite, Ultra, Prime and Enterprise; homepage/public pricing; dashboard billing; manual UPI+UTR verification; admin approval; subscriptions and quota helpers. Payment phone is 9019254743. UPI ID is intentionally prompted later because it was not supplied. Free users get Free access; paid plans unlock after admin verification.

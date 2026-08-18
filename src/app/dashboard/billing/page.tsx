@@ -1,0 +1,1 @@
+import {BillingWorkspace} from "@/components/billing/billing-workspace"; export default async function BillingPage({searchParams}:{searchParams:Promise<{plan?:string}>}){const p=await searchParams;return <main className="dashboard-page"><BillingWorkspace initialPlan={p.plan}/></main>}

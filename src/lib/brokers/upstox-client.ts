@@ -12,6 +12,14 @@ function accessTokenFrom(payload: Record<string, unknown>) {
   return token;
 }
 
+async function upstoxRequest(path: string, init?: RequestInit) {
+  const { token } = await getConnectedBrokerConnection("upstox");
+  const response = await fetch(`${API}${path}`, { ...init, headers: { Accept: "application/json", Authorization: `Bearer ${accessTokenFrom(token)}`, ...(init?.body ? { "Content-Type": "application/json" } : {}), ...(init?.headers ?? {}) }, cache: "no-store" });
+  const json = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(`Upstox request failed (${response.status})`);
+  return json;
+}
+
 async function upstoxGet(path: string) {
   const { token } = await getConnectedBrokerConnection("upstox");
   const response = await fetch(`${API}${path}`, {
@@ -40,6 +48,7 @@ export const upstoxClient = {
   holdings: () => upstoxGet("/portfolio/long-term-holdings"),
   orders: () => upstoxGet("/order/retrieve-all"),
   trades: () => upstoxGet("/order/trades/get-trades-for-day"),
+  exitAllPositions: (segment?: string) => upstoxRequest(`/order/positions/exit${segment ? `?segment=${encodeURIComponent(segment)}` : ""}`, { method: "POST" }),
 };
 
 export async function getUpstoxAccessTokenForUplink() {

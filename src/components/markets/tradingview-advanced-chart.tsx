@@ -2,13 +2,9 @@
 
 import { memo, useEffect, useId, useRef } from "react";
 
-type Props = {
-  symbol: string;
-  interval?: string;
-  height?: number;
-};
+type Props = { symbol: string; interval?: string; height?: number };
 
-function TradingViewAdvancedChartImpl({ symbol, interval = "15", height = 520 }: Props) {
+function TradingViewAdvancedChartImpl({ symbol, interval = "15", height = 800 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const id = useId().replace(/:/g, "");
 
@@ -19,7 +15,7 @@ function TradingViewAdvancedChartImpl({ symbol, interval = "15", height = 520 }:
 
     const widget = document.createElement("div");
     widget.className = "tradingview-widget-container__widget";
-    widget.style.height = "calc(100% - 26px)";
+    widget.style.height = "100%";
     widget.style.width = "100%";
     node.appendChild(widget);
 
@@ -33,8 +29,8 @@ function TradingViewAdvancedChartImpl({ symbol, interval = "15", height = 520 }:
       interval,
       timezone: "exchange",
       theme: "dark",
-      backgroundColor: "rgba(30, 11, 16, 1)",
-      gridColor: "rgba(117, 80, 88, 0.18)",
+      backgroundColor: "rgba(7,11,17,1)",
+      gridColor: "rgba(118,151,184,.14)",
       style: "1",
       locale: "en",
       withdateranges: true,
@@ -43,23 +39,21 @@ function TradingViewAdvancedChartImpl({ symbol, interval = "15", height = 520 }:
       hide_legend: false,
       hide_volume: false,
       allow_symbol_change: true,
-      save_image: false,
-      calendar: false,
+      calendar: true,
+      details: true,
+      hotlist: true,
       support_host: "https://www.tradingview.com",
     });
     node.appendChild(script);
-
-    return () => {
-      node.innerHTML = "";
-    };
+    return () => { node.innerHTML = ""; };
   }, [symbol, interval]);
 
   return (
     <div
       id={`tv-${id}`}
       ref={ref}
-      className="tradingview-widget-container overflow-hidden rounded-2xl border border-white/10"
-      style={{ height, width: "100%", background: "#1E0B10" }}
+      className="tradingview-widget-container zx-full-tradingview"
+      style={{ width: "100%", minHeight: height, height }}
     />
   );
 }

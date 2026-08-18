@@ -1,0 +1,1 @@
+import {getActivePlan} from "@/lib/billing/plan-service"; import {ok,fail} from "@/lib/security/api-response"; export async function GET(){try{return ok(await getActivePlan())}catch(e){return fail("SUBSCRIPTION_READ_FAILED",e instanceof Error?e.message:"Could not load subscription",500)}}
