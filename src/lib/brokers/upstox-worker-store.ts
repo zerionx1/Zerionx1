@@ -1,7 +1,5 @@
-import "server-only";
-
-import { openBrokerSecret } from "@/lib/brokers/token-vault";
-import { adminSelect } from "@/lib/supabase/admin-rest";
+import { openBrokerSecretCore } from "@/lib/brokers/token-vault-core";
+import { adminSelectCore } from "@/lib/supabase/admin-rest-core";
 
 type BrokerTokenPayload = Record<string, unknown>;
 
@@ -24,7 +22,7 @@ function accessTokenFrom(payload: BrokerTokenPayload) {
 export async function listConnectedUpstoxWorkerConnections(): Promise<
   UpstoxWorkerConnection[]
 > {
-  const rows = await adminSelect(
+  const rows = await adminSelectCore(
     "broker_connections",
     "broker_key=eq.upstox&status=eq.connected&select=id,owner_id,metadata",
   );
@@ -39,7 +37,7 @@ export async function listConnectedUpstoxWorkerConnections(): Promise<
       continue;
     }
 
-    const token = openBrokerSecret<BrokerTokenPayload>(sealed);
+    const token = openBrokerSecretCore<BrokerTokenPayload>(sealed);
 
     connections.push({
       connectionId: String(row.id),

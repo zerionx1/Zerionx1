@@ -2,10 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import WebSocket from "ws";
 
-import {
-  getUpstoxMarketDataFeedV3AuthorizeUrl,
-  getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken,
-} from "@/lib/brokers/upstox-client";
+import { getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken } from "@/lib/brokers/upstox-feed-auth-core";
 
 import { decodeUpstoxV3Feed } from "./protobuf";
 
@@ -44,11 +41,14 @@ export async function connectUpstoxV3MarketFeed(
     throw new Error("At least one Upstox instrument key is required");
   }
 
-  const authorizedUrl = options.accessToken
-    ? await getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken(
-        options.accessToken,
-      )
-    : await getUpstoxMarketDataFeedV3AuthorizeUrl();
+  if (!options.accessToken) {
+    throw new Error("Upstox worker access token is required");
+  }
+
+  const authorizedUrl =
+    await getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken(
+      options.accessToken,
+    );
 
   const socket = new WebSocket(authorizedUrl, {
     followRedirects: true,
