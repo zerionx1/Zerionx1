@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { callbackUrl } from "@/lib/brokers/oauth-config";
 import { sealBrokerSecret } from "@/lib/brokers/token-vault";
-import { currentUser, select, update } from "@/lib/supabase/rest";
+import { adminRest } from "@/lib/supabase/admin-rest";
 
 type Row = Record<string, unknown>;
 
@@ -13,37 +13,27 @@ function redirect(request: Request, query: string) {
 }
 
 export async function GET(request: Request) {
-  const user = await currentUser();
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const cookie = request.headers
-    .get("cookie")
-    ?.split(";")
-    .map((item) => item.trim())
-    .find((item) => item.startsWith("zx_broker_oauth="))
-    ?.split("=")
-    .slice(1)
-    .join("=");
 
-  if (!code || !state || cookie !== `upstox:${state}`) {
+  if (!code || !state) {
     return redirect(request, "error=upstox_oauth_state");
   }
 
-  const connection = (
-    await select(
-      "broker_connections",
-      `owner_id=eq.${user.id}&broker_key=eq.upstox&limit=1`,
-    )
-  )[0];
+  const rows = await adminRest<Row[]>(
+    `broker_connections?broker_key=eq.upstox&metadata->>oauth_state=eq.${encodeURIComponent(state)}&limit=1`,
+    { method: "GET" },
+  );
 
-  const metadata = (connection?.metadata ?? {}) as Record<string, unknown>;
-  if (!connection || metadata.oauth_state !== state) {
+  const connection = rows[0];
+  if (!connection) {
     return redirect(request, "error=upstox_oauth_state");
   }
 
   const clientId = process.env.UPSTOX_CLIENT_ID;
   const clientSecret = process.env.UPSTOX_CLIENT_SECRET;
+
   if (!clientId || !clientSecret) {
     return redirect(request, "error=upstox_not_configured");
   }
@@ -69,38 +59,44 @@ export async function GET(request: Request) {
     },
   );
 
-  const tokenPayload = (await tokenResponse.json().catch(() => null)) as
-    | Record<string, unknown>
-    | null;
+  const tokenPayload = (await tokenResponse.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
 
   if (!tokenResponse.ok || !tokenPayload?.access_token) {
-    await update(
-      "broker_connections",
-      `id=eq.${String(connection.id)}&owner_id=eq.${user.id}`,
+    await adminRest<Row[]>(
+      `broker_connections?id=eq.${encodeURIComponent(String(connection.id))}`,
       {
-        status: "degraded",
-        metadata: {
-          provider: "upstox",
-          oauth_error: "token_exchange_failed",
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "degraded",
+          metadata: {
+            provider: "upstox",
+            oauth_error: "token_exchange_failed",
+            updated_at: new Date().toISOString(),
+          },
           updated_at: new Date().toISOString(),
-        },
-        updated_at: new Date().toISOString(),
+        }),
       },
     );
+
     return redirect(request, "error=upstox_token");
   }
 
-  await update(
-    "broker_connections",
-    `id=eq.${String(connection.id)}&owner_id=eq.${user.id}`,
+  await adminRest<Row[]>(
+    `broker_connections?id=eq.${encodeURIComponent(String(connection.id))}`,
     {
-      status: "connected",
-      metadata: {
-        provider: "upstox",
-        token_envelope: sealBrokerSecret(tokenPayload),
-        connected_at: new Date().toISOString(),
-      },
-      updated_at: new Date().toISOString(),
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "connected",
+        metadata: {
+          provider: "upstox",
+          token_envelope: sealBrokerSecret(tokenPayload),
+          connected_at: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      }),
     },
   );
 
