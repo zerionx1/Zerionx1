@@ -1,4 +1,5 @@
 import { askPowerX } from "@/lib/ai/powerx-client";
+import { consumeQuota } from "@/lib/billing/quotas";
 import { ok, fail } from "@/lib/security/api-response";
 import { currentUser, insert } from "@/lib/supabase/rest";
 
@@ -27,6 +28,16 @@ export async function POST(request: Request) {
     payload: {},
     created_at: now,
   });
+
+  try {
+    await consumeQuota("ai", 1);
+  } catch (error) {
+    return fail(
+      "PLAN_LIMIT_REACHED",
+      error instanceof Error ? error.message : "AI quota reached",
+      403,
+    );
+  }
 
   const result = await askPowerX({
     messages: [

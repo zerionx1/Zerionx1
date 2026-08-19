@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   Radio,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { GlobalMarketSearch } from "@/components/markets/global-market-search";
@@ -18,18 +19,30 @@ const marketCards: {
   label: string;
   description: string;
 }[] = [
-  { kind: "indian-equity", label: "Indian Equity", description: "NSE and BSE cash market" },
+  { kind: "indian-equity", label: "Indian Equity", description: "Search NSE/BSE stocks through Upstox" },
   { kind: "indian-index", label: "Indices", description: "Nifty, Bank Nifty and benchmarks" },
-  { kind: "indian-futures", label: "Futures", description: "Index and stock derivatives" },
-  { kind: "indian-options", label: "Options", description: "Option chains and contracts" },
-  { kind: "commodity", label: "Commodities", description: "MCX metals and energy" },
-  { kind: "crypto", label: "Crypto", description: "CoinDCX integration is next" },
-  { kind: "forex", label: "Forex", description: "MT5 bridge integration is next" },
-  { kind: "us-equity", label: "US Stocks", description: "Future provider integration" },
+  { kind: "indian-futures", label: "Futures", description: "Search concrete NSE/BSE futures" },
+  { kind: "indian-options", label: "Options", description: "Search strikes, CE/PE and expiries" },
+  { kind: "commodity", label: "Commodities", description: "MCX instruments through provider search" },
+  { kind: "crypto", label: "Crypto", description: "CoinDCX live markets" },
+  { kind: "forex", label: "Forex", description: "Amplify/Exness connector phase pending" },
+  { kind: "us-equity", label: "US Stocks", description: "Provider integration pending" },
   { kind: "etf", label: "ETFs", description: "Exchange-traded funds" },
 ];
 
+function detailHref(item: MarketOverviewItem) {
+  const params = new URLSearchParams({
+    id: item.id,
+    symbol: item.symbol,
+    name: item.displayName,
+    market: item.market,
+    exchange: item.exchange,
+  });
+  return `/dashboard/markets/instrument?${params.toString()}`;
+}
+
 export function MultiMarketExplorer() {
+  const router = useRouter();
   const [active, setActive] = useState<MarketKind>("indian-index");
   const [rows, setRows] = useState<MarketOverviewItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +62,7 @@ export function MultiMarketExplorer() {
         });
 
     void load();
-    const timer = window.setInterval(() => void load(), 2_000);
+    const timer = window.setInterval(() => void load(), 2_500);
 
     return () => {
       mounted = false;
@@ -109,9 +122,11 @@ export function MultiMarketExplorer() {
         ) : (
           <div className="mt-5 grid gap-3">
             {rows.map((item) => (
-              <article
+              <button
+                type="button"
                 key={item.id}
-                className="grid gap-3 rounded-2xl border border-white/8 bg-black/15 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                onClick={() => router.push(detailHref(item))}
+                className="grid gap-3 rounded-2xl border border-white/8 bg-black/15 p-4 text-left transition hover:border-amber-100/30 hover:bg-white/[.06] sm:grid-cols-[1fr_auto] sm:items-center"
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -121,6 +136,9 @@ export function MultiMarketExplorer() {
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-white/45">{item.displayName}</p>
+                  <span className="mt-2 inline-block text-xs text-amber-100/60">
+                    Open chart →
+                  </span>
                 </div>
 
                 {item.quote ? (
@@ -142,19 +160,15 @@ export function MultiMarketExplorer() {
                       )}
                       {item.quote.changePercent.toFixed(2)}%
                     </span>
-                    <p className="text-xs text-white/35">
-                      {item.quote.delayed ? "Delayed provider" : "Upstox live"}
-                    </p>
+                    <p className="text-xs text-white/35">Provider live</p>
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-2 text-sm text-white/40">
                     <Activity className="h-4 w-4" />
-                    {active.startsWith("indian-")
-                      ? "Waiting for Upstox live feed"
-                      : "Provider integration pending"}
+                    Open to resolve live provider instrument
                   </div>
                 )}
-              </article>
+              </button>
             ))}
           </div>
         )}

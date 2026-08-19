@@ -38,9 +38,11 @@ type Status = Record<
   string,
   {
     configured: boolean;
-    clientId: boolean;
-    clientSecret: boolean;
-    redirectUri: boolean;
+    clientId?: boolean;
+    clientSecret?: boolean;
+    redirectUri?: boolean;
+    apiKey?: boolean;
+    apiSecret?: boolean;
     encryptionKey: boolean;
   }
 >;
@@ -48,15 +50,15 @@ type Status = Record<
 const marketCopy = {
   india: {
     title: "Indian Markets",
-    copy: "Connect Upstox for equities, indices, futures and options. F&O contracts become tradable after the provider session is authorized.",
+    copy: "Connect Upstox for equities, indices, futures and options.",
   },
   forex: {
     title: "Forex",
-    copy: "Connect cTrader and authorize Zerion X1 for the Forex trading accounts you choose.",
+    copy: "MT5 Bridge integration is the next live Forex connector.",
   },
   crypto: {
     title: "Crypto",
-    copy: "Live crypto account linking remains Coming Soon in this release.",
+    copy: "Connect CoinDCX for live crypto market data, candles, wallet balances and account events.",
   },
 } as const;
 
@@ -110,6 +112,7 @@ export function BrokerConnectionCenter() {
         window.location.assign(j.data.authorizationUrl);
         return;
       }
+      setMessage(`${broker.name} connected successfully.`);
       await load();
     } finally {
       setBusy(null);
@@ -173,7 +176,7 @@ export function BrokerConnectionCenter() {
                   ? "Forex"
                   : "Crypto"}
             </span>
-            {v === "crypto" ? <small>Coming soon</small> : null}
+            {v === "forex" ? <small>Coming soon</small> : null}
           </button>
         ))}
       </div>
@@ -192,6 +195,7 @@ export function BrokerConnectionCenter() {
           const coming = broker.availability === "coming-soon";
           const server = status[broker.key];
           const configured = server?.configured ?? broker.configured ?? false;
+
           return (
             <article className="zx-broker-card" key={broker.key}>
               <div className="zx-broker-card__top">
@@ -212,8 +216,10 @@ export function BrokerConnectionCenter() {
                         : "Credentials missing on deployed server"}
                 </span>
               </div>
+
               <h3>{broker.name}</h3>
               <p>{broker.description}</p>
+
               {!coming ? (
                 <>
                   <div className="zx-capability-row">
@@ -221,8 +227,10 @@ export function BrokerConnectionCenter() {
                     <span>Orders</span>
                     <span>Positions</span>
                     <span>Risk checks</span>
-                    {broker.key === "upstox" ? <span>F&O</span> : null}
+                    {broker.key === "upstox" ? <span>F&amp;O</span> : null}
+                    {broker.key === "coindcx" ? <span>Crypto</span> : null}
                   </div>
+
                   <div className="zx-broker-actions">
                     {connected && connection ? (
                       <>
@@ -248,7 +256,7 @@ export function BrokerConnectionCenter() {
                           className="zx-primary-action"
                         >
                           {busy === broker.key ? (
-                            "Opening secure login…"
+                            "Connecting securely…"
                           ) : (
                             <>
                               <LockKeyhole className="mr-2 h-4 w-4" />
@@ -256,6 +264,7 @@ export function BrokerConnectionCenter() {
                             </>
                           )}
                         </button>
+
                         {broker.createAccountUrl ? (
                           <a
                             href={broker.createAccountUrl}
@@ -275,17 +284,13 @@ export function BrokerConnectionCenter() {
                       </>
                     )}
                   </div>
+
                   {!configured ? (
                     <div className="zx19-credential-diagnostic">
-                      <strong>
-                        Code is ready, deployment environment is not seeing
-                        every credential.
-                      </strong>
+                      <strong>Deployment credentials are incomplete.</strong>
                       <p>
-                        If these values are present only in Termux .env.local,
-                        Vercel cannot read them. Add the same variables to the
-                        deployed project&apos;s Environment Variables, then
-                        redeploy.
+                        Add the provider variables to Vercel and Render, then
+                        redeploy before connecting the account.
                       </p>
                     </div>
                   ) : null}
@@ -293,10 +298,7 @@ export function BrokerConnectionCenter() {
               ) : (
                 <div className="zx-coming-soon-box">
                   <strong>Coming soon.</strong>
-                  <p>
-                    Research can remain available while live crypto linking
-                    stays disabled.
-                  </p>
+                  <p>This provider is not enabled for live linking yet.</p>
                 </div>
               )}
             </article>

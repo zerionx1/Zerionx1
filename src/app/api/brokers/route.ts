@@ -4,6 +4,11 @@ import {
   brokerConfigured,
   type OAuthBrokerKey,
 } from "@/lib/brokers/oauth-config";
+import {
+  coinDcxServerCredentials,
+  verifyCoinDcxCredentials,
+} from "@/lib/brokers/coindcx-core";
+import { sealBrokerSecret } from "@/lib/brokers/token-vault";
 import { fail, ok } from "@/lib/security/api-response";
 import {
   currentUser,
@@ -13,10 +18,13 @@ import {
   update,
 } from "@/lib/supabase/rest";
 
-type Row = Record<string, unknown>;
-
 function isOAuthBroker(key: string): key is OAuthBrokerKey {
   return key === "upstox" || key === "ctrader";
+}
+
+function configured(key: string) {
+  if (key === "coindcx") return Boolean(coinDcxServerCredentials());
+  return isOAuthBroker(key) ? brokerConfigured(key) : false;
 }
 
 export async function GET() {
@@ -29,12 +37,61 @@ export async function GET() {
   const catalog = brokerCatalog.map((broker) => ({
     ...broker,
     configured:
-      isOAuthBroker(broker.key) && broker.availability !== "coming-soon"
-        ? brokerConfigured(broker.key)
-        : false,
+      broker.availability !== "coming-soon" ? configured(broker.key) : false,
   }));
 
   return ok({ catalog, connections });
+}
+
+async function connectCoinDcx(userId: string) {
+  const credentials = coinDcxServerCredentials();
+  if (!credentials) {
+    return fail(
+      "BROKER_NOT_CONFIGURED",
+      "CoinDCX API key and secret are not configured on the server.",
+      503,
+    );
+  }
+
+  const info = await verifyCoinDcxCredentials(credentials);
+  const existing = (
+    await select(
+      "broker_connections",
+      `owner_id=eq.${userId}&broker_key=eq.coindcx&limit=1`,
+    )
+  )[0];
+
+  const metadata = {
+    provider: "coindcx",
+    token_envelope: sealBrokerSecret({
+      api_key: credentials.apiKey,
+      api_secret: credentials.apiSecret,
+    }),
+    verified_at: new Date().toISOString(),
+    account_info_present: Array.isArray(info) && info.length > 0,
+  };
+
+  if (existing) {
+    await update(
+      "broker_connections",
+      `id=eq.${String(existing.id)}&owner_id=eq.${userId}`,
+      {
+        status: "connected",
+        metadata,
+        updated_at: new Date().toISOString(),
+      },
+    );
+  } else {
+    await insert("broker_connections", {
+      owner_id: userId,
+      broker_key: "coindcx",
+      display_name: "CoinDCX",
+      status: "connected",
+      metadata,
+    });
+  }
+
+  return ok({ connected: true, brokerKey: "coindcx" });
 }
 
 export async function POST(request: Request) {
@@ -54,6 +111,20 @@ export async function POST(request: Request) {
       `${broker.name} is not enabled for live account connection yet.`,
       409,
     );
+  }
+
+  if (broker.key === "coindcx") {
+    try {
+      return await connectCoinDcx(user.id);
+    } catch (error) {
+      return fail(
+        "BROKER_AUTH_FAILED",
+        error instanceof Error
+          ? error.message
+          : "CoinDCX credential verification failed.",
+        401,
+      );
+    }
   }
 
   if (!isOAuthBroker(broker.key)) {

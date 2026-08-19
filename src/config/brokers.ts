@@ -27,7 +27,7 @@ export const brokerCatalog: BrokerAdapterDescriptor[] = [
     supportsSandbox: false,
     availability: "coming-soon",
     description:
-      "MT5 broker accounts will connect through the external Zerion MT5 Bridge. MT5 is the terminal/protocol layer, not the broker.",
+      "MT5 broker accounts will connect through the external Zerion MT5 Bridge.",
     capabilities: {
       marketData: false,
       orders: false,
@@ -37,20 +37,21 @@ export const brokerCatalog: BrokerAdapterDescriptor[] = [
     },
   },
   {
-    key: "coindcx-coming-soon",
+    key: "coindcx",
     name: "CoinDCX",
     kind: "crypto",
-    authMode: "session",
+    authMode: "api-key",
     supportsSandbox: false,
-    availability: "coming-soon",
+    availability: "available",
     description:
-      "CoinDCX account, historical data and realtime socket integration is the next V1 connector after Upstox.",
+      "Connect CoinDCX for crypto balances, realtime spot prices, candles and account events.",
+    createAccountUrl: "https://coindcx.com/",
     capabilities: {
-      marketData: false,
-      orders: false,
-      positions: false,
-      funds: false,
-      websocket: false,
+      marketData: true,
+      orders: true,
+      positions: true,
+      funds: true,
+      websocket: true,
     },
   },
 ];

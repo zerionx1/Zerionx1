@@ -1,17 +1,22 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, UserRound, X } from "lucide-react";
+
 import { dashboardNav } from "@/config/dashboard-nav";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
+
 interface SidebarProps {
   mobile?: boolean;
   onClose?: () => void;
 }
+
 export function Sidebar({ mobile = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+
   async function handleLogout() {
     const supabase = createBrowserSupabaseClient();
     await supabase.auth.signOut();
@@ -19,14 +24,17 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
     router.replace("/login");
     router.refresh();
   }
+
   return (
     <aside
       className={cn(
         "x1-sidebar flex min-h-screen w-72 flex-col border-r p-5",
-        mobile ? "w-full border-r-0" : "hidden lg:flex",
+        mobile
+          ? "h-[100dvh] min-h-0 w-full overflow-hidden border-r-0"
+          : "hidden lg:flex",
       )}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex shrink-0 items-center justify-between">
         <Link
           href="/dashboard"
           onClick={onClose}
@@ -45,11 +53,13 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
           </button>
         ) : null}
       </div>
-      <nav className="mt-8 flex-1 space-y-1 overflow-y-auto">
+
+      <nav className="mt-8 min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pb-8">
         {dashboardNav.map(({ label, href, icon: Icon, badge }) => {
           const active =
             pathname === href ||
             (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+
           return (
             <Link
               key={href}
@@ -69,7 +79,8 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
           );
         })}
       </nav>
-      <div className="mt-6 space-y-2 border-t border-[rgba(230,216,195,.14)] pt-5">
+
+      <div className="shrink-0 space-y-2 border-t border-[rgba(230,216,195,.14)] bg-inherit pt-5">
         <Link
           href="/dashboard/settings"
           onClick={onClose}

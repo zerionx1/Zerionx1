@@ -56,6 +56,10 @@ export const upstoxClient = {
     upstoxV2Get(
       `/instruments/search?query=${encodeURIComponent(query)}${filters ? `&${filters}` : ""}`,
     ),
+  fullQuote: (instrumentKey: string) =>
+    upstoxV2Get(
+      `/market-quote/quotes?instrument_key=${encodeURIComponent(instrumentKey)}`,
+    ),
   historicalV3: (
     instrumentKey: string,
     unit: "minutes" | "hours" | "days" | "weeks" | "months",

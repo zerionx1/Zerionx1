@@ -1,8 +1,22 @@
 import http from "node:http";
 
+import { startBackgroundAiLoop } from "@/workers/background-ai-loop";
+
 import { WebSocket, WebSocketServer } from "ws";
 
+import { getCoinDcxTicker } from "@/lib/brokers/coindcx-core";
+import { scanConnectedCoinDcxWorkerConnections } from "@/lib/brokers/coindcx-worker-store";
 import { scanConnectedUpstoxWorkerConnections } from "@/lib/brokers/upstox-worker-store";
+import {
+  COINDCX_PAIRS,
+  normalizeCoinDcxTicker,
+  normalizeCoinDcxTrade,
+  type CoinDcxRealtimeQuote,
+} from "@/lib/market-data/providers/coindcx/feed-normalizer";
+import {
+  connectCoinDcxMarketSocket,
+  connectCoinDcxPrivateSocket,
+} from "@/lib/market-data/providers/coindcx/socket";
 import {
   UPSTOX_INSTRUMENTS,
   normalizeUpstoxFeedQuote,
@@ -11,37 +25,66 @@ import {
 import { connectUpstoxV3MarketFeed } from "@/lib/market-data/providers/upstox/socket";
 
 const PORT = Number(process.env.PORT ?? 10000);
-const INSTRUMENT_KEYS = Object.values(UPSTOX_INSTRUMENTS);
+const UPSTOX_KEYS = Object.values(UPSTOX_INSTRUMENTS);
+const COINDCX_KEYS = Object.values(COINDCX_PAIRS);
 const RECONNECT_MS = 5_000;
 
-type WorkerHealth = {
-  startedAt: string;
+type ProviderHealth = {
   accounts: number;
-  skippedConnections: number;
   activeSockets: number;
+  skippedConnections: number;
   subscribedInstruments: number;
   lastTickAt: string | null;
   lastError: string | null;
 };
 
-const health: WorkerHealth = {
-  startedAt: new Date().toISOString(),
-  accounts: 0,
-  skippedConnections: 0,
-  activeSockets: 0,
-  subscribedInstruments: INSTRUMENT_KEYS.length,
-  lastTickAt: null,
-  lastError: null,
+const startedAt = new Date().toISOString();
+const providers: Record<"upstox" | "coindcx", ProviderHealth> = {
+  upstox: {
+    accounts: 0,
+    activeSockets: 0,
+    skippedConnections: 0,
+    subscribedInstruments: UPSTOX_KEYS.length,
+    lastTickAt: null,
+    lastError: null,
+  },
+  coindcx: {
+    accounts: 0,
+    activeSockets: 0,
+    skippedConnections: 0,
+    subscribedInstruments: COINDCX_KEYS.length,
+    lastTickAt: null,
+    lastError: null,
+  },
 };
 
-const quotes = new Map<string, ZerionRealtimeQuote>();
+type AnyQuote = ZerionRealtimeQuote | CoinDcxRealtimeQuote;
+const quotes = new Map<string, AnyQuote>();
 const wss = new WebSocketServer({ noServer: true });
 let shuttingDown = false;
 
-function publicHealth() {
+function aggregateHealth() {
+  const activeSockets =
+    providers.upstox.activeSockets + providers.coindcx.activeSockets;
+  const lastTimes = [
+    providers.upstox.lastTickAt,
+    providers.coindcx.lastTickAt,
+  ].filter((value): value is string => Boolean(value));
+
   return {
-    ok: health.activeSockets > 0 && Boolean(health.lastTickAt),
-    ...health,
+    ok: activeSockets > 0 && lastTimes.length > 0,
+    startedAt,
+    accounts: providers.upstox.accounts + providers.coindcx.accounts,
+    activeSockets,
+    subscribedInstruments:
+      providers.upstox.subscribedInstruments +
+      providers.coindcx.subscribedInstruments,
+    lastTickAt: lastTimes.sort().at(-1) ?? null,
+    lastError:
+      activeSockets > 0
+        ? null
+        : providers.upstox.lastError ?? providers.coindcx.lastError,
+    providers,
   };
 }
 
@@ -72,6 +115,13 @@ function quoteFor(input: string) {
   return undefined;
 }
 
+function remember(quote: AnyQuote) {
+  quotes.set(quote.instrumentId, quote);
+  providers[quote.provider].lastTickAt = quote.timestamp;
+  providers[quote.provider].lastError = null;
+  broadcast({ type: "quote", data: quote });
+}
+
 function broadcast(payload: unknown) {
   const message = JSON.stringify(payload);
   for (const client of wss.clients) {
@@ -79,95 +129,160 @@ function broadcast(payload: unknown) {
   }
 }
 
-async function runConnection(
+async function runUpstoxConnection(
   connection: Awaited<ReturnType<typeof scanConnectedUpstoxWorkerConnections>>["connections"][number],
 ) {
   if (shuttingDown) return;
-
   let counted = false;
 
   try {
     await connectUpstoxV3MarketFeed({
       accessToken: connection.accessToken,
-      instrumentKeys: INSTRUMENT_KEYS,
+      instrumentKeys: UPSTOX_KEYS,
       mode: "full",
       onMessage: (message) => {
         const response = message as { feeds?: Record<string, unknown> };
-
         for (const [instrumentKey, feed] of Object.entries(response.feeds ?? {})) {
           try {
             const quote = normalizeUpstoxFeedQuote(instrumentKey, feed);
-            quotes.set(instrumentKey, quote);
-            health.lastTickAt = quote.timestamp;
-            health.lastError = null;
-
-            broadcast({
-              type: "quote",
-              data: quote,
-            });
-
-            console.log(
-              JSON.stringify({
-                type: "upstox_tick",
-                symbol: quote.symbol,
-                price: quote.price,
-                timestamp: quote.timestamp,
-              }),
-            );
+            remember(quote);
           } catch {
-            // Market-info/snapshot frames that do not contain LTPC are valid.
+            // Snapshot frames without LTPC are valid.
           }
         }
       },
       onError: (error) => {
-        health.lastError = error.message;
-        console.error("Upstox socket error:", error.message);
+        providers.upstox.lastError = error.message;
       },
       onClose: () => {
         if (counted) {
-          health.activeSockets = Math.max(0, health.activeSockets - 1);
+          providers.upstox.activeSockets = Math.max(
+            0,
+            providers.upstox.activeSockets - 1,
+          );
           counted = false;
         }
         if (!shuttingDown) {
-          setTimeout(() => void runConnection(connection), RECONNECT_MS);
+          setTimeout(() => void runUpstoxConnection(connection), RECONNECT_MS);
         }
       },
     });
 
-    health.activeSockets += 1;
+    providers.upstox.activeSockets += 1;
     counted = true;
   } catch (error) {
-    health.lastError =
-      error instanceof Error ? error.message : "Upstox worker connection failed";
-    console.error("Upstox worker connection failed:", health.lastError);
-
+    providers.upstox.lastError =
+      error instanceof Error ? error.message : "Upstox connection failed";
     if (!shuttingDown) {
-      setTimeout(() => void runConnection(connection), RECONNECT_MS);
+      setTimeout(() => void runUpstoxConnection(connection), RECONNECT_MS);
     }
   }
 }
 
-async function startUpstoxSockets() {
+async function startUpstox() {
   const scan = await scanConnectedUpstoxWorkerConnections();
-  health.accounts = scan.connections.length;
-  health.skippedConnections = scan.skipped;
+  providers.upstox.accounts = scan.connections.length;
+  providers.upstox.skippedConnections = scan.skipped;
 
   if (scan.connections.length === 0) {
-    health.lastError =
-      scan.skipped > 0
-        ? "No decryptable connected Upstox account found"
-        : "No connected Upstox accounts found";
+    providers.upstox.lastError = "No connected Upstox account found";
     return;
   }
 
-  await Promise.all(scan.connections.map((connection) => runConnection(connection)));
+  await Promise.all(
+    scan.connections.map((connection) => runUpstoxConnection(connection)),
+  );
+}
+
+async function startCoinDcx() {
+  try {
+    const ticker = await getCoinDcxTicker();
+    for (const row of ticker) {
+      const quote = normalizeCoinDcxTicker(row);
+      if (quote) remember(quote);
+    }
+  } catch (error) {
+    providers.coindcx.lastError =
+      error instanceof Error ? error.message : "CoinDCX ticker bootstrap failed";
+  }
+
+  let publicCounted = false;
+  connectCoinDcxMarketSocket({
+    pairs: COINDCX_KEYS,
+    onTrade: (response) => {
+      const row = response as { data?: { s?: string } };
+      const pair = String(row.data?.s ?? "");
+      const previous = quoteFor(pair);
+      const quote = normalizeCoinDcxTrade(
+        response,
+        previous?.provider === "coindcx" ? previous : undefined,
+      );
+      if (quote) remember(quote);
+    },
+    onOpen: () => {
+      if (!publicCounted) {
+        providers.coindcx.activeSockets += 1;
+        publicCounted = true;
+      }
+    },
+    onClose: () => {
+      if (publicCounted) {
+        providers.coindcx.activeSockets = Math.max(
+          0,
+          providers.coindcx.activeSockets - 1,
+        );
+        publicCounted = false;
+      }
+    },
+    onError: (error) => {
+      providers.coindcx.lastError = error.message;
+    },
+  });
+
+  const scan = await scanConnectedCoinDcxWorkerConnections();
+  providers.coindcx.accounts = scan.connections.length;
+  providers.coindcx.skippedConnections = scan.skipped;
+
+  for (const connection of scan.connections) {
+    let counted = false;
+    connectCoinDcxPrivateSocket({
+      credentials: connection.credentials,
+      onOpen: () => {
+        if (!counted) {
+          providers.coindcx.activeSockets += 1;
+          counted = true;
+        }
+      },
+      onClose: () => {
+        if (counted) {
+          providers.coindcx.activeSockets = Math.max(
+            0,
+            providers.coindcx.activeSockets - 1,
+          );
+          counted = false;
+        }
+      },
+      onError: (error) => {
+        providers.coindcx.lastError = error.message;
+      },
+      onBalance: () => {
+        // The authenticated socket remains active; REST account endpoint
+        // retrieves the authoritative wallet snapshot on demand.
+      },
+      onOrder: () => {},
+      onTrade: () => {},
+    });
+  }
 }
 
 const server = http.createServer((request, response) => {
-  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+  const url = new URL(
+    request.url ?? "/",
+    `http://${request.headers.host ?? "localhost"}`,
+  );
 
   if (url.pathname === "/" || url.pathname === "/health") {
-    return json(response, 200, publicHealth());
+    return json(response, 200, aggregateHealth());
   }
 
   if (url.pathname === "/quote") {
@@ -195,7 +310,10 @@ const server = http.createServer((request, response) => {
 });
 
 server.on("upgrade", (request, socket, head) => {
-  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+  const url = new URL(
+    request.url ?? "/",
+    `http://${request.headers.host ?? "localhost"}`,
+  );
   if (url.pathname !== "/realtime") {
     socket.destroy();
     return;
@@ -211,7 +329,7 @@ wss.on("connection", (client) => {
     JSON.stringify({
       type: "snapshot",
       data: [...quotes.values()],
-      health: publicHealth(),
+      health: aggregateHealth(),
     }),
   );
 });
@@ -220,10 +338,13 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`Zerion realtime worker listening on port ${PORT}`);
 });
 
-void startUpstoxSockets().catch((error) => {
-  health.lastError =
-    error instanceof Error ? error.message : "Worker startup failed";
-  console.error("Realtime worker startup failed:", health.lastError);
+startBackgroundAiLoop();
+
+void Promise.all([startUpstox(), startCoinDcx()]).catch((error) => {
+  console.error(
+    "Realtime worker startup failed:",
+    error instanceof Error ? error.message : error,
+  );
 });
 
 function shutdown() {

@@ -10,17 +10,26 @@ export async function GET() {
       cache: "no-store",
     });
     const worker = await response.json().catch(() => null);
+    const providerState = worker?.providers ?? {};
 
     return NextResponse.json({
       status: response.ok && worker?.ok ? "live" : "degraded",
       providers: [
         {
           provider: "upstox",
-          state: worker?.ok ? "connected" : "degraded",
-          accounts: worker?.accounts ?? 0,
-          activeSockets: worker?.activeSockets ?? 0,
-          lastTickAt: worker?.lastTickAt ?? null,
-          message: worker?.lastError ?? null,
+          state:
+            (providerState.upstox?.activeSockets ?? 0) > 0
+              ? "connected"
+              : "degraded",
+          ...(providerState.upstox ?? {}),
+        },
+        {
+          provider: "coindcx",
+          state:
+            (providerState.coindcx?.activeSockets ?? 0) > 0
+              ? "connected"
+              : "degraded",
+          ...(providerState.coindcx ?? {}),
         },
       ],
       checkedAt: new Date().toISOString(),

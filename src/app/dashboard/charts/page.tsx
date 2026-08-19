@@ -1,2 +1,18 @@
 import { MarketChartTerminal } from "@/components/markets/market-chart-terminal";
-export default function ChartsPage(){return <main className="dashboard-page zx-chart-dedicated"><div className="page-heading"><div><p className="eyebrow">CHARTS</p><h1>Full Market Chart Terminal</h1><p>Chart-first workspace for stocks, indices, F&amp;O and Forex. Positions and history stay on their own pages.</p></div></div><MarketChartTerminal/></main>}
+import { ActiveStrategyRuntime } from "@/components/strategies/active-strategy-runtime";
+
+export default function ChartsPage() {
+  return (
+    <main className="dashboard-page zx-chart-dedicated">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">CHARTS</p>
+          <h1>Full Market Chart Terminal</h1>
+          <p>Chart-first workspace for provider-backed markets and enabled strategies.</p>
+        </div>
+      </div>
+      <ActiveStrategyRuntime />
+      <MarketChartTerminal />
+    </main>
+  );
+}

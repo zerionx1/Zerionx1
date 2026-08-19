@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { MarketKind, Timeframe } from "@/types/market";
 import type { StrategyDefinition, StrategyNode } from "@/types/strategy";
 
-type Template = {
+type ReadyStrategy = {
   key: string;
   name: string;
   description: string;
@@ -20,7 +20,7 @@ type Template = {
   nodes: StrategyNode[];
 };
 
-const templates: Template[] = [
+const templates: ReadyStrategy[] = [
   {
     key: "nifty-orb",
     name: "NIFTY Opening Range Breakout",
@@ -111,7 +111,7 @@ export function StrategyMarketplace() {
     return matchesQuery && (market === "all" || item.market === market);
   }), [market, query]);
 
-  async function install(template: Template) {
+  async function install(template: ReadyStrategy) {
     setBusy(template.key);
     setError("");
     const now = new Date().toISOString();
@@ -123,7 +123,7 @@ export function StrategyMarketplace() {
       markets: [template.market],
       symbols: [template.symbol],
       timeframe: template.timeframe,
-      status: "draft",
+      status: "paper-ready",
       nodes: template.nodes,
       edges: template.nodes.slice(1).map((node, index) => ({
         id: `edge-${index}`,
@@ -152,10 +152,30 @@ export function StrategyMarketplace() {
     const payload = await response.json();
     setBusy(undefined);
     if (!response.ok) {
-      setError(payload.error?.message ?? "Unable to install strategy template.");
+      setError(payload.error?.message ?? "Unable to add ready strategy.");
       return;
     }
-    router.push(`/dashboard/strategies/${payload.data.strategy.id}`);
+    const installed = payload.data.strategy;
+    const deployment = await fetch("/api/algo/deployments", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: installed.name,
+        strategyId: installed.id,
+        mode: "paper",
+        market: installed.markets[0],
+        symbol: installed.symbols[0],
+        capital: Math.max(template.minCapital, 1),
+        autoStart: true,
+        riskConfig: installed.risk,
+      }),
+    });
+    const deploymentBody = await deployment.json();
+    if (!deployment.ok) {
+      setError(deploymentBody.error?.message ?? "Strategy was saved but could not be enabled.");
+      return;
+    }
+    router.push(`/dashboard/charts?strategy=${encodeURIComponent(installed.id)}`);
     router.refresh();
   }
 
@@ -163,8 +183,8 @@ export function StrategyMarketplace() {
     <section className="panel overflow-hidden p-0">
       <div className="zip3-marketplace-hero p-6 md:p-9">
         <p className="eyebrow">Zerion curated marketplace</p>
-        <h2 className="mt-3 max-w-3xl text-3xl font-semibold md:text-5xl">Production-minded strategy blueprints for every market.</h2>
-        <p className="mt-4 max-w-2xl text-white/60">Install a template into your private workspace, customize the rules, validate it and run it through historical testing before paper deployment.</p>
+        <h2 className="mt-3 max-w-3xl text-3xl font-semibold md:text-5xl">Ready-to-use strategies for supported markets.</h2>
+        <p className="mt-4 max-w-2xl text-white/60">Add a ready strategy to your workspace with its preconfigured rules. Validate and paper-test it before live deployment.</p>
       </div>
     </section>
 
@@ -193,7 +213,7 @@ export function StrategyMarketplace() {
           <div className="luxury-stat"><span>Min capital</span><strong>₹{template.minCapital.toLocaleString("en-IN")}</strong></div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">{template.nodes.map((node) => <span key={node.id} className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/55">{node.label}</span>)}</div>
-        <Button className="mt-6 w-full" disabled={busy === template.key} onClick={() => install(template)}>{busy === template.key ? "Installing…" : "Install & customize"}</Button>
+        <Button className="mt-6 w-full" disabled={busy === template.key} onClick={() => install(template)}>{busy === template.key ? "Deploying…" : "Install strategy"}</Button>
       </article>)}
     </div>
   </div>;
