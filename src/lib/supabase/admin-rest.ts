@@ -19,7 +19,9 @@ export async function adminRest<T>(
     cache: "no-store",
     headers: {
       apikey: serviceRole,
-      Authorization: `Bearer ${serviceRole}`,
+      ...(serviceRole.startsWith("eyJ")
+        ? { Authorization: `Bearer ${serviceRole}` }
+        : {}),
       "Content-Type": "application/json",
       Prefer: "return=representation",
       ...(init.headers ?? {}),
@@ -28,7 +30,9 @@ export async function adminRest<T>(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || `Supabase admin request failed (${response.status})`);
+    throw new Error(
+      body || `Supabase admin request failed (${response.status})`,
+    );
   }
 
   if (response.status === 204) return undefined as T;
@@ -36,10 +40,8 @@ export async function adminRest<T>(
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
-export const adminSelect = (
-  table: string,
-  query = "",
-) => adminRest<Record<string, unknown>[]>(`${table}?${query}`, { method: "GET" });
+export const adminSelect = (table: string, query = "") =>
+  adminRest<Record<string, unknown>[]>(`${table}?${query}`, { method: "GET" });
 
 export const adminInsert = <T>(
   table: string,
