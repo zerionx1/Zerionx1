@@ -1,15 +1,5 @@
 import type { BrokerAdapterDescriptor } from "@/types/broker";
 
-/*
-  Production-first broker catalog for the current Zerion X1 release.
-
-  Active now:
-  - Upstox: Indian markets
-  - cTrader Open API: Global Forex, through a user's cTrader-linked broker account
-
-  Crypto is intentionally shown as Coming Soon until a production connector is
-  approved and configured. This avoids showing dead cards or fake connectivity.
-*/
 export const brokerCatalog: BrokerAdapterDescriptor[] = [
   {
     key: "upstox",
@@ -30,31 +20,31 @@ export const brokerCatalog: BrokerAdapterDescriptor[] = [
     },
   },
   {
-    key: "ctrader",
-    name: "cTrader",
+    key: "mt5-coming-soon",
+    name: "MetaTrader 5",
     kind: "forex",
-    authMode: "oauth",
-    supportsSandbox: true,
-    availability: "available",
+    authMode: "session",
+    supportsSandbox: false,
+    availability: "coming-soon",
     description:
-      "Link a cTrader account and authorize Zerion X1 to access permitted Forex trading accounts.",
+      "MT5 broker accounts will connect through the external Zerion MT5 Bridge. MT5 is the terminal/protocol layer, not the broker.",
     capabilities: {
-      marketData: true,
-      orders: true,
-      positions: true,
-      funds: true,
-      websocket: true,
+      marketData: false,
+      orders: false,
+      positions: false,
+      funds: false,
+      websocket: false,
     },
   },
   {
-    key: "crypto-coming-soon",
-    name: "Crypto Trading",
+    key: "coindcx-coming-soon",
+    name: "CoinDCX",
     kind: "crypto",
     authMode: "session",
     supportsSandbox: false,
     availability: "coming-soon",
     description:
-      "Crypto live-account trading is being prepared. Public market research can remain available separately.",
+      "CoinDCX account, historical data and realtime socket integration is the next V1 connector after Upstox.",
     capabilities: {
       marketData: false,
       orders: false,

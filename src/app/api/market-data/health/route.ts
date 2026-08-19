@@ -1,1 +1,40 @@
-import { NextResponse } from "next/server"; export async function GET(){return NextResponse.json({status:"configuration_required",providers:[],checkedAt:new Date().toISOString()});}
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const base =
+    process.env.ZERION_MARKET_DATA_BASE_URL ??
+    "https://zerionx1.onrender.com";
+
+  try {
+    const response = await fetch(`${base.replace(/\/$/, "")}/health`, {
+      cache: "no-store",
+    });
+    const worker = await response.json().catch(() => null);
+
+    return NextResponse.json({
+      status: response.ok && worker?.ok ? "live" : "degraded",
+      providers: [
+        {
+          provider: "upstox",
+          state: worker?.ok ? "connected" : "degraded",
+          accounts: worker?.accounts ?? 0,
+          activeSockets: worker?.activeSockets ?? 0,
+          lastTickAt: worker?.lastTickAt ?? null,
+          message: worker?.lastError ?? null,
+        },
+      ],
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        status: "unavailable",
+        providers: [],
+        error:
+          error instanceof Error ? error.message : "Realtime worker unavailable",
+        checkedAt: new Date().toISOString(),
+      },
+      { status: 503 },
+    );
+  }
+}
