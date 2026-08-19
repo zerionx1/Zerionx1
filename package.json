@@ -22,7 +22,8 @@
     "verify:phase10": "node scripts/verify-phase-10.mjs",
     "check:migrations": "node scripts/check-migration-order.mjs",
     "check:routes": "node scripts/check-route-security.mjs",
-    "phase10:verify": "npm run verify:phase10 && npm run check:migrations && npm run check:routes"
+    "phase10:verify": "npm run verify:phase10 && npm run check:migrations && npm run check:routes",
+    "start:realtime": "tsx src/workers/realtime-worker.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
@@ -38,6 +39,7 @@
     "react-dom": "19.1.1",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.3.1",
+    "tsx": "^4.23.12",
     "ws": "^8.21.3",
     "zod": "^4.1.5"
   },

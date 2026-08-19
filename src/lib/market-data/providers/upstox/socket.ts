@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import WebSocket from "ws";
 
-import { getUpstoxMarketDataFeedV3AuthorizeUrl } from "@/lib/brokers/upstox-client";
+import {
+  getUpstoxMarketDataFeedV3AuthorizeUrl,
+  getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken,
+} from "@/lib/brokers/upstox-client";
 
 import { decodeUpstoxV3Feed } from "./protobuf";
 
@@ -11,6 +14,7 @@ export type UpstoxV3Mode = "ltpc" | "option_greeks" | "full" | "full_d30";
 export interface UpstoxV3SocketOptions {
   instrumentKeys: string[];
   mode?: UpstoxV3Mode;
+  accessToken?: string;
   onMessage: (message: unknown) => void;
   onError?: (error: Error) => void;
   onClose?: () => void;
@@ -40,7 +44,11 @@ export async function connectUpstoxV3MarketFeed(
     throw new Error("At least one Upstox instrument key is required");
   }
 
-  const authorizedUrl = await getUpstoxMarketDataFeedV3AuthorizeUrl();
+  const authorizedUrl = options.accessToken
+    ? await getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken(
+        options.accessToken,
+      )
+    : await getUpstoxMarketDataFeedV3AuthorizeUrl();
 
   const socket = new WebSocket(authorizedUrl, {
     followRedirects: true,

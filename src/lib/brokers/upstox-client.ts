@@ -70,9 +70,9 @@ export async function getUpstoxAccessTokenForUplink() {
   return accessTokenFrom(token);
 }
 
-export async function getUpstoxMarketDataFeedV3AuthorizeUrl() {
-  const accessToken = await getUpstoxAccessTokenForUplink();
-
+export async function getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken(
+  accessToken: string,
+) {
   const response = await fetch(
     "https://api.upstox.com/v3/feed/market-data-feed/authorize",
     {
@@ -107,4 +107,9 @@ export async function getUpstoxMarketDataFeedV3AuthorizeUrl() {
   }
 
   return url;
+}
+
+export async function getUpstoxMarketDataFeedV3AuthorizeUrl() {
+  const accessToken = await getUpstoxAccessTokenForUplink();
+  return getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken(accessToken);
 }
