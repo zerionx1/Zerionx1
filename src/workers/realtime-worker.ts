@@ -59,9 +59,108 @@ const providers: Record<"upstox" | "coindcx", ProviderHealth> = {
 };
 
 type AnyQuote = ZerionRealtimeQuote | CoinDcxRealtimeQuote;
+
+type UpstoxFeedHandle = Awaited<ReturnType<typeof connectUpstoxV3MarketFeed>>;
+
+type CoinDcxFeedHandle = ReturnType<typeof connectCoinDcxMarketSocket>;
+
 const quotes = new Map<string, AnyQuote>();
 const wss = new WebSocketServer({ noServer: true });
+
+const upstoxHandles = new Set<UpstoxFeedHandle>();
+let coinDcxPublicHandle: CoinDcxFeedHandle | null = null;
+
+const upstoxDynamicRefs = new Map<string, number>();
+const coinDcxDynamicRefs = new Map<string, number>();
+
+const BASE_UPSTOX_KEYS: Set<string> = new Set(UPSTOX_KEYS.map(String));
+new Set(UPSTOX_KEYS);
+const BASE_COINDCX_KEYS: Set<string> = new Set(COINDCX_KEYS.map(String));
+new Set(COINDCX_KEYS);
+
 let shuttingDown = false;
+
+function refreshSubscribedCounts() {
+  providers.upstox.subscribedInstruments = new Set([
+    ...UPSTOX_KEYS,
+    ...upstoxDynamicRefs.keys(),
+  ]).size;
+
+  providers.coindcx.subscribedInstruments = new Set([
+    ...COINDCX_KEYS,
+    ...coinDcxDynamicRefs.keys(),
+  ]).size;
+}
+
+function parseRuntimeInstrument(value: string) {
+  const raw = value.trim();
+
+  if (raw.toLowerCase().startsWith("upstox:")) {
+    const key = raw.slice("upstox:".length);
+    return key ? ({ provider: "upstox", key } as const) : null;
+  }
+
+  if (raw.toLowerCase().startsWith("coindcx:")) {
+    const key = raw.slice("coindcx:".length);
+    return key ? ({ provider: "coindcx", key } as const) : null;
+  }
+
+  return null;
+}
+
+function addRuntimeSubscription(value: string) {
+  const parsed = parseRuntimeInstrument(value);
+  if (!parsed) return false;
+
+  if (parsed.provider === "upstox") {
+    const previous = upstoxDynamicRefs.get(parsed.key) ?? 0;
+    upstoxDynamicRefs.set(parsed.key, previous + 1);
+
+    if (previous === 0 && !BASE_UPSTOX_KEYS.has(parsed.key)) {
+      for (const handle of upstoxHandles) {
+        handle.subscribe([parsed.key], "full");
+      }
+    }
+  } else {
+    const previous = coinDcxDynamicRefs.get(parsed.key) ?? 0;
+    coinDcxDynamicRefs.set(parsed.key, previous + 1);
+
+    if (previous === 0 && !BASE_COINDCX_KEYS.has(parsed.key)) {
+      coinDcxPublicHandle?.subscribe([parsed.key]);
+    }
+  }
+
+  refreshSubscribedCounts();
+  return true;
+}
+
+function removeRuntimeSubscription(value: string) {
+  const parsed = parseRuntimeInstrument(value);
+  if (!parsed) return;
+
+  const refs =
+    parsed.provider === "upstox" ? upstoxDynamicRefs : coinDcxDynamicRefs;
+
+  const previous = refs.get(parsed.key) ?? 0;
+
+  if (previous <= 1) {
+    refs.delete(parsed.key);
+
+    if (parsed.provider === "upstox") {
+      if (!BASE_UPSTOX_KEYS.has(parsed.key)) {
+        for (const handle of upstoxHandles) {
+          handle.unsubscribe([parsed.key], "full");
+        }
+      }
+    } else if (!BASE_COINDCX_KEYS.has(parsed.key)) {
+      coinDcxPublicHandle?.unsubscribe([parsed.key]);
+    }
+  } else {
+    refs.set(parsed.key, previous - 1);
+  }
+
+  refreshSubscribedCounts();
+}
 
 function aggregateHealth() {
   const activeSockets =
@@ -83,16 +182,12 @@ function aggregateHealth() {
     lastError:
       activeSockets > 0
         ? null
-        : providers.upstox.lastError ?? providers.coindcx.lastError,
+        : (providers.upstox.lastError ?? providers.coindcx.lastError),
     providers,
   };
 }
 
-function json(
-  response: http.ServerResponse,
-  status: number,
-  payload: unknown,
-) {
+function json(response: http.ServerResponse, status: number, payload: unknown) {
   response.writeHead(status, {
     "content-type": "application/json",
     "cache-control": "no-store",
@@ -130,19 +225,27 @@ function broadcast(payload: unknown) {
 }
 
 async function runUpstoxConnection(
-  connection: Awaited<ReturnType<typeof scanConnectedUpstoxWorkerConnections>>["connections"][number],
+  connection: Awaited<
+    ReturnType<typeof scanConnectedUpstoxWorkerConnections>
+  >["connections"][number],
 ) {
   if (shuttingDown) return;
   let counted = false;
 
+  let feedHandle: UpstoxFeedHandle | null = null;
+
   try {
-    await connectUpstoxV3MarketFeed({
+    feedHandle = await connectUpstoxV3MarketFeed({
       accessToken: connection.accessToken,
-      instrumentKeys: UPSTOX_KEYS,
+      instrumentKeys: [
+        ...new Set([...UPSTOX_KEYS, ...upstoxDynamicRefs.keys()]),
+      ],
       mode: "full",
       onMessage: (message) => {
         const response = message as { feeds?: Record<string, unknown> };
-        for (const [instrumentKey, feed] of Object.entries(response.feeds ?? {})) {
+        for (const [instrumentKey, feed] of Object.entries(
+          response.feeds ?? {},
+        )) {
           try {
             const quote = normalizeUpstoxFeedQuote(instrumentKey, feed);
             remember(quote);
@@ -155,6 +258,10 @@ async function runUpstoxConnection(
         providers.upstox.lastError = error.message;
       },
       onClose: () => {
+        if (feedHandle) {
+          upstoxHandles.delete(feedHandle);
+        }
+
         if (counted) {
           providers.upstox.activeSockets = Math.max(
             0,
@@ -168,8 +275,10 @@ async function runUpstoxConnection(
       },
     });
 
+    upstoxHandles.add(feedHandle);
     providers.upstox.activeSockets += 1;
     counted = true;
+    refreshSubscribedCounts();
   } catch (error) {
     providers.upstox.lastError =
       error instanceof Error ? error.message : "Upstox connection failed";
@@ -203,12 +312,14 @@ async function startCoinDcx() {
     }
   } catch (error) {
     providers.coindcx.lastError =
-      error instanceof Error ? error.message : "CoinDCX ticker bootstrap failed";
+      error instanceof Error
+        ? error.message
+        : "CoinDCX ticker bootstrap failed";
   }
 
   let publicCounted = false;
-  connectCoinDcxMarketSocket({
-    pairs: COINDCX_KEYS,
+  coinDcxPublicHandle = connectCoinDcxMarketSocket({
+    pairs: [...new Set([...COINDCX_KEYS, ...coinDcxDynamicRefs.keys()])],
     onTrade: (response) => {
       const row = response as { data?: { s?: string } };
       const pair = String(row.data?.s ?? "");
@@ -325,6 +436,8 @@ server.on("upgrade", (request, socket, head) => {
 });
 
 wss.on("connection", (client) => {
+  const clientSubscriptions = new Set<string>();
+
   client.send(
     JSON.stringify({
       type: "snapshot",
@@ -332,6 +445,75 @@ wss.on("connection", (client) => {
       health: aggregateHealth(),
     }),
   );
+
+  client.on("message", (raw) => {
+    try {
+      const message = JSON.parse(raw.toString()) as {
+        type?: string;
+        instruments?: unknown;
+      };
+
+      const instruments = Array.isArray(message.instruments)
+        ? message.instruments
+            .filter((value): value is string => typeof value === "string")
+            .map((value) => value.trim())
+            .filter(Boolean)
+        : [];
+
+      if (message.type === "subscribe") {
+        const accepted: string[] = [];
+
+        for (const instrument of instruments) {
+          if (clientSubscriptions.has(instrument)) continue;
+
+          if (addRuntimeSubscription(instrument)) {
+            clientSubscriptions.add(instrument);
+            accepted.push(instrument);
+          }
+        }
+
+        client.send(
+          JSON.stringify({
+            type: "subscribed",
+            instruments: accepted,
+            health: aggregateHealth(),
+          }),
+        );
+
+        return;
+      }
+
+      if (message.type === "unsubscribe") {
+        for (const instrument of instruments) {
+          if (!clientSubscriptions.delete(instrument)) continue;
+          removeRuntimeSubscription(instrument);
+        }
+
+        client.send(
+          JSON.stringify({
+            type: "unsubscribed",
+            instruments,
+            health: aggregateHealth(),
+          }),
+        );
+      }
+    } catch {
+      client.send(
+        JSON.stringify({
+          type: "error",
+          error: "invalid_realtime_message",
+        }),
+      );
+    }
+  });
+
+  client.on("close", () => {
+    for (const instrument of clientSubscriptions) {
+      removeRuntimeSubscription(instrument);
+    }
+
+    clientSubscriptions.clear();
+  });
 });
 
 server.listen(PORT, "0.0.0.0", () => {

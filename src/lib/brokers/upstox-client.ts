@@ -60,6 +60,16 @@ export const upstoxClient = {
     upstoxV2Get(
       `/market-quote/quotes?instrument_key=${encodeURIComponent(instrumentKey)}`,
     ),
+  optionContracts: (instrumentKey: string, expiry?: string) =>
+    upstoxV2Get(
+      `/option/contract?instrument_key=${encodeURIComponent(instrumentKey)}${
+        expiry ? `&expiry_date=${encodeURIComponent(expiry)}` : ""
+      }`,
+    ),
+  optionChain: (instrumentKey: string, expiry: string) =>
+    upstoxV2Get(
+      `/option/chain?instrument_key=${encodeURIComponent(instrumentKey)}&expiry_date=${encodeURIComponent(expiry)}`,
+    ),
   historicalV3: (
     instrumentKey: string,
     unit: "minutes" | "hours" | "days" | "weeks" | "months",

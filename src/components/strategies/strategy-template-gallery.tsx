@@ -1,35 +1,38 @@
 "use client";
-import { useState } from "react";
+
+import { Play, ShieldCheck, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Pencil, Play, ShieldCheck, Sparkles } from "lucide-react";
+import { useState } from "react";
+
 import {
   zerionStrategyTemplates,
   type ZerionStrategyTemplate,
 } from "@/config/strategy-templates";
-function build(t: ZerionStrategyTemplate, mode: "deploy" | "customize") {
+
+function buildStrategy(template: ZerionStrategyTemplate) {
   const now = new Date().toISOString();
   return {
-    id: `strategy_${t.id}_${crypto.randomUUID()}`,
+    id: crypto.randomUUID(),
     ownerId: "resolved-server-side",
-    name: t.name,
-    description: t.description,
-    markets: [t.market],
-    symbols: [t.symbol],
-    timeframe: t.timeframe,
-    status: mode === "deploy" ? "paper-ready" : "draft",
+    name: template.name,
+    description: template.description,
+    markets: [template.market],
+    symbols: [template.symbol],
+    timeframe: template.timeframe,
+    status: "paper-ready" as const,
     nodes: [
       {
         id: "source-1",
         kind: "source",
-        label: t.symbol,
+        label: template.symbol,
         x: 40,
         y: 120,
-        config: { symbol: t.symbol },
+        config: { symbol: template.symbol },
       },
       {
         id: "indicator-1",
         kind: "indicator",
-        label: t.rules[0] ?? "Indicator",
+        label: template.rules[0] ?? "Indicator",
         x: 250,
         y: 90,
         config: { period: 20 },
@@ -37,7 +40,7 @@ function build(t: ZerionStrategyTemplate, mode: "deploy" | "customize") {
       {
         id: "condition-1",
         kind: "condition",
-        label: t.rules[1] ?? "Confirmation",
+        label: template.rules[1] ?? "Confirmation",
         x: 470,
         y: 90,
         config: { operator: "confirm" },
@@ -82,108 +85,136 @@ function build(t: ZerionStrategyTemplate, mode: "deploy" | "customize") {
       stopLossMode: "atr",
       takeProfitMode: "risk-multiple",
     },
-    tags: [t.style.toLowerCase(), t.market],
+    tags: [template.style.toLowerCase(), template.market],
     version: 1,
     createdAt: now,
     updatedAt: now,
   };
 }
-type StrategyApiPayload = {
-  error?: { message?: string };
-  data?: { strategy?: { id?: string }; id?: string };
-};
-async function safePayload(r: Response): Promise<StrategyApiPayload> {
-  const text = await r.text();
-  if (!text) return {};
-  try {
-    return JSON.parse(text) as StrategyApiPayload;
-  } catch {
-    return {
-      error: { message: `Server returned an invalid response (${r.status})` },
+
+type StrategyResponse = {
+  data?: {
+    strategy?: {
+      id: string;
+      name: string;
+      markets: string[];
+      symbols: string[];
+      risk: unknown;
     };
-  }
-}
+  };
+  error?: { message?: string };
+};
+
 export function StrategyTemplateGallery() {
-  const router = useRouter(),
-    [busy, setBusy] = useState(""),
-    [message, setMessage] = useState("");
-  async function act(t: ZerionStrategyTemplate, mode: "deploy" | "customize") {
-    const key = `${t.id}:${mode}`;
-    setBusy(key);
+  const router = useRouter();
+  const [busy, setBusy] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function install(template: ZerionStrategyTemplate) {
+    setBusy(template.id);
     setMessage("");
+
     try {
-      const r = await fetch("/api/strategies", {
+      const response = await fetch("/api/strategies", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(build(t, mode)),
+        body: JSON.stringify(buildStrategy(template)),
       });
-      const j = await safePayload(r);
-      if (!r.ok)
+
+      const payload = (await response.json()) as StrategyResponse;
+      if (!response.ok || !payload.data?.strategy) {
         throw new Error(
-          j.error?.message ?? `Strategy save failed (${r.status})`,
+          payload.error?.message ?? `Strategy save failed (${response.status})`,
         );
-      const id = j.data?.strategy?.id ?? j.data?.id;
-      if (!id) throw new Error("Strategy saved but no ID returned");
+      }
+
+      const strategy = payload.data.strategy;
+      const deploymentResponse = await fetch("/api/algo/deployments", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: strategy.name,
+          strategyId: strategy.id,
+          mode: "paper",
+          market: strategy.markets[0],
+          symbol: strategy.symbols[0],
+          capital: template.market === "forex" ? 50000 : 100000,
+          autoStart: true,
+          riskConfig: strategy.risk,
+        }),
+      });
+
+      const deploymentPayload = await deploymentResponse.json();
+      if (!deploymentResponse.ok) {
+        throw new Error(
+          deploymentPayload.error?.message ??
+            "Strategy saved but deployment could not start",
+        );
+      }
+
       router.push(
-        mode === "customize"
-          ? `/dashboard/strategies/${id}?mode=edit`
-          : `/dashboard/strategies/${id}?mode=paper`,
+        `/dashboard/charts?strategy=${encodeURIComponent(strategy.id)}&symbol=${encodeURIComponent(strategy.symbols[0] ?? "")}`,
       );
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Strategy action failed");
+      router.refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Strategy installation failed",
+      );
     } finally {
       setBusy("");
     }
   }
+
   return (
     <section className="space-y-4">
       <div>
         <p className="eyebrow">READY STRATEGIES</p>
-        <h2 className="mt-2 text-2xl font-semibold">Choose a starting point</h2>
-        <p>
-          Install creates a paper-ready strategy. Customize creates a draft and
-          opens the editor.
+        <h2 className="mt-2 text-2xl font-semibold">
+          Install a ready Zerion strategy
+        </h2>
+        <p className="mt-2 text-sm text-white/55">
+          Install creates a real strategy record and immediately enables its
+          paper runtime. You can enable, pause or delete it from the chart
+          runtime.
         </p>
       </div>
+
       {message ? <div className="zx-error-banner">{message}</div> : null}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {zerionStrategyTemplates.map((t) => (
-          <article className="zx-strategy-card" key={t.id}>
+        {zerionStrategyTemplates.map((template) => (
+          <article className="zx-strategy-card" key={template.id}>
             <div className="flex justify-between">
               <Sparkles />
               <span className="data-badge">
-                {t.market === "forex" ? "Forex" : "Indian Market"}
+                {template.market === "forex" ? "Forex" : "Indian Market"}
               </span>
             </div>
-            <h3>{t.name}</h3>
-            <p>{t.description}</p>
+
+            <h3>{template.name}</h3>
+            <p>{template.description}</p>
+
             <div className="zx-template-meta">
-              <span>{t.symbol}</span>
-              <span>{t.timeframe}</span>
-              <span>{t.style}</span>
+              <span>{template.symbol}</span>
+              <span>{template.timeframe}</span>
+              <span>{template.style}</span>
             </div>
+
             <p className="mt-4 flex gap-2 text-xs">
               <ShieldCheck className="h-4 w-4" />
-              {t.risk}
+              {template.risk}
             </p>
-            <div className="zx-template-actions">
-              <button
-                className="zx-primary-action"
-                disabled={!!busy}
-                onClick={() => void act(t, "deploy")}
-              >
-                <Play className="mr-2 h-4 w-4" />
-                {busy === `${t.id}:deploy` ? "Installing…" : "Install & Deploy"}
-              </button>
-              <button
-                className="zx-secondary-action"
-                disabled={!!busy}
-                onClick={() => void act(t, "customize")}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                {busy === `${t.id}:customize` ? "Opening…" : "Customize"}
-              </button>
-            </div>
+
+            <button
+              className="zx-primary-action mt-5 w-full"
+              disabled={Boolean(busy)}
+              onClick={() => void install(template)}
+            >
+              <Play className="mr-2 h-4 w-4" />
+              {busy === template.id
+                ? "Installing & enabling…"
+                : "Install strategy"}
+            </button>
           </article>
         ))}
       </div>

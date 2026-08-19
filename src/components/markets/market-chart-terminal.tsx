@@ -1,6 +1,5 @@
 "use client";
-import Link from "next/link";
-import { useMemo, useState } from "react";
+
 import {
   BarChart3,
   Search,
@@ -8,99 +7,147 @@ import {
   Sparkles,
   WalletCards,
 } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
 import { TradingViewAdvancedChart } from "@/components/markets/tradingview-advanced-chart";
-const presets = [
-  ["NIFTY 50", "NSE:NIFTY", "Index"],
-  ["BANK NIFTY", "NSE:BANKNIFTY", "F&O"],
-  ["FIN NIFTY", "NSE:CNXFINANCE", "F&O"],
-  ["RELIANCE", "NSE:RELIANCE", "Equity"],
-  ["TCS", "NSE:TCS", "Equity"],
-  ["EUR/USD", "FX:EURUSD", "Forex"],
-  ["XAU/USD", "OANDA:XAUUSD", "Forex"],
-  ["BTC/USDT", "BINANCE:BTCUSDT", "Crypto"],
-  ["ETH/USDT", "BINANCE:ETHUSDT", "Crypto"],
+import type { MarketInstrument } from "@/types/market";
+
+const frames = [
+  ["1m", "1"],
+  ["3m", "3"],
+  ["5m", "5"],
+  ["15m", "15"],
+  ["30m", "30"],
+  ["1h", "60"],
+  ["4h", "240"],
+  ["1D", "D"],
+  ["1W", "W"],
 ] as const;
-const frames = ["1", "5", "15", "30", "60", "240", "D", "W"] as const;
+
 export function MarketChartTerminal() {
-  const [q, setQ] = useState("");
-  const [symbol, setSymbol] = useState("NSE:NIFTY");
-  const [label, setLabel] = useState("NIFTY 50");
+  const [query, setQuery] = useState("NIFTY 50");
+  const [searching, setSearching] = useState(false);
+  const [results, setResults] = useState<MarketInstrument[]>([]);
+  const [selected, setSelected] = useState<MarketInstrument | null>(null);
   const [interval, setInterval] = useState("15");
-  const visible = useMemo(() => {
-    const x = q.trim().toLowerCase();
-    return x
-      ? presets.filter((r) =>
-          `${r[0]} ${r[1]} ${r[2]}`.toLowerCase().includes(x),
-        )
-      : presets;
-  }, [q]);
-  function openCustom() {
-    const x = q.trim().toUpperCase();
-    if (!x) return;
-    setSymbol(x);
-    setLabel(x);
-  }
+
+  useEffect(() => {
+    const value = query.trim();
+    if (value.length < 2) {
+      setResults([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const response = await fetch(
+          `/api/markets/search?q=${encodeURIComponent(value)}`,
+          { cache: "no-store", signal: controller.signal },
+        );
+        const body = await response.json();
+        setResults((body.data ?? []) as MarketInstrument[]);
+      } catch {
+        if (!controller.signal.aborted) setResults([]);
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
+    }, 220);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  const chartSymbol = useMemo(
+    () => selected?.symbol ?? (query.trim() || "NIFTY 50"),
+    [query, selected],
+  );
+
   return (
-    <div className="zx-chart-workspace">
+    <div className="zx-chart-workspace space-y-4">
       <section className="zx-chart-commandbar">
-        <div className="zx-chart-search">
+        <div className="relative zx-chart-search">
           <Search className="h-4 w-4" />
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") openCustom();
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setSelected(null);
             }}
-            placeholder="Search or enter TradingView symbol e.g. NSE:RELIANCE, OANDA:XAUUSD"
+            placeholder="Search any Upstox stock, index, F&O contract or CoinDCX pair"
           />
-          <button className="zx-secondary-action" onClick={openCustom}>
-            Open
-          </button>
+          {searching ? (
+            <span className="text-xs text-white/40">Searching…</span>
+          ) : null}
+
+          {results.length && !selected ? (
+            <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-40 max-h-80 overflow-y-auto rounded-2xl border border-white/10 bg-[#151a1d] p-2 shadow-2xl">
+              {results.slice(0, 30).map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left hover:bg-white/5"
+                  onClick={() => {
+                    setSelected(item);
+                    setQuery(item.symbol);
+                    setResults([]);
+                  }}
+                >
+                  <span>
+                    <strong className="block">{item.symbol}</strong>
+                    <small className="text-white/45">{item.displayName}</small>
+                  </span>
+                  <span className="text-right text-[10px] uppercase text-white/35">
+                    {item.exchange}
+                    <br />
+                    {item.market.replaceAll("-", " ")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
+
         <div className="zx-chart-timeframes">
-          {frames.map((x) => (
+          {frames.map(([label, value]) => (
             <button
-              key={x}
-              onClick={() => setInterval(x)}
-              className={interval === x ? "is-active" : ""}
+              key={value}
+              onClick={() => setInterval(value)}
+              className={interval === value ? "is-active" : ""}
             >
-              {x}
+              {label}
             </button>
           ))}
         </div>
       </section>
-      <div className="zx-chart-preset-strip">
-        {visible.slice(0, 12).map((r) => (
-          <button
-            key={r[1]}
-            onClick={() => {
-              setSymbol(r[1]);
-              setLabel(r[0]);
-              setQ("");
-            }}
-            className={symbol === r[1] ? "is-active" : ""}
-          >
-            <strong>{r[0]}</strong>
-            <small>{r[2]}</small>
-          </button>
-        ))}
-      </div>
+
       <section className="zx-chart-stage">
         <header>
           <div>
-            <p className="eyebrow">ZERION ANALYSIS WORKSPACE</p>
-            <h2>{label}</h2>
+            <p className="eyebrow">ZERION X1 · OWN MARKET TERMINAL</p>
+            <h2>{selected?.displayName ?? chartSymbol}</h2>
+            <p className="mt-1 text-xs text-white/45">
+              {selected
+                ? `${selected.exchange} · ${selected.market.replaceAll("-", " ")} · ${selected.id.startsWith("coindcx:") ? "CoinDCX" : "Upstox"}`
+                : "Resolve an instrument from provider search"}
+            </p>
           </div>
           <span className="data-badge">
-            Realtime tools depend on provider/TradingView feed
+            Provider-backed · no external chart embed
           </span>
         </header>
+
         <TradingViewAdvancedChart
-          symbol={symbol}
+          symbol={selected?.symbol ?? chartSymbol}
           interval={interval}
-          height={900}
+          height={720}
         />
       </section>
+
       <section className="zx-chart-actions">
         <Link href="/dashboard/strategies">
           <Sparkles />

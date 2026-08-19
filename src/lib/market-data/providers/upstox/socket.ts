@@ -17,14 +17,22 @@ export interface UpstoxV3SocketOptions {
   onClose?: () => void;
 }
 
+export type UpstoxV3FeedHandle = {
+  socket: WebSocket;
+  subscribe: (instrumentKeys: string[], mode?: UpstoxV3Mode) => boolean;
+  unsubscribe: (instrumentKeys: string[], mode?: UpstoxV3Mode) => boolean;
+  close: () => Promise<void>;
+};
+
 function subscriptionPayload(
   instrumentKeys: string[],
   mode: UpstoxV3Mode,
+  method: "sub" | "unsub" = "sub",
 ): Buffer {
   return Buffer.from(
     JSON.stringify({
       guid: randomUUID(),
-      method: "sub",
+      method,
       data: {
         mode,
         instrumentKeys,
@@ -36,7 +44,7 @@ function subscriptionPayload(
 
 export async function connectUpstoxV3MarketFeed(
   options: UpstoxV3SocketOptions,
-) {
+): Promise<UpstoxV3FeedHandle> {
   if (options.instrumentKeys.length === 0) {
     throw new Error("At least one Upstox instrument key is required");
   }
@@ -95,6 +103,37 @@ export async function connectUpstoxV3MarketFeed(
 
   return {
     socket,
+
+    subscribe(
+      instrumentKeys: string[],
+      mode: UpstoxV3Mode = options.mode ?? "ltpc",
+    ) {
+      const keys = [...new Set<string>(instrumentKeys.filter(Boolean))];
+
+      if (!keys.length || socket.readyState !== WebSocket.OPEN) {
+        return false;
+      }
+
+      socket.send(subscriptionPayload(keys, mode, "sub"), { binary: true });
+
+      return true;
+    },
+
+    unsubscribe(
+      instrumentKeys: string[],
+      mode: UpstoxV3Mode = options.mode ?? "ltpc",
+    ) {
+      const keys = [...new Set<string>(instrumentKeys.filter(Boolean))];
+
+      if (!keys.length || socket.readyState !== WebSocket.OPEN) {
+        return false;
+      }
+
+      socket.send(subscriptionPayload(keys, mode, "unsub"), { binary: true });
+
+      return true;
+    },
+
     close: async () => {
       if (
         socket.readyState === WebSocket.OPEN ||

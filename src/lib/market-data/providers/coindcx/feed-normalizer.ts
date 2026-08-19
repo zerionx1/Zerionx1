@@ -35,7 +35,8 @@ const marketToSymbol = new Map<string, string>([
 
 export function coinDcxPairFor(symbol: string) {
   const normalized = symbol.trim().toUpperCase();
-  if (normalized.startsWith("B-") && normalized.includes("_")) return normalized;
+  if (normalized.startsWith("B-") && normalized.includes("_"))
+    return normalized;
   const display = normalized.includes("/")
     ? normalized
     : normalized.endsWith("USDT")
@@ -45,11 +46,22 @@ export function coinDcxPairFor(symbol: string) {
 }
 
 export function coinDcxSymbolFor(value: string) {
-  return (
-    pairToSymbol.get(value.toUpperCase()) ??
-    marketToSymbol.get(value.toUpperCase()) ??
-    value
-  );
+  const normalized = value.trim().toUpperCase();
+
+  const configured =
+    pairToSymbol.get(normalized) ?? marketToSymbol.get(normalized);
+
+  if (configured) return configured;
+
+  const pairMatch = normalized.match(/^[A-Z]-([^_]+)_(.+)$/);
+  if (pairMatch) return `${pairMatch[1]}/${pairMatch[2]}`;
+
+  if (normalized.includes("_")) {
+    const [base, ...quote] = normalized.split("_");
+    if (base && quote.length) return `${base}/${quote.join("_")}`;
+  }
+
+  return normalized;
 }
 
 function number(value: unknown, fallback = 0) {
@@ -106,10 +118,10 @@ export function normalizeCoinDcxTrade(
   const row = (envelope?.data ?? response) as Record<string, unknown>;
   const pair = String(row.s ?? "").toUpperCase();
   const symbol = coinDcxSymbolFor(pair);
-  const configuredPair = coinDcxPairFor(symbol);
+  const providerPair = pair;
   const price = number(row.p);
 
-  if (!configuredPair || !(price > 0)) return null;
+  if (!providerPair || !(price > 0)) return null;
 
   const eventTime = number(row.T, Date.now());
   const previousClose = previous?.previousClose ?? price;
@@ -118,8 +130,8 @@ export function normalizeCoinDcxTrade(
   return {
     provider: "coindcx",
     symbol,
-    providerSymbol: configuredPair,
-    instrumentId: `coindcx:${configuredPair}`,
+    providerSymbol: providerPair,
+    instrumentId: `coindcx:${providerPair}`,
     timestamp: new Date(eventTime).toISOString(),
     price,
     change,

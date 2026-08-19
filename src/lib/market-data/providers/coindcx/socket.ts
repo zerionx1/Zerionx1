@@ -2,9 +2,16 @@ import { createHmac } from "node:crypto";
 
 import type { CoinDcxCredentials } from "@/lib/brokers/coindcx-core";
 
-type SocketLike = {
+export type SocketLike = {
   on(event: string, callback: (...args: unknown[]) => void): SocketLike;
   emit(event: string, payload?: unknown): SocketLike;
+  close(): void;
+};
+
+export type CoinDcxMarketSocketHandle = {
+  socket: SocketLike;
+  subscribe(pairs: string[]): void;
+  unsubscribe(pairs: string[]): void;
   close(): void;
 };
 
@@ -39,11 +46,12 @@ export function connectCoinDcxMarketSocket(options: {
   onOpen?: () => void;
   onClose?: () => void;
   onError?: (error: Error) => void;
-}) {
+}): CoinDcxMarketSocketHandle {
   const socket = makeSocket();
+  const joinedPairs = new Set<string>(options.pairs);
 
   socket.on("connect", () => {
-    for (const pair of options.pairs) {
+    for (const pair of joinedPairs) {
       socket.emit("join", { channelName: `${pair}@trades` });
     }
     options.onOpen?.();
@@ -65,10 +73,35 @@ export function connectCoinDcxMarketSocket(options: {
 
   return {
     socket,
+
+    subscribe(pairs: string[]) {
+      for (const pair of pairs.filter(Boolean)) {
+        if (joinedPairs.has(pair)) continue;
+
+        joinedPairs.add(pair);
+        socket.emit("join", {
+          channelName: `${pair}@trades`,
+        });
+      }
+    },
+
+    unsubscribe(pairs: string[]) {
+      for (const pair of pairs.filter(Boolean)) {
+        if (!joinedPairs.has(pair)) continue;
+
+        joinedPairs.delete(pair);
+        socket.emit("leave", {
+          channelName: `${pair}@trades`,
+        });
+      }
+    },
+
     close() {
-      for (const pair of options.pairs) {
+      for (const pair of joinedPairs) {
         socket.emit("leave", { channelName: `${pair}@trades` });
       }
+
+      joinedPairs.clear();
       socket.close();
     },
   };
