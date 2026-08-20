@@ -417,8 +417,6 @@ async function startCoinDcx() {
   coinDcxPublicHandle = connectCoinDcxMarketSocket({
     pairs: [...new Set([...COINDCX_KEYS, ...coinDcxDynamicRefs.keys()])],
     onTrade: (response) => {
-      coinDcxLastSocketTradeAt = Date.now();
-
       const envelope = response as { data?: unknown };
       const row = (envelope?.data ?? response) as {
         s?: string;
@@ -432,19 +430,22 @@ async function startCoinDcx() {
         previous?.provider === "coindcx" ? previous : undefined,
       );
 
-      if (quote) remember(quote);
+      if (quote) {
+        remember(quote);
+        coinDcxLastSocketTradeAt = Date.now();
+      }
     },
 
     onPrice: (response) => {
-      coinDcxLastSocketTradeAt = Date.now();
-
       const quote = normalizeCoinDcxPriceEvent(response);
-      if (quote) remember(quote);
+
+      if (quote) {
+        remember(quote);
+        coinDcxLastSocketTradeAt = Date.now();
+      }
     },
 
     onOpen: () => {
-      coinDcxLastSocketTradeAt = Date.now();
-
       if (!publicCounted) {
         providers.coindcx.activeSockets += 1;
         publicCounted = true;
