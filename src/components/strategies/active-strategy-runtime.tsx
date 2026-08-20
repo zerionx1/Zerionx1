@@ -1,6 +1,6 @@
 "use client";
 
-import { Pause, Play, Trash2 } from "lucide-react";
+import { Pause, Play, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type Deployment = {
@@ -11,6 +11,11 @@ type Deployment = {
   market: string;
   symbol: string;
   mode: string;
+  last_evaluation_at?: string | null;
+  last_signal?: string | null;
+  last_action?: string | null;
+  runtime_health?: string | null;
+  runtime_error?: string | null;
 };
 
 export function ActiveStrategyRuntime({ symbol }: { symbol?: string }) {
@@ -22,7 +27,6 @@ export function ActiveStrategyRuntime({ symbol }: { symbol?: string }) {
     const response = await fetch("/api/algo/deployments", { cache: "no-store" });
     const body = await response.json();
     const deployments = (body.data?.deployments ?? []) as Deployment[];
-
     setRows(
       symbol
         ? deployments.filter(
@@ -34,11 +38,37 @@ export function ActiveStrategyRuntime({ symbol }: { symbol?: string }) {
     );
   }, [symbol]);
 
+  const evaluate = useCallback(async (deployment: Deployment) => {
+    if (deployment.status !== "active") return;
+    await fetch(`/api/algo/deployments/${deployment.id}/evaluate`, {
+      method: "POST",
+      cache: "no-store",
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     void load();
   }, [load]);
 
-  async function setStatus(deployment: Deployment, status: "active" | "paused") {
+  useEffect(() => {
+    if (!rows.some((row) => row.status === "active")) return;
+    const run = async () => {
+      await Promise.all(
+        rows
+          .filter((row) => row.status === "active")
+          .map((row) => evaluate(row)),
+      );
+      await load();
+    };
+    void run();
+    const timer = window.setInterval(() => void run(), 30_000);
+    return () => window.clearInterval(timer);
+  }, [evaluate, load, rows]);
+
+  async function setStatus(
+    deployment: Deployment,
+    status: "active" | "paused",
+  ) {
     setBusy(deployment.id);
     setMessage("");
     try {
@@ -48,28 +78,35 @@ export function ActiveStrategyRuntime({ symbol }: { symbol?: string }) {
         body: JSON.stringify({ status }),
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error?.message ?? "Strategy update failed");
+      if (!response.ok)
+        throw new Error(body.error?.message ?? "Strategy update failed");
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Strategy update failed");
+      setMessage(
+        error instanceof Error ? error.message : "Strategy update failed",
+      );
     } finally {
       setBusy(null);
     }
   }
 
   async function removeStrategy(deployment: Deployment) {
-    if (!window.confirm(`Delete ${deployment.name} from your strategies?`)) return;
+    if (!window.confirm(`Delete ${deployment.name} from your strategies?`))
+      return;
     setBusy(deployment.id);
-    setMessage("");
     try {
-      const response = await fetch(`/api/strategies/${deployment.strategy_id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/strategies/${deployment.strategy_id}`,
+        { method: "DELETE" },
+      );
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error?.message ?? "Strategy delete failed");
+      if (!response.ok)
+        throw new Error(body.error?.message ?? "Strategy delete failed");
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Strategy delete failed");
+      setMessage(
+        error instanceof Error ? error.message : "Strategy delete failed",
+      );
     } finally {
       setBusy(null);
     }
@@ -78,28 +115,68 @@ export function ActiveStrategyRuntime({ symbol }: { symbol?: string }) {
   if (!rows.length && !message) return null;
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-black/15 p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <strong className="mr-2 text-sm">Strategies on chart</strong>
+    <section className="rounded-2xl border border-white/10 bg-black/15 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <strong className="text-sm">Installed strategy runtime</strong>
+        <button className="zx-secondary-action" onClick={() => void load()}>
+          <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
+        </button>
+      </div>
+      <div className="grid gap-3">
         {rows.map((deployment) => (
-          <div key={deployment.id} className="flex items-center gap-2 rounded-full border border-white/10 px-3 py-2">
-            <span className="text-xs">{deployment.name} · {deployment.status}</span>
-            {deployment.status === "active" ? (
-              <button type="button" title="Disable strategy" disabled={busy === deployment.id} onClick={() => void setStatus(deployment, "paused")}>
-                <Pause className="h-3.5 w-3.5" />
+          <article
+            key={deployment.id}
+            className="rounded-xl border border-white/10 p-3"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <strong>{deployment.name}</strong>
+                <p className="text-xs text-white/45">
+                  {deployment.mode} · {deployment.market} · {deployment.symbol}
+                </p>
+              </div>
+              <span className="data-badge">
+                {deployment.status} / {deployment.runtime_health ?? "idle"}
+              </span>
+            </div>
+            <div className="mt-3 grid gap-2 text-xs sm:grid-cols-4">
+              <span>Last evaluation: {deployment.last_evaluation_at ? new Date(deployment.last_evaluation_at).toLocaleString() : "Never"}</span>
+              <span>Signal: {deployment.last_signal ?? "—"}</span>
+              <span>Action: {deployment.last_action ?? "—"}</span>
+              <span className={deployment.runtime_error ? "negative" : ""}>
+                {deployment.runtime_error ?? "Runtime healthy"}
+              </span>
+            </div>
+            <div className="mt-3 flex gap-2">
+              {deployment.status === "active" ? (
+                <button
+                  className="zx-secondary-action"
+                  disabled={busy === deployment.id}
+                  onClick={() => void setStatus(deployment, "paused")}
+                >
+                  <Pause className="mr-1 h-3.5 w-3.5" /> Disable/Pause
+                </button>
+              ) : (
+                <button
+                  className="zx-primary-action"
+                  disabled={busy === deployment.id}
+                  onClick={() => void setStatus(deployment, "active")}
+                >
+                  <Play className="mr-1 h-3.5 w-3.5" /> Enable
+                </button>
+              )}
+              <button
+                className="zx-exit-action"
+                disabled={busy === deployment.id}
+                onClick={() => void removeStrategy(deployment)}
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
               </button>
-            ) : (
-              <button type="button" title="Enable strategy" disabled={busy === deployment.id} onClick={() => void setStatus(deployment, "active")}>
-                <Play className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <button type="button" title="Delete strategy" disabled={busy === deployment.id} onClick={() => void removeStrategy(deployment)}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
+            </div>
+          </article>
         ))}
       </div>
-      {message ? <p className="mt-2 text-xs text-amber-100/70">{message}</p> : null}
+      {message ? <p className="mt-2 text-xs">{message}</p> : null}
     </section>
   );
 }

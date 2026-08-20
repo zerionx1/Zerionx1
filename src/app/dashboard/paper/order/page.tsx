@@ -1,0 +1,1 @@
+import { PaperSectionWorkspace } from "@/components/paper/paper-section-workspace"; export default function Page(){return <PaperSectionWorkspace mode="order"/>}

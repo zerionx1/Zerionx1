@@ -1,0 +1,1 @@
+import {LiveSectionWorkspace} from "@/components/live/live-section-workspace";export default function Page(){return <LiveSectionWorkspace mode="pnl"/>}

@@ -1,25 +1,19 @@
-import { InstrumentWorkspace } from "@/components/markets/instrument-workspace";
+import { redirect } from "next/navigation";
 
 export default async function InstrumentPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const query = await searchParams;
-  const value = (key: string) => {
-    const item = query[key];
-    return Array.isArray(item) ? item[0] ?? "" : item ?? "";
+  const q = await searchParams;
+  const one = (k: string) => {
+    const v = q[k];
+    return Array.isArray(v) ? v[0] ?? "" : v ?? "";
   };
-
-  return (
-    <main className="dashboard-page">
-      <InstrumentWorkspace
-        initialId={value("id")}
-        symbol={value("symbol")}
-        name={value("name")}
-        market={value("market")}
-        exchange={value("exchange")}
-      />
-    </main>
-  );
+  const params = new URLSearchParams({
+    instrument: one("id"),
+    symbol: one("symbol"),
+    tf: one("tf") || "15m",
+  });
+  redirect(`/dashboard/charts?${params.toString()}`);
 }

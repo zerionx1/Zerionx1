@@ -2,431 +2,338 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Candle } from "@/types/market";
+import { TIMEFRAME_MS } from "@/lib/market-data/live-candle-builder";
+import type { Timeframe } from "@/types/market";
 
-type IndicatorKey = "sma20" | "ema20" | "vwap" | "volume";
-type Style = "candles" | "line";
+export type ChartPriceLine = {
+  id: string;
+  price: number;
+  label: string;
+  kind: "entry" | "stop" | "target";
+  pnl?: number;
+};
+
+type Indicator =
+  | "sma"
+  | "ema"
+  | "vwap"
+  | "volume"
+  | "rsi"
+  | "macd"
+  | "bb"
+  | "atr"
+  | "supertrend";
+
+type Tool = "cursor" | "trend" | "hline" | "vline" | "ray" | "rect" | "fib" | "text" | "erase";
+type Anchor = { index: number; price: number };
+type Drawing = { id: string; tool: Exclude<Tool, "cursor" | "erase">; a: Anchor; b?: Anchor; text?: string };
 
 type Props = {
   candles: Candle[];
   symbol?: string;
-  timeframe?: string;
+  timeframe?: Timeframe;
   height?: number;
   livePrice?: number | null;
+  priceLines?: ChartPriceLine[];
+  instrumentId?: string;
 };
 
-type Point = { x: number; y: number };
+const average = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0);
+const fmt = (v: number) =>
+  Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: 4 }) : "—";
 
-function average(values: number[]) {
-  return values.length
-    ? values.reduce((sum, value) => sum + value, 0) / values.length
-    : 0;
+function sma(c: Candle[], p: number) {
+  return c.map((_, i) => (i + 1 < p ? null : average(c.slice(i + 1 - p, i + 1).map((x) => x.close))));
 }
-
-function sma(candles: Candle[], period: number) {
-  return candles.map((_, i) => {
-    if (i + 1 < period) return null;
-    return average(candles.slice(i + 1 - period, i + 1).map((c) => c.close));
+function ema(c: Candle[], p: number) {
+  if (!c.length) return [] as number[];
+  const k = 2 / (p + 1);
+  let last = c[0]!.close;
+  return c.map((x, i) => (last = i ? x.close * k + last * (1 - k) : x.close));
+}
+function vwap(c: Candle[]) {
+  let pv = 0, vol = 0;
+  return c.map((x) => {
+    const v = Math.max(0, Number(x.volume ?? 0));
+    const t = (x.high + x.low + x.close) / 3;
+    pv += t * v; vol += v;
+    return vol ? pv / vol : t;
   });
 }
-
-function ema(candles: Candle[], period: number) {
-  if (!candles.length) return [];
-  const k = 2 / (period + 1);
-  let last = candles[0]!.close;
-  return candles.map((c, i) => {
-    last = i === 0 ? c.close : c.close * k + last * (1 - k);
-    return last;
+function std(v: number[]) {
+  const m = average(v);
+  return Math.sqrt(average(v.map((x) => (x - m) ** 2)));
+}
+function bollinger(c: Candle[], p = 20) {
+  return c.map((_, i) => {
+    if (i + 1 < p) return null;
+    const values = c.slice(i + 1 - p, i + 1).map((x) => x.close);
+    const m = average(values), s = std(values) * 2;
+    return { mid: m, upper: m + s, lower: m - s };
   });
 }
-
-function vwap(candles: Candle[]) {
-  let cumulativePV = 0;
-  let cumulativeVolume = 0;
-  return candles.map((c) => {
-    const volume = Math.max(0, Number(c.volume ?? 0));
-    const typical = (c.high + c.low + c.close) / 3;
-    cumulativePV += typical * volume;
-    cumulativeVolume += volume;
-    return cumulativeVolume ? cumulativePV / cumulativeVolume : typical;
+function tr(c: Candle[], i: number) {
+  const x = c[i]!, prev = c[i - 1];
+  return prev
+    ? Math.max(x.high - x.low, Math.abs(x.high - prev.close), Math.abs(x.low - prev.close))
+    : x.high - x.low;
+}
+function atr(c: Candle[], p = 14) {
+  return c.map((_, i) => (i + 1 < p ? null : average(c.slice(i + 1 - p, i + 1).map((__, j) => tr(c, i + 1 - p + j)))));
+}
+function rsi(c: Candle[], p = 14) {
+  return c.map((_, i) => {
+    if (i < p) return null;
+    let gains = 0, losses = 0;
+    for (let j = i - p + 1; j <= i; j++) {
+      const d = c[j]!.close - c[j - 1]!.close;
+      if (d >= 0) gains += d; else losses -= d;
+    }
+    if (!losses) return 100;
+    const rs = gains / losses;
+    return 100 - 100 / (1 + rs);
   });
 }
-
-function compact(value: number) {
-  if (!Number.isFinite(value)) return "—";
-  if (Math.abs(value) >= 10000000) return `${(value / 10000000).toFixed(2)}Cr`;
-  if (Math.abs(value) >= 100000) return `${(value / 100000).toFixed(2)}L`;
-  if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}K`;
-  return value.toLocaleString(undefined, { maximumFractionDigits: 4 });
+function macd(c: Candle[]) {
+  const fast = ema(c, 12), slow = ema(c, 26);
+  const line = c.map((_, i) => fast[i]! - slow[i]!);
+  const signal: number[] = [];
+  const k = 2 / 10;
+  let last = line[0] ?? 0;
+  line.forEach((x, i) => { last = i ? x * k + last * (1 - k) : x; signal.push(last); });
+  return { line, signal, hist: line.map((x, i) => x - signal[i]!) };
+}
+function supertrend(c: Candle[], p = 10, m = 3) {
+  const a = atr(c, p);
+  let trend = 1;
+  return c.map((x, i) => {
+    const av = a[i];
+    if (av == null) return null;
+    const mid = (x.high + x.low) / 2;
+    const upper = mid + m * av, lower = mid - m * av;
+    if (x.close > upper) trend = 1;
+    if (x.close < lower) trend = -1;
+    return trend === 1 ? lower : upper;
+  });
 }
 
 export function ZerionProChart({
   candles,
   symbol = "Instrument",
   timeframe = "15m",
-  height = 560,
+  height = 640,
   livePrice = null,
+  priceLines = [],
+  instrumentId = symbol,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [style, setStyle] = useState<Style>("candles");
-  const [indicators, setIndicators] = useState<Set<IndicatorKey>>(
-    new Set(["volume"]),
-  );
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [visibleCount, setVisibleCount] = useState(90);
-  const [pan, setPan] = useState(0);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
   const drag = useRef<{ x: number; pan: number } | null>(null);
+  const [visibleCount, setVisibleCount] = useState(100);
+  const [pan, setPan] = useState(0);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [tool, setTool] = useState<Tool>("cursor");
+  const [pending, setPending] = useState<Anchor | null>(null);
+  const [drawings, setDrawings] = useState<Drawing[]>([]);
+  const [history, setHistory] = useState<Drawing[][]>([]);
+  const [redo, setRedo] = useState<Drawing[][]>([]);
+  const [indicators, setIndicators] = useState<Set<Indicator>>(new Set(["volume"]));
 
   const visible = useMemo(() => {
-    if (!candles.length) return [];
-    const count = Math.max(20, Math.min(240, visibleCount));
-    const end = Math.max(
-      count,
-      Math.min(candles.length, candles.length - Math.round(pan)),
-    );
+    const count = Math.max(20, Math.min(300, visibleCount));
+    const end = Math.max(count, Math.min(candles.length, candles.length - Math.round(pan)));
     return candles.slice(Math.max(0, end - count), end);
   }, [candles, pan, visibleCount]);
 
-  const sma20 = useMemo(() => sma(visible, 20), [visible]);
-  const ema20 = useMemo(() => ema(visible, 20), [visible]);
-  const vwapSeries = useMemo(() => vwap(visible), [visible]);
+  const series = useMemo(() => ({
+    sma: sma(visible, 20),
+    ema: ema(visible, 20),
+    vwap: vwap(visible),
+    bb: bollinger(visible),
+    atr: atr(visible),
+    rsi: rsi(visible),
+    macd: macd(visible),
+    supertrend: supertrend(visible),
+  }), [visible]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const stage = stageRef.current;
-    if (!canvas || !stage || !visible.length) return;
+    const controller = new AbortController();
+    void fetch(`/api/chart/drawings?instrument=${encodeURIComponent(instrumentId)}&timeframe=${encodeURIComponent(timeframe)}`, {
+      cache: "no-store", signal: controller.signal,
+    }).then((r) => r.ok ? r.json() : null).then((body) => {
+      if (body?.data && Array.isArray(body.data)) setDrawings(body.data as Drawing[]);
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [instrumentId, timeframe]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetch(`/api/chart/drawings?instrument=${encodeURIComponent(instrumentId)}&timeframe=${encodeURIComponent(timeframe)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ drawings }),
+      }).catch(() => {});
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [drawings, instrumentId, timeframe]);
+
+  function commit(next: Drawing[]) {
+    setHistory((h) => [...h.slice(-30), drawings]);
+    setRedo([]);
+    setDrawings(next);
+  }
+
+  function undo() {
+    const previous = history.at(-1);
+    if (!previous) return;
+    setRedo((r) => [drawings, ...r].slice(0, 30));
+    setDrawings(previous);
+    setHistory((h) => h.slice(0, -1));
+  }
+  function redoOnce() {
+    const next = redo[0];
+    if (!next) return;
+    setHistory((h) => [...h, drawings]);
+    setDrawings(next);
+    setRedo((r) => r.slice(1));
+  }
+
+  useEffect(() => {
+    const canvas = canvasRef.current, stage = stageRef.current;
+    if (!canvas || !stage || !visible.length) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const rect = stage.getBoundingClientRect();
     const width = Math.max(320, rect.width);
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    canvas.width = width*dpr; canvas.height=height*dpr; canvas.style.width=`${width}px`; canvas.style.height=`${height}px`;
+    const raw=canvas.getContext("2d"); if(!raw)return; const ctx=raw; ctx.scale(dpr,dpr);
 
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    const ctx = context;
-    ctx.scale(dpr, dpr);
+    const right=78,left=8,top=24;
+    const rsiH=indicators.has("rsi")?85:0, macdH=indicators.has("macd")?85:0, volumeH=indicators.has("volume")?82:0;
+    const bottom=34+rsiH+macdH+volumeH, chartW=width-left-right, chartH=Math.max(180,height-top-bottom);
+    const lows=visible.map(c=>c.low), highs=visible.map(c=>c.high);
+    if(livePrice!=null){lows.push(livePrice);highs.push(livePrice)}
+    priceLines.forEach(l=>{lows.push(l.price);highs.push(l.price)});
+    const min=Math.min(...lows),max=Math.max(...highs),pad=Math.max((max-min)*.1,Math.abs(max)*.0005,.01),lo=min-pad,hi=max+pad,range=hi-lo||1;
+    const x=(i:number)=>left+((i+.5)/visible.length)*chartW;
+    const y=(p:number)=>top+((hi-p)/range)*chartH;
 
-    const palette = {
-      bg: "#151a1d",
-      grid: "rgba(255,255,255,.075)",
-      text: "rgba(245,239,228,.62)",
-      up: "#5fd4aa",
-      down: "#e98484",
-      wick: "rgba(245,239,228,.72)",
-      price: "#efe1c9",
-      cross: "rgba(255,255,255,.28)",
-      sma: "#d5b56f",
-      ema: "#8fc7ff",
-      vwap: "#c59cff",
-      volumeUp: "rgba(95,212,170,.28)",
-      volumeDown: "rgba(233,132,132,.24)",
-    };
+    ctx.fillStyle="#151a1d";ctx.fillRect(0,0,width,height);ctx.font="11px system-ui";ctx.lineWidth=1;
+    for(let i=0;i<=6;i++){const yy=top+chartH*i/6;ctx.strokeStyle="rgba(255,255,255,.07)";ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.fillStyle="rgba(245,239,228,.64)";ctx.fillText(fmt(hi-range*i/6),width-right+6,yy+4)}
+    const timeLines=Math.min(7,visible.length);
+    for(let i=0;i<timeLines;i++){const idx=Math.round(i*(visible.length-1)/Math.max(1,timeLines-1)),xx=x(idx);ctx.strokeStyle="rgba(255,255,255,.05)";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.stroke();ctx.fillStyle="rgba(245,239,228,.54)";ctx.fillText(new Date(visible[idx]!.time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),Math.max(left,xx-25),height-10)}
+    const slot=chartW/visible.length,bodyW=Math.max(2,Math.min(12,slot*.65));
+    visible.forEach((c,i)=>{const xx=x(i),color=c.close>=c.open?"#5fd4aa":"#e98484";ctx.strokeStyle=color;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(xx,y(c.high));ctx.lineTo(xx,y(c.low));ctx.stroke();const y1=y(c.open),y2=y(c.close);ctx.fillRect(xx-bodyW/2,Math.min(y1,y2),bodyW,Math.max(1.5,Math.abs(y2-y1)))});
 
-    ctx.fillStyle = palette.bg;
-    ctx.fillRect(0, 0, width, height);
+    const line=(values:Array<number|null>,color:string,width=1.25)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();let started=false;values.forEach((v,i)=>{if(v==null||!Number.isFinite(v))return;started?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v));started=true});if(started)ctx.stroke();ctx.lineWidth=1};
+    if(indicators.has("sma"))line(series.sma,"#d5b56f");
+    if(indicators.has("ema"))line(series.ema,"#8fc7ff");
+    if(indicators.has("vwap"))line(series.vwap,"#c59cff");
+    if(indicators.has("supertrend"))line(series.supertrend,"#f3c779",1.5);
+    if(indicators.has("bb")){line(series.bb.map(v=>v?.upper??null),"rgba(143,199,255,.65)");line(series.bb.map(v=>v?.mid??null),"rgba(143,199,255,.35)");line(series.bb.map(v=>v?.lower??null),"rgba(143,199,255,.65)")}
 
-    const top = 26;
-    const right = 72;
-    const bottom = indicators.has("volume") ? 118 : 40;
-    const left = 8;
-    const chartW = width - left - right;
-    const chartH = height - top - bottom;
-
-    const lows = visible.map((c) => c.low);
-    const highs = visible.map((c) => c.high);
-    if (livePrice) {
-      lows.push(livePrice);
-      highs.push(livePrice);
-    }
-    const min = Math.min(...lows);
-    const max = Math.max(...highs);
-    const pad = Math.max((max - min) * 0.08, Math.abs(max) * 0.0005, 0.01);
-    const lo = min - pad;
-    const hi = max + pad;
-    const range = hi - lo || 1;
-
-    const x = (i: number) =>
-      left + ((i + 0.5) / Math.max(1, visible.length)) * chartW;
-    const y = (value: number) => top + ((hi - value) / range) * chartH;
-
-    ctx.font = "11px system-ui";
-    ctx.lineWidth = 1;
-
-    for (let i = 0; i <= 6; i++) {
-      const yy = top + (chartH / 6) * i;
-      const value = hi - (range / 6) * i;
-      ctx.strokeStyle = palette.grid;
-      ctx.beginPath();
-      ctx.moveTo(left, yy);
-      ctx.lineTo(width - right, yy);
-      ctx.stroke();
-      ctx.fillStyle = palette.text;
-      ctx.fillText(compact(value), width - right + 8, yy + 4);
+    if(indicators.has("volume")){
+      const vTop=top+chartH+12,vBottom=vTop+60,maxV=Math.max(...visible.map(c=>Number(c.volume??0)),1);
+      visible.forEach((c,i)=>{const h=Number(c.volume??0)/maxV*55;ctx.fillStyle=c.close>=c.open?"rgba(95,212,170,.3)":"rgba(233,132,132,.28)";ctx.fillRect(x(i)-bodyW/2,vBottom-h,bodyW,h)});
+      ctx.fillStyle="rgba(245,239,228,.5)";ctx.fillText("VOL",left+4,vTop+10);
     }
 
-    const timeLines = Math.min(7, visible.length);
-    for (let i = 0; i < timeLines; i++) {
-      const index = Math.round(
-        (i / Math.max(1, timeLines - 1)) * (visible.length - 1),
-      );
-      const xx = x(index);
-      ctx.strokeStyle = palette.grid;
-      ctx.beginPath();
-      ctx.moveTo(xx, top);
-      ctx.lineTo(xx, height - bottom + 4);
-      ctx.stroke();
-      const stamp = new Date(visible[index]!.time);
-      ctx.fillStyle = palette.text;
-      ctx.fillText(
-        stamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        Math.max(left, xx - 24),
-        height - 12,
-      );
+    let panelTop=top+chartH+12+volumeH;
+    if(indicators.has("rsi")){
+      const topR=panelTop,bottomR=topR+70,ry=(v:number)=>bottomR-(v/100)*(bottomR-topR);
+      [30,50,70].forEach(v=>{ctx.strokeStyle="rgba(255,255,255,.06)";ctx.beginPath();ctx.moveTo(left,ry(v));ctx.lineTo(width-right,ry(v));ctx.stroke()});
+      ctx.strokeStyle="#d5b56f";ctx.beginPath();let s=false;series.rsi.forEach((v,i)=>{if(v==null)return;s?ctx.lineTo(x(i),ry(v)):ctx.moveTo(x(i),ry(v));s=true});if(s)ctx.stroke();ctx.fillStyle="rgba(245,239,228,.5)";ctx.fillText("RSI",left+4,topR+10);panelTop+=rsiH;
+    }
+    if(indicators.has("macd")){
+      const topM=panelTop,bottomM=topM+70,maxAbs=Math.max(...series.macd.hist.map(Math.abs),...series.macd.line.map(Math.abs),1e-9),my=(v:number)=>(topM+bottomM)/2-v/maxAbs*(bottomM-topM)/2*.85;
+      ctx.strokeStyle="rgba(255,255,255,.08)";ctx.beginPath();ctx.moveTo(left,my(0));ctx.lineTo(width-right,my(0));ctx.stroke();
+      series.macd.hist.forEach((v,i)=>{ctx.fillStyle=v>=0?"rgba(95,212,170,.32)":"rgba(233,132,132,.3)";ctx.fillRect(x(i)-bodyW/2,Math.min(my(v),my(0)),bodyW,Math.max(1,Math.abs(my(v)-my(0))))});
+      const ml=(vals:number[],color:string)=>{ctx.strokeStyle=color;ctx.beginPath();vals.forEach((v,i)=>i?ctx.lineTo(x(i),my(v)):ctx.moveTo(x(i),my(v)));ctx.stroke()};ml(series.macd.line,"#8fc7ff");ml(series.macd.signal,"#d5b56f");ctx.fillStyle="rgba(245,239,228,.5)";ctx.fillText("MACD",left+4,topM+10);
     }
 
-    const slot = chartW / Math.max(1, visible.length);
-    const bodyW = Math.max(2, Math.min(12, slot * 0.64));
+    if(livePrice!=null&&livePrice>=lo&&livePrice<=hi){const yy=y(livePrice);ctx.setLineDash([5,4]);ctx.strokeStyle="#efe1c9";ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#efe1c9";ctx.fillRect(width-right,yy-10,right,20);ctx.fillStyle="#191c1f";ctx.fillText(fmt(livePrice),width-right+5,yy+4)}
 
-    if (style === "candles") {
-      visible.forEach((c, i) => {
-        const xx = x(i);
-        const up = c.close >= c.open;
-        ctx.strokeStyle = up ? palette.up : palette.down;
-        ctx.fillStyle = up ? palette.up : palette.down;
-        ctx.beginPath();
-        ctx.moveTo(xx, y(c.high));
-        ctx.lineTo(xx, y(c.low));
-        ctx.stroke();
-        const y1 = y(c.open);
-        const y2 = y(c.close);
-        ctx.fillRect(
-          xx - bodyW / 2,
-          Math.min(y1, y2),
-          bodyW,
-          Math.max(1.5, Math.abs(y2 - y1)),
-        );
-      });
-    } else {
-      ctx.strokeStyle = palette.price;
-      ctx.lineWidth = 1.7;
-      ctx.beginPath();
-      visible.forEach((c, i) => {
-        const xx = x(i);
-        const yy = y(c.close);
-        if (i === 0) ctx.moveTo(xx, yy);
-        else ctx.lineTo(xx, yy);
-      });
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
+    const lineColor:Record<ChartPriceLine["kind"],string>={entry:"#8fc7ff",stop:"#e98484",target:"#5fd4aa"};
+    priceLines.forEach(pl=>{if(pl.price<lo||pl.price>hi)return;const yy=y(pl.price);ctx.setLineDash(pl.kind==="entry"?[]:[4,4]);ctx.strokeStyle=lineColor[pl.kind];ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=lineColor[pl.kind];const label=`${pl.label}${typeof pl.pnl==="number"?` ${pl.pnl>=0?"+":""}${fmt(pl.pnl)}`:""}`;ctx.fillText(label,left+8,yy-4)});
 
-    function drawSeries(
-      values: Array<number | null>,
-      color: string,
-      width = 1.25,
-    ) {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      ctx.beginPath();
-      let started = false;
-      values.forEach((value, i) => {
-        if (value == null || !Number.isFinite(value)) return;
-        if (!started) {
-          ctx.moveTo(x(i), y(value));
-          started = true;
-        } else {
-          ctx.lineTo(x(i), y(value));
-        }
-      });
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
-
-    if (indicators.has("sma20")) drawSeries(sma20, palette.sma);
-    if (indicators.has("ema20")) drawSeries(ema20, palette.ema);
-    if (indicators.has("vwap")) drawSeries(vwapSeries, palette.vwap);
-
-    if (indicators.has("volume")) {
-      const volumeTop = height - 95;
-      const volumeBottom = height - 30;
-      const maxVolume = Math.max(
-        ...visible.map((c) => Number(c.volume ?? 0)),
-        1,
-      );
-      visible.forEach((c, i) => {
-        const volume = Number(c.volume ?? 0);
-        const h = (volume / maxVolume) * (volumeBottom - volumeTop);
-        ctx.fillStyle =
-          c.close >= c.open ? palette.volumeUp : palette.volumeDown;
-        ctx.fillRect(x(i) - bodyW / 2, volumeBottom - h, bodyW, h);
-      });
-      ctx.fillStyle = palette.text;
-      ctx.fillText("VOL", left + 4, volumeTop + 10);
-    }
-
-    if (livePrice && livePrice >= lo && livePrice <= hi) {
-      const yy = y(livePrice);
-      ctx.setLineDash([5, 4]);
-      ctx.strokeStyle = palette.price;
-      ctx.beginPath();
-      ctx.moveTo(left, yy);
-      ctx.lineTo(width - right, yy);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = palette.price;
-      ctx.fillRect(width - right, yy - 10, right, 20);
-      ctx.fillStyle = "#191c1f";
-      ctx.fillText(compact(livePrice), width - right + 6, yy + 4);
-    }
-
-    if (hoverIndex != null && visible[hoverIndex]) {
-      const xx = x(hoverIndex);
-      const candle = visible[hoverIndex]!;
-      const yy = y(candle.close);
-      ctx.setLineDash([3, 3]);
-      ctx.strokeStyle = palette.cross;
-      ctx.beginPath();
-      ctx.moveTo(xx, top);
-      ctx.lineTo(xx, height - 28);
-      ctx.moveTo(left, yy);
-      ctx.lineTo(width - right, yy);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-  }, [
-    ema20,
-    height,
-    hoverIndex,
-    indicators,
-    livePrice,
-    sma20,
-    style,
-    visible,
-    vwapSeries,
-  ]);
-
-  const hovered =
-    hoverIndex != null && visible[hoverIndex]
-      ? visible[hoverIndex]
-      : visible[visible.length - 1];
-
-  function toggleIndicator(key: IndicatorKey) {
-    setIndicators((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
+    function ax(a:Anchor){return x(Math.max(0,Math.min(visible.length-1,a.index)))} function ay(a:Anchor){return y(a.price)}
+    drawings.forEach(d=>{ctx.strokeStyle="rgba(230,216,195,.9)";ctx.fillStyle="rgba(230,216,195,.9)";ctx.lineWidth=1.2;const aX=ax(d.a),aY=ay(d.a),b=d.b,bX=b?ax(b):aX,bY=b?ay(b):aY;
+      if(d.tool==="hline"){ctx.beginPath();ctx.moveTo(left,aY);ctx.lineTo(width-right,aY);ctx.stroke()}
+      else if(d.tool==="vline"){ctx.beginPath();ctx.moveTo(aX,top);ctx.lineTo(aX,top+chartH);ctx.stroke()}
+      else if(d.tool==="trend"||d.tool==="ray"){ctx.beginPath();ctx.moveTo(aX,aY);const endX=d.tool==="ray"?width-right:bX;const slope=(bX-aX)?(bY-aY)/(bX-aX):0;ctx.lineTo(endX,d.tool==="ray"?aY+slope*(endX-aX):bY);ctx.stroke()}
+      else if(d.tool==="rect"){ctx.strokeRect(Math.min(aX,bX),Math.min(aY,bY),Math.abs(bX-aX),Math.abs(bY-aY))}
+      else if(d.tool==="fib"){[0,.236,.382,.5,.618,.786,1].forEach(level=>{const yy=aY+(bY-aY)*level;ctx.beginPath();ctx.moveTo(Math.min(aX,bX),yy);ctx.lineTo(Math.max(aX,bX),yy);ctx.stroke();ctx.fillText(String(level),Math.max(aX,bX)+4,yy+3)})}
+      else if(d.tool==="text"){ctx.fillText(d.text??"Note",aX,aY)}
     });
+
+    if(hoverIndex!=null&&visible[hoverIndex]){const xx=x(hoverIndex),yy=y(visible[hoverIndex]!.close);ctx.setLineDash([3,3]);ctx.strokeStyle="rgba(255,255,255,.28)";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([])}
+  }, [drawings,height,hoverIndex,indicators,livePrice,priceLines,series,visible]);
+
+  const hovered = hoverIndex != null ? visible[hoverIndex] : visible.at(-1);
+  const remaining = useMemo(() => {
+    const last = candles.at(-1); if (!last) return 0;
+    const size = TIMEFRAME_MS[timeframe];
+    const end = Math.floor(Date.parse(last.time)/size)*size + size;
+    return Math.max(0, end-Date.now());
+  }, [candles,timeframe]);
+  const [clock,setClock]=useState(0);
+  useEffect(()=>{const t=setInterval(()=>setClock(v=>v+1),1000);return()=>clearInterval(t)},[]);
+  void clock;
+
+  function anchorFromEvent(event: React.PointerEvent<HTMLDivElement>): Anchor | null {
+    if (!visible.length) return null;
+    const rect=event.currentTarget.getBoundingClientRect(),right=78,left=8,top=24,chartW=rect.width-left-right;
+    const idx=Math.max(0,Math.min(visible.length-1,Math.floor((event.clientX-rect.left-left)/Math.max(1,chartW)*visible.length)));
+    const lows=visible.map(c=>c.low),highs=visible.map(c=>c.high);if(livePrice!=null){lows.push(livePrice);highs.push(livePrice)}
+    const min=Math.min(...lows),max=Math.max(...highs),pad=Math.max((max-min)*.1,Math.abs(max)*.0005,.01),lo=min-pad,hi=max+pad,chartH=Math.max(180,height-top-34-(indicators.has("volume")?82:0)-(indicators.has("rsi")?85:0)-(indicators.has("macd")?85:0));
+    const yy=event.clientY-rect.top; const price=hi-((yy-top)/chartH)*(hi-lo);
+    return {index:idx,price};
   }
 
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151a1d]">
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2 text-xs">
-        <strong className="mr-2 text-sm">{symbol}</strong>
-        <span className="rounded-md border border-white/10 px-2 py-1">
-          {timeframe}
-        </span>
-        <button
-          type="button"
-          onClick={() => setStyle(style === "candles" ? "line" : "candles")}
-          className="rounded-md border border-white/10 px-2 py-1"
-        >
-          {style === "candles" ? "Candles" : "Line"}
-        </button>
-        {(["sma20", "ema20", "vwap", "volume"] as IndicatorKey[]).map((key) => (
-          <button
-            type="button"
-            key={key}
-            onClick={() => toggleIndicator(key)}
-            className={`rounded-md border px-2 py-1 ${
-              indicators.has(key)
-                ? "border-amber-100/35 bg-amber-100/10"
-                : "border-white/10"
-            }`}
-          >
-            {key === "sma20"
-              ? "SMA 20"
-              : key === "ema20"
-                ? "EMA 20"
-                : key.toUpperCase()}
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => {
-            setVisibleCount(90);
-            setPan(0);
-          }}
-          className="ml-auto rounded-md border border-white/10 px-2 py-1"
-        >
-          Reset
-        </button>
-      </div>
+  function applyTool(event: React.PointerEvent<HTMLDivElement>) {
+    const a=anchorFromEvent(event); if(!a||tool==="cursor")return;
+    if(tool==="erase"){
+      if(!drawings.length)return;
+      let best=0,dist=Infinity;
+      drawings.forEach((d,i)=>{const dd=Math.abs(d.a.index-a.index)+Math.abs(d.a.price-a.price)/Math.max(1,Math.abs(a.price));if(dd<dist){dist=dd;best=i}});
+      commit(drawings.filter((_,i)=>i!==best));return;
+    }
+    if(tool==="hline"||tool==="vline"||tool==="text"){
+      const text=tool==="text"?window.prompt("Chart annotation")??"":undefined;
+      commit([...drawings,{id:crypto.randomUUID(),tool,a,text}]);return;
+    }
+    if(!pending){setPending(a);return}
+    commit([...drawings,{id:crypto.randomUUID(),tool,a:pending,b:a}]);setPending(null);
+  }
 
-      <div className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 border-b border-white/5 px-3 py-1.5 text-[11px] text-white/55">
-        {hovered ? (
-          <>
-            <span>{new Date(hovered.time).toLocaleString()}</span>
-            <span>O {compact(hovered.open)}</span>
-            <span>H {compact(hovered.high)}</span>
-            <span>L {compact(hovered.low)}</span>
-            <span>C {compact(hovered.close)}</span>
-            <span>V {compact(Number(hovered.volume ?? 0))}</span>
-          </>
-        ) : (
-          <span>No candles</span>
-        )}
-      </div>
+  const toggle=(key:Indicator)=>setIndicators(cur=>{const n=new Set(cur);n.has(key)?n.delete(key):n.add(key);return n});
 
-      <div
-        ref={stageRef}
-        className="relative w-full touch-none select-none"
-        style={{ height }}
-        onWheel={(event) => {
-          event.preventDefault();
-          setVisibleCount((current) =>
-            Math.max(20, Math.min(240, current + (event.deltaY > 0 ? 8 : -8))),
-          );
-        }}
-        onPointerDown={(event) => {
-          drag.current = { x: event.clientX, pan };
-          event.currentTarget.setPointerCapture(event.pointerId);
-        }}
-        onPointerMove={(event) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          const slot = Math.max(1, rect.width / Math.max(20, visible.length));
-          const index = Math.max(
-            0,
-            Math.min(
-              visible.length - 1,
-              Math.floor(
-                ((event.clientX - rect.left) / rect.width) * visible.length,
-              ),
-            ),
-          );
-          setHoverIndex(index);
-
-          if (drag.current) {
-            setPan(
-              drag.current.pan +
-                Math.round((drag.current.x - event.clientX) / slot),
-            );
-          }
-        }}
-        onPointerUp={(event) => {
-          drag.current = null;
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }}
-        onPointerLeave={() => {
-          drag.current = null;
-          setHoverIndex(null);
-        }}
-      >
-        <canvas ref={canvasRef} className="absolute inset-0" />
-      </div>
+  return <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151a1d]">
+    <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 p-2 text-xs">
+      <strong className="mr-1">{symbol}</strong><span className="rounded border border-white/10 px-2 py-1">{timeframe}</span>
+      {(["sma","ema","vwap","volume","rsi","macd","bb","atr","supertrend"] as Indicator[]).map(k=><button key={k} onClick={()=>toggle(k)} className={`rounded border px-2 py-1 ${indicators.has(k)?"border-amber-100/30 bg-amber-100/10":"border-white/10"}`}>{k.toUpperCase()}</button>)}
+      <button onClick={()=>{setVisibleCount(100);setPan(0)}} className="rounded border border-white/10 px-2 py-1">Fit</button>
+      <button onClick={()=>void stageRef.current?.requestFullscreen()} className="rounded border border-white/10 px-2 py-1">Fullscreen</button>
     </div>
-  );
+    <div className="flex flex-wrap gap-1 border-b border-white/10 p-2 text-xs">
+      {(["cursor","trend","hline","vline","ray","rect","fib","text","erase"] as Tool[]).map(k=><button key={k} onClick={()=>{setTool(k);setPending(null)}} className={`rounded border px-2 py-1 ${tool===k?"border-amber-100/30 bg-amber-100/10":"border-white/10"}`}>{k}</button>)}
+      <button onClick={undo} className="rounded border border-white/10 px-2 py-1">Undo</button>
+      <button onClick={redoOnce} className="rounded border border-white/10 px-2 py-1">Redo</button>
+      <button onClick={()=>commit([])} className="rounded border border-white/10 px-2 py-1">Clear</button>
+      {pending?<span className="px-2 py-1 text-white/50">Select second point…</span>:null}
+    </div>
+    <div className="flex flex-wrap gap-3 border-b border-white/5 px-3 py-1.5 text-[11px] text-white/55">
+      {hovered?<><span>{new Date(hovered.time).toLocaleString()}</span><span>O {fmt(hovered.open)}</span><span>H {fmt(hovered.high)}</span><span>L {fmt(hovered.low)}</span><span>C {fmt(hovered.close)}</span><span>V {fmt(Number(hovered.volume??0))}</span></>:<span>No candles</span>}
+      <span className="ml-auto">Candle {Math.floor(remaining/60000).toString().padStart(2,"0")}:{Math.floor((remaining%60000)/1000).toString().padStart(2,"0")}</span>
+    </div>
+    <div ref={stageRef} className="relative w-full touch-none select-none" style={{height}}
+      onWheel={e=>{e.preventDefault();setVisibleCount(v=>Math.max(20,Math.min(300,v+(e.deltaY>0?8:-8))))}}
+      onPointerDown={e=>{pointers.current.set(e.pointerId,{x:e.clientX,y:e.clientY});if(tool!=="cursor"){applyTool(e);return}drag.current={x:e.clientX,pan};e.currentTarget.setPointerCapture(e.pointerId)}}
+      onPointerMove={e=>{const rect=e.currentTarget.getBoundingClientRect();const idx=Math.max(0,Math.min(visible.length-1,Math.floor((e.clientX-rect.left)/rect.width*visible.length)));setHoverIndex(idx);pointers.current.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.current.size===2){const pts=[...pointers.current.values()];const d=Math.abs(pts[0]!.x-pts[1]!.x);const last=(e.currentTarget.dataset.pinch?Number(e.currentTarget.dataset.pinch):d);if(Math.abs(d-last)>8){setVisibleCount(v=>Math.max(20,Math.min(300,v+(d>last?-6:6))));e.currentTarget.dataset.pinch=String(d)}return}if(drag.current){const slot=Math.max(1,rect.width/Math.max(20,visible.length));setPan(drag.current.pan+Math.round((drag.current.x-e.clientX)/slot))}}}
+      onPointerUp={e=>{pointers.current.delete(e.pointerId);drag.current=null;delete e.currentTarget.dataset.pinch;try{e.currentTarget.releasePointerCapture(e.pointerId)}catch{}}}
+      onPointerCancel={e=>{pointers.current.delete(e.pointerId);drag.current=null}}
+      onPointerLeave={()=>{setHoverIndex(null);if(!pointers.current.size)drag.current=null}}>
+      <canvas ref={canvasRef} className="absolute inset-0"/>
+    </div>
+  </div>;
 }

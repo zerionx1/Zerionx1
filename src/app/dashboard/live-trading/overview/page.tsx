@@ -1,0 +1,1 @@
+import {LiveTradingCommandCenter} from "@/components/live/live-trading-command-center";export default function Page(){return <main className="dashboard-page"><LiveTradingCommandCenter/></main>}

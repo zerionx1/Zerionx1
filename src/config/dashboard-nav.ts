@@ -1,26 +1,14 @@
 import {
-  Activity,
-  BarChart3,
-  Bell,
-  BookOpen,
-  BrainCircuit,
-  ChartCandlestick,
-  CreditCard,
-  FileBarChart,
-  Gauge,
-  ListFilter,
-  NotebookTabs,
-  Settings,
-  ShieldCheck,
-  TestTube2,
-  UserRound,
-  WalletCards,
+  Activity, BarChart3, Bell, BookOpen, BrainCircuit, ChartCandlestick, CreditCard,
+  FileBarChart, Gauge, ListFilter, NotebookTabs, Settings, ShieldCheck, TestTube2,
+  UserRound, WalletCards,
 } from "lucide-react";
 import type { NavigationItem } from "@/types/navigation";
 
 export const dashboardNav: NavigationItem[] = [
   { label: "Command Center", href: "/dashboard", icon: Gauge },
   { label: "Markets", href: "/dashboard/markets", icon: ChartCandlestick },
+  { label: "Charts", href: "/dashboard/charts", icon: BarChart3 },
   { label: "Signals", href: "/dashboard/signals", icon: Activity },
   { label: "Watchlists", href: "/dashboard/watchlists", icon: ListFilter },
   { label: "Alerts", href: "/dashboard/alerts", icon: Bell },

@@ -1,4 +1,4 @@
-import type { Candle } from "@/types/market";
+import type { Candle, Timeframe } from "@/types/market";
 import { ZerionProChart } from "@/components/charts/zerion-pro-chart";
 
 export function CandlestickChart({
@@ -9,7 +9,7 @@ export function CandlestickChart({
 }: {
   candles: Candle[];
   symbol?: string;
-  timeframe?: string;
+  timeframe?: Timeframe;
   livePrice?: number | null;
 }) {
   return (

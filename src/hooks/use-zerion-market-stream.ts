@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+export type ZerionFeedStatus =
+  | "LIVE"
+  | "RECONNECTING"
+  | "STALE"
+  | "DISCONNECTED";
 
 export type ZerionLiveQuote = {
   provider: "upstox" | "coindcx";
@@ -26,139 +32,200 @@ type GatewayEnvelope = {
   data?: unknown;
 };
 
-function normalize(value: string) {
+type Listener = () => void;
+
+function norm(value: string) {
   return value.trim().toUpperCase();
 }
 
-function aliases(quote: ZerionLiveQuote) {
-  return new Set([
-    normalize(quote.instrumentId),
-    normalize(quote.symbol),
-    normalize(quote.providerSymbol),
-    normalize(quote.symbol).replace("/", ""),
-    normalize(quote.symbol).replace("-", ""),
-  ]);
+function quoteAliases(quote: ZerionLiveQuote) {
+  return [
+    norm(quote.instrumentId),
+    norm(quote.symbol),
+    norm(quote.providerSymbol),
+    norm(quote.symbol).replaceAll("/", ""),
+    norm(quote.symbol).replaceAll("-", ""),
+  ];
 }
 
-export function useZerionMarketStream(
-  instruments: string[],
-): Record<string, ZerionLiveQuote> {
-  const [quotes, setQuotes] = useState<Record<string, ZerionLiveQuote>>({});
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+class ZerionRealtimeGateway {
+  socket: WebSocket | null = null;
+  refs = new Map<string, number>();
+  quotes = new Map<string, ZerionLiveQuote>();
+  listeners = new Set<Listener>();
+  reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  staleTimer: ReturnType<typeof setInterval> | null = null;
+  reconnectAttempt = 0;
+  status: ZerionFeedStatus = "DISCONNECTED";
+  lastQuoteAt = 0;
 
-  const wanted = useMemo(
-    () => new Set(instruments.map(normalize).filter(Boolean)),
-    [instruments],
-  );
+  private url() {
+    return (
+      process.env.NEXT_PUBLIC_ZERION_REALTIME_URL ??
+      "wss://zerionx1.onrender.com/realtime"
+    );
+  }
 
-  useEffect(() => {
-    if (wanted.size === 0) return;
+  private emit() {
+    for (const listener of this.listeners) listener();
+  }
 
-    let socket: WebSocket | null = null;
-    let stopped = false;
+  private setStatus(status: ZerionFeedStatus) {
+    if (status === this.status) return;
+    this.status = status;
+    this.emit();
+  }
 
-    const ingest = (value: unknown) => {
-      if (!value || typeof value !== "object") return;
+  private startStaleWatch() {
+    if (this.staleTimer) return;
+    this.staleTimer = setInterval(() => {
+      if (this.socket?.readyState !== WebSocket.OPEN) return;
+      if (!this.lastQuoteAt) return;
+      if (Date.now() - this.lastQuoteAt > 15_000) this.setStatus("STALE");
+    }, 2500);
+  }
 
-      const quote = value as ZerionLiveQuote;
+  private ingest(value: unknown) {
+    if (!value || typeof value !== "object") return;
+    const quote = value as ZerionLiveQuote;
+    if (
+      (quote.provider !== "upstox" && quote.provider !== "coindcx") ||
+      !quote.instrumentId ||
+      !quote.symbol ||
+      !Number.isFinite(quote.price)
+    ) return;
 
-      if (
-        (quote.provider !== "upstox" && quote.provider !== "coindcx") ||
-        !quote.instrumentId ||
-        !quote.symbol ||
-        typeof quote.price !== "number"
-      ) {
+    for (const alias of quoteAliases(quote)) this.quotes.set(alias, quote);
+    this.lastQuoteAt = Date.now();
+    this.setStatus("LIVE");
+    this.emit();
+  }
+
+  connect() {
+    if (typeof window === "undefined") return;
+    if (
+      this.socket?.readyState === WebSocket.OPEN ||
+      this.socket?.readyState === WebSocket.CONNECTING
+    ) return;
+
+    this.setStatus(this.reconnectAttempt ? "RECONNECTING" : "DISCONNECTED");
+    const socket = new WebSocket(this.url());
+    this.socket = socket;
+
+    socket.addEventListener("open", () => {
+      this.reconnectAttempt = 0;
+      this.startStaleWatch();
+      const instruments = [...this.refs.keys()];
+      if (instruments.length) {
+        socket.send(JSON.stringify({ type: "subscribe", instruments }));
+      }
+    });
+
+    socket.addEventListener("message", (event) => {
+      try {
+        const frame = JSON.parse(event.data) as GatewayEnvelope;
+        if (frame.type === "snapshot" && Array.isArray(frame.data)) {
+          for (const item of frame.data) this.ingest(item);
+          return;
+        }
+        if (frame.type === "quote") this.ingest(frame.data);
+      } catch {
+        // Malformed gateway frames are ignored; provider prices are never synthesized.
+      }
+    });
+
+    socket.addEventListener("error", () => socket.close());
+    socket.addEventListener("close", () => {
+      if (this.socket === socket) this.socket = null;
+      if (!this.refs.size) {
+        this.setStatus("DISCONNECTED");
         return;
       }
+      this.setStatus("RECONNECTING");
+      const delay = Math.min(15_000, 1000 * 2 ** Math.min(4, this.reconnectAttempt++));
+      if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = setTimeout(() => this.connect(), delay);
+    });
+  }
 
-      const quoteAliases = aliases(quote);
-      const matched = [...wanted].some((item) => quoteAliases.has(item));
+  subscribe(instruments: string[], listener: Listener) {
+    this.listeners.add(listener);
+    const wanted = [...new Set(instruments.map(norm).filter(Boolean))];
+    const newlyAdded: string[] = [];
 
-      if (!matched) return;
+    for (const id of wanted) {
+      const count = this.refs.get(id) ?? 0;
+      this.refs.set(id, count + 1);
+      if (count === 0) newlyAdded.push(id);
+    }
 
-      setQuotes((current) => {
-        const next = { ...current };
+    this.connect();
 
-        for (const item of wanted) {
-          if (quoteAliases.has(item)) next[item] = quote;
-        }
-
-        next[normalize(quote.instrumentId)] = quote;
-        next[normalize(quote.symbol)] = quote;
-        next[normalize(quote.providerSymbol)] = quote;
-
-        return next;
-      });
-    };
-
-    const connect = () => {
-      if (stopped) return;
-
-      const configured =
-        process.env.NEXT_PUBLIC_ZERION_REALTIME_URL ??
-        "wss://zerionx1.onrender.com/realtime";
-
-      socket = new WebSocket(configured);
-
-      socket.addEventListener("open", () => {
-        socket?.send(
-          JSON.stringify({
-            type: "subscribe",
-            instruments: [...wanted],
-          }),
-        );
-      });
-
-      socket.addEventListener("message", (event) => {
-        try {
-          const envelope = JSON.parse(event.data) as GatewayEnvelope;
-
-          if (envelope.type === "snapshot" && Array.isArray(envelope.data)) {
-            for (const row of envelope.data) ingest(row);
-            return;
-          }
-
-          if (envelope.type === "quote") {
-            ingest(envelope.data);
-          }
-        } catch {
-          // Ignore malformed frames.
-        }
-      });
-
-      socket.addEventListener("close", () => {
-        if (stopped) return;
-
-        reconnectTimer.current = setTimeout(connect, 3000);
-      });
-
-      socket.addEventListener("error", () => {
-        socket?.close();
-      });
-    };
-
-    connect();
+    if (newlyAdded.length && this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ type: "subscribe", instruments: newlyAdded }));
+    }
 
     return () => {
-      stopped = true;
-
-      if (reconnectTimer.current) {
-        clearTimeout(reconnectTimer.current);
-        reconnectTimer.current = null;
+      this.listeners.delete(listener);
+      const removed: string[] = [];
+      for (const id of wanted) {
+        const count = this.refs.get(id) ?? 0;
+        if (count <= 1) {
+          this.refs.delete(id);
+          removed.push(id);
+        } else this.refs.set(id, count - 1);
       }
 
-      if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(
-          JSON.stringify({
-            type: "unsubscribe",
-            instruments: [...wanted],
-          }),
-        );
+      if (removed.length && this.socket?.readyState === WebSocket.OPEN) {
+        this.socket.send(JSON.stringify({ type: "unsubscribe", instruments: removed }));
       }
 
-      socket?.close();
+      if (!this.refs.size) {
+        if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+        this.socket?.close();
+        this.socket = null;
+        this.setStatus("DISCONNECTED");
+      }
     };
+  }
+
+  snapshot(wanted: Set<string>) {
+    const out: Record<string, ZerionLiveQuote> = {};
+    for (const id of wanted) {
+      const quote = this.quotes.get(id);
+      if (quote) out[id] = quote;
+    }
+    return { quotes: out, status: this.status, lastQuoteAt: this.lastQuoteAt };
+  }
+}
+
+const gateway = new ZerionRealtimeGateway();
+
+export function useZerionMarketStream(instruments: string[]) {
+  const key = instruments.map(norm).filter(Boolean).sort().join("|");
+  const wanted = useMemo(() => new Set(key ? key.split("|") : []), [key]);
+  const [, render] = useState(0);
+
+  useEffect(() => {
+    if (!wanted.size) return;
+    return gateway.subscribe([...wanted], () => render((v) => v + 1));
   }, [wanted]);
 
-  return quotes;
+  return gateway.snapshot(wanted).quotes;
+}
+
+export function useZerionFeedStatus() {
+  const [, render] = useState(0);
+  useEffect(() => {
+    const listener = () => render((v) => v + 1);
+    gateway.listeners.add(listener);
+    return () => {
+      gateway.listeners.delete(listener);
+    };
+  }, []);
+  return {
+    status: gateway.status,
+    lastQuoteAt: gateway.lastQuoteAt,
+  };
 }

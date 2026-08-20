@@ -1,0 +1,1 @@
+import type {ReactNode} from "react";import {LiveSectionNav} from "@/components/live/live-section-nav";export default function Layout({children}:{children:ReactNode}){return <><LiveSectionNav/>{children}</>}

@@ -3,29 +3,30 @@
 import { LoaderCircle, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
 import type { MarketInstrument, MarketKind } from "@/types/market";
 
 const filters: [string, MarketKind | ""][] = [
   ["All", ""],
   ["India", "indian-equity"],
   ["Indices", "indian-index"],
-  ["F&O", "indian-futures"],
+  ["Futures", "indian-futures"],
+  ["Options", "indian-options"],
   ["Crypto", "crypto"],
-  ["Forex", "forex"],
-  ["Commodities", "commodity"],
-  ["US", "us-equity"],
 ];
+
+function providerFor(instrument: MarketInstrument) {
+  if (instrument.id.startsWith("coindcx:")) return "CoinDCX";
+  if (instrument.id.startsWith("upstox:")) return "Upstox";
+  return "Provider";
+}
 
 function hrefFor(instrument: MarketInstrument) {
   const params = new URLSearchParams({
-    id: instrument.id,
+    instrument: instrument.id,
     symbol: instrument.symbol,
-    name: instrument.displayName,
-    market: instrument.market,
-    exchange: instrument.exchange,
+    tf: "5m",
   });
-  return `/dashboard/markets/instrument?${params.toString()}`;
+  return `/dashboard/charts?${params.toString()}`;
 }
 
 export function GlobalMarketSearch({
@@ -47,22 +48,23 @@ export function GlobalMarketSearch({
         setLoading(false);
         return;
       }
-
       setLoading(true);
       try {
         const response = await fetch(
-          `/api/markets/search?q=${encodeURIComponent(query)}${
-            market ? `&market=${market}` : ""
-          }`,
+          `/api/markets/search?q=${encodeURIComponent(query)}${market ? `&market=${market}` : ""}`,
           { signal: controller.signal, cache: "no-store" },
         );
         const body = (await response.json()) as { data?: MarketInstrument[] };
-        setRows(body.data ?? []);
+        setRows(
+          (body.data ?? []).filter(
+            (row) =>
+              row.id.startsWith("upstox:") || row.id.startsWith("coindcx:"),
+          ),
+        );
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
-    }, 220);
-
+    }, 180);
     return () => {
       clearTimeout(timer);
       controller.abort();
@@ -70,39 +72,33 @@ export function GlobalMarketSearch({
   }, [query, market]);
 
   return (
-    <section className="relative rounded-[28px] border border-white/10 bg-white/[0.035] p-4 shadow-2xl backdrop-blur-xl">
-      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4">
-        <Search className="h-5 w-5 text-amber-100" />
+    <section className="relative rounded-[24px] border border-black/10 bg-[#F7F4ED] p-4 text-[#2F2A25] shadow-sm">
+      <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-[#F3F1EC] px-4">
+        <Search className="h-5 w-5" />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search TATA, RELIANCE, NIFTY, BTC, option contract…"
-          className="h-14 min-w-0 flex-1 bg-transparent text-white outline-none placeholder:text-white/35"
+          placeholder="Search TATA, TCS, RELIANCE, HDFC, NIFTY, BANKNIFTY, BTC, ETH, SOL…"
+          className="h-14 min-w-0 flex-1 bg-transparent outline-none placeholder:text-black/35"
         />
-        {loading ? (
-          <LoaderCircle className="h-5 w-5 animate-spin text-white/50" />
-        ) : null}
+        {loading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : null}
       </div>
-
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
         {filters.map(([label, value]) => (
           <button
             key={label}
             type="button"
             onClick={() => setMarket(value)}
-            className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition ${
-              market === value
-                ? "bg-amber-100 text-[#2F2A25]"
-                : "border border-white/10 text-white/60 hover:text-white"
+            className={`luxury-filter shrink-0 ${
+              market === value ? "luxury-filter--active" : ""
             }`}
           >
             {label}
           </button>
         ))}
       </div>
-
       {query.trim() ? (
-        <div className="mt-4 grid max-h-[420px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+        <div className="mt-4 grid max-h-[430px] gap-2 overflow-y-auto sm:grid-cols-2">
           {rows.map((instrument) => (
             <button
               type="button"
@@ -110,20 +106,25 @@ export function GlobalMarketSearch({
               onClick={() =>
                 onAdd ? onAdd(instrument) : router.push(hrefFor(instrument))
               }
-              className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/15 p-4 text-left transition hover:border-amber-100/30 hover:bg-white/[.06]"
+              className="flex min-h-[72px] items-center justify-between gap-3 rounded-2xl border border-black/10 p-4 text-left hover:bg-black/[.03]"
             >
               <div className="min-w-0">
                 <strong className="block truncate">{instrument.symbol}</strong>
-                <span className="block truncate text-xs text-white/45">
-                  {instrument.displayName} · {instrument.exchange}
+                <span className="block truncate text-xs opacity-55">
+                  {instrument.displayName}
+                </span>
+                <span className="mt-1 block text-[10px] uppercase opacity-45">
+                  {instrument.exchange} · {instrument.market.replaceAll("-", " ")}
                 </span>
               </div>
-              <span className="data-badge shrink-0">Open chart</span>
+              <span className="data-badge shrink-0">
+                {providerFor(instrument)}
+              </span>
             </button>
           ))}
           {!loading && rows.length === 0 ? (
-            <p className="p-3 text-sm text-white/45">
-              No provider instrument matched this search.
+            <p className="p-3 text-sm opacity-55">
+              No supported Upstox/CoinDCX instrument matched.
             </p>
           ) : null}
         </div>

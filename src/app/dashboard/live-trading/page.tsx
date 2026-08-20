@@ -1,9 +1,1 @@
-import { LiveTradingCommandCenter } from "@/components/live/live-trading-command-center";
-
-export default function LiveTradingPage() {
-  return (
-    <main className="dashboard-page">
-      <LiveTradingCommandCenter />
-    </main>
-  );
-}
+import {redirect} from "next/navigation";export default function Page(){redirect("/dashboard/live-trading/overview")}

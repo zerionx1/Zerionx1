@@ -1,5 +1,4 @@
 import { MarketChartTerminal } from "@/components/markets/market-chart-terminal";
-import { ActiveStrategyRuntime } from "@/components/strategies/active-strategy-runtime";
 
 export default function ChartsPage() {
   return (
@@ -7,11 +6,10 @@ export default function ChartsPage() {
       <div className="page-heading">
         <div>
           <p className="eyebrow">CHARTS</p>
-          <h1>Full Market Chart Terminal</h1>
-          <p>Chart-first workspace for provider-backed markets and enabled strategies.</p>
+          <h1>Zerion Market Terminal</h1>
+          <p>One provider-backed chart workspace for search, positions, trades and market navigation.</p>
         </div>
       </div>
-      <ActiveStrategyRuntime />
       <MarketChartTerminal />
     </main>
   );
