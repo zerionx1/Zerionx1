@@ -29,7 +29,7 @@ type IoFactory = (
 import socketIoClient from "socket.io-client";
 
 const io = socketIoClient as unknown as IoFactory;
-const ENDPOINT = "wss://stream.coindcx.com";
+const ENDPOINT = "https://stream.coindcx.com";
 
 function makeSocket() {
   return io(ENDPOINT, {

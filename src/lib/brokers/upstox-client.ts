@@ -5,21 +5,44 @@ import { getConnectedBrokerConnection } from "@/lib/brokers/connection-store";
 const API_V2 = "https://api.upstox.com/v2";
 const API_V3 = "https://api.upstox.com/v3";
 
+type TokenScope = "account" | "market";
+
 function accessTokenFrom(payload: Record<string, unknown>) {
   const token = payload.access_token;
+
   if (typeof token !== "string" || !token) {
     throw new Error("Upstox access token is missing");
   }
+
   return token;
 }
 
-async function upstoxFetch(base: string, path: string, init?: RequestInit) {
+async function tokenFor(scope: TokenScope) {
+  if (scope === "market") {
+    const analytics = process.env.UPSTOX_ANALYTICS_TOKEN?.trim();
+
+    if (analytics) {
+      return analytics;
+    }
+  }
+
   const { token } = await getConnectedBrokerConnection("upstox");
+  return accessTokenFrom(token);
+}
+
+async function upstoxFetch(
+  base: string,
+  path: string,
+  init?: RequestInit,
+  scope: TokenScope = "account",
+) {
+  const accessToken = await tokenFor(scope);
+
   const response = await fetch(`${base}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",
-      Authorization: `Bearer ${accessTokenFrom(token)}`,
+      Authorization: `Bearer ${accessToken}`,
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
       ...(init?.headers ?? {}),
     },
@@ -34,42 +57,79 @@ async function upstoxFetch(base: string, path: string, init?: RequestInit) {
         ?.message ??
       (json as { message?: string } | null)?.message ??
       `Upstox request failed (${response.status})`;
+
     throw new Error(message);
   }
 
   return json;
 }
 
-const upstoxV2Get = (path: string) => upstoxFetch(API_V2, path);
-const upstoxV3Get = (path: string, headers?: HeadersInit) =>
-  upstoxFetch(API_V3, path, { headers });
+const accountV2Get = (path: string) =>
+  upstoxFetch(API_V2, path, undefined, "account");
+
+const accountV3Get = (path: string, headers?: HeadersInit) =>
+  upstoxFetch(API_V3, path, { headers }, "account");
+
+const marketV2Get = (path: string) =>
+  upstoxFetch(API_V2, path, undefined, "market");
+
+const marketV3Get = (path: string, headers?: HeadersInit) =>
+  upstoxFetch(API_V3, path, { headers }, "market");
 
 export const upstoxClient = {
-  profile: () => upstoxV2Get("/user/profile"),
+  // User/account APIs remain behind the user's normal OAuth token.
+  profile: () => accountV2Get("/user/profile"),
+
   funds: () =>
-    upstoxV3Get("/user/get-funds-and-margin", { "Api-Version": "3.0" }),
-  positions: () => upstoxV2Get("/portfolio/short-term-positions"),
-  holdings: () => upstoxV2Get("/portfolio/long-term-holdings"),
-  orders: () => upstoxV2Get("/order/retrieve-all"),
-  trades: () => upstoxV2Get("/order/trades/get-trades-for-day"),
+    accountV3Get("/user/get-funds-and-margin", {
+      "Api-Version": "3.0",
+    }),
+
+  positions: () =>
+    accountV2Get("/portfolio/short-term-positions"),
+
+  holdings: () =>
+    accountV2Get("/portfolio/long-term-holdings"),
+
+  orders: () =>
+    accountV2Get("/order/retrieve-all"),
+
+  trades: () =>
+    accountV2Get("/order/trades/get-trades-for-day"),
+
+  // Market/read-only APIs prefer the 1-year Analytics Token.
   instrumentSearch: (query: string, filters = "") =>
-    upstoxV2Get(
-      `/instruments/search?query=${encodeURIComponent(query)}${filters ? `&${filters}` : ""}`,
-    ),
-  fullQuote: (instrumentKey: string) =>
-    upstoxV2Get(
-      `/market-quote/quotes?instrument_key=${encodeURIComponent(instrumentKey)}`,
-    ),
-  optionContracts: (instrumentKey: string, expiry?: string) =>
-    upstoxV2Get(
-      `/option/contract?instrument_key=${encodeURIComponent(instrumentKey)}${
-        expiry ? `&expiry_date=${encodeURIComponent(expiry)}` : ""
+    marketV2Get(
+      `/instruments/search?query=${encodeURIComponent(query)}${
+        filters ? `&${filters}` : ""
       }`,
     ),
-  optionChain: (instrumentKey: string, expiry: string) =>
-    upstoxV2Get(
-      `/option/chain?instrument_key=${encodeURIComponent(instrumentKey)}&expiry_date=${encodeURIComponent(expiry)}`,
+
+  fullQuote: (instrumentKey: string) =>
+    marketV2Get(
+      `/market-quote/quotes?instrument_key=${encodeURIComponent(
+        instrumentKey,
+      )}`,
     ),
+
+  optionContracts: (instrumentKey: string, expiry?: string) =>
+    marketV2Get(
+      `/option/contract?instrument_key=${encodeURIComponent(
+        instrumentKey,
+      )}${
+        expiry
+          ? `&expiry_date=${encodeURIComponent(expiry)}`
+          : ""
+      }`,
+    ),
+
+  optionChain: (instrumentKey: string, expiry: string) =>
+    marketV2Get(
+      `/option/chain?instrument_key=${encodeURIComponent(
+        instrumentKey,
+      )}&expiry_date=${encodeURIComponent(expiry)}`,
+    ),
+
   historicalV3: (
     instrumentKey: string,
     unit: "minutes" | "hours" | "days" | "weeks" | "months",
@@ -77,24 +137,33 @@ export const upstoxClient = {
     toDate: string,
     fromDate?: string,
   ) =>
-    upstoxV3Get(
-      `/historical-candle/${encodeURIComponent(instrumentKey)}/${unit}/${interval}/${toDate}${
+    marketV3Get(
+      `/historical-candle/${encodeURIComponent(
+        instrumentKey,
+      )}/${unit}/${interval}/${toDate}${
         fromDate ? `/${fromDate}` : ""
       }`,
     ),
+
   intradayV3: (
     instrumentKey: string,
     unit: "minutes" | "hours" | "days",
     interval: number,
   ) =>
-    upstoxV3Get(
-      `/historical-candle/intraday/${encodeURIComponent(instrumentKey)}/${unit}/${interval}`,
+    marketV3Get(
+      `/historical-candle/intraday/${encodeURIComponent(
+        instrumentKey,
+      )}/${unit}/${interval}`,
     ),
+
   exitAllPositions: (segment?: string) =>
     upstoxFetch(
       API_V2,
-      `/order/positions/exit${segment ? `?segment=${encodeURIComponent(segment)}` : ""}`,
+      `/order/positions/exit${
+        segment ? `?segment=${encodeURIComponent(segment)}` : ""
+      }`,
       { method: "POST" },
+      "account",
     ),
 };
 
