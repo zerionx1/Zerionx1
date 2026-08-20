@@ -43,6 +43,7 @@ function makeSocket() {
 export function connectCoinDcxMarketSocket(options: {
   pairs: string[];
   onTrade: (response: unknown) => void;
+  onPrice?: (response: unknown) => void;
   onOpen?: () => void;
   onClose?: () => void;
   onError?: (error: Error) => void;
@@ -53,12 +54,17 @@ export function connectCoinDcxMarketSocket(options: {
   socket.on("connect", () => {
     for (const pair of joinedPairs) {
       socket.emit("join", { channelName: `${pair}@trades` });
+      socket.emit("join", { channelName: `${pair}@prices` });
     }
     options.onOpen?.();
   });
 
   socket.on("new-trade", (...args) => {
     options.onTrade(args[0]);
+  });
+
+  socket.on("price-change", (...args) => {
+    options.onPrice?.(args[0]);
   });
 
   socket.on("disconnect", () => options.onClose?.());
@@ -82,6 +88,10 @@ export function connectCoinDcxMarketSocket(options: {
         socket.emit("join", {
           channelName: `${pair}@trades`,
         });
+
+        socket.emit("join", {
+          channelName: `${pair}@prices`,
+        });
       }
     },
 
@@ -93,12 +103,17 @@ export function connectCoinDcxMarketSocket(options: {
         socket.emit("leave", {
           channelName: `${pair}@trades`,
         });
+
+        socket.emit("leave", {
+          channelName: `${pair}@prices`,
+        });
       }
     },
 
     close() {
       for (const pair of joinedPairs) {
         socket.emit("leave", { channelName: `${pair}@trades` });
+        socket.emit("leave", { channelName: `${pair}@prices` });
       }
 
       joinedPairs.clear();

@@ -98,6 +98,36 @@ export async function getCoinDcxMarketDetails() {
   return (await jsonOrThrow(response)) as CoinDcxMarketDetail[];
 }
 
+export async function getCoinDcxTradeHistory(
+  pair: string,
+  limit = 10,
+) {
+  const query = new URLSearchParams({
+    pair,
+    limit: String(Math.min(Math.max(limit, 1), 500)),
+  });
+
+  const response = await fetch(
+    `${PUBLIC}/market_data/trade_history?${query}`,
+    {
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        "Cache-Control": "no-cache, no-store, max-age=0",
+        Pragma: "no-cache",
+      },
+    },
+  );
+
+  return (await jsonOrThrow(response)) as Array<{
+    p: number | string;
+    q?: number | string;
+    s?: string;
+    T: number | string;
+    m?: boolean;
+  }>;
+}
+
 export async function getCoinDcxCandles(
   pair: string,
   interval: string,
