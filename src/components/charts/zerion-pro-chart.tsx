@@ -11,6 +11,15 @@ export type ChartPriceLine = {
   label: string;
   kind: "entry" | "stop" | "target";
   pnl?: number;
+  exit?: {
+    mode: "paper" | "live";
+    positionId: string;
+    broker?: "upstox";
+    instrumentToken?: string;
+    symbol?: string;
+    quantity?: number;
+    product?: string;
+  };
 };
 
 type Indicator =
@@ -36,6 +45,8 @@ type Props = {
   livePrice?: number | null;
   priceLines?: ChartPriceLine[];
   instrumentId?: string;
+  onExitPriceLine?: (line: ChartPriceLine) => void;
+  exitBusyId?: string;
 };
 
 const average = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0);
@@ -125,12 +136,14 @@ export function ZerionProChart({
   livePrice = null,
   priceLines = [],
   instrumentId = symbol,
+  onExitPriceLine,
+  exitBusyId = "",
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const drag = useRef<{ x: number; pan: number } | null>(null);
-  const [visibleCount, setVisibleCount] = useState(100);
+  const [visibleCount, setVisibleCount] = useState(72);
   const [pan, setPan] = useState(0);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [tool, setTool] = useState<Tool>("cursor");
@@ -208,21 +221,21 @@ export function ZerionProChart({
     canvas.width = width*dpr; canvas.height=height*dpr; canvas.style.width=`${width}px`; canvas.style.height=`${height}px`;
     const raw=canvas.getContext("2d"); if(!raw)return; const ctx=raw; ctx.scale(dpr,dpr);
 
-    const right=78,left=8,top=24;
+    const right=Math.max(118,Math.min(170,width*.16)),left=12,top=28;
     const rsiH=indicators.has("rsi")?85:0, macdH=indicators.has("macd")?85:0, volumeH=indicators.has("volume")?82:0;
-    const bottom=34+rsiH+macdH+volumeH, chartW=width-left-right, chartH=Math.max(180,height-top-bottom);
+    const bottom=38+rsiH+macdH+volumeH, chartW=width-left-right, plotW=chartW*.91, chartH=Math.max(180,height-top-bottom);
     const lows=visible.map(c=>c.low), highs=visible.map(c=>c.high);
     if(livePrice!=null){lows.push(livePrice);highs.push(livePrice)}
     priceLines.forEach(l=>{lows.push(l.price);highs.push(l.price)});
     const min=Math.min(...lows),max=Math.max(...highs),pad=Math.max((max-min)*.1,Math.abs(max)*.0005,.01),lo=min-pad,hi=max+pad,range=hi-lo||1;
-    const x=(i:number)=>left+((i+.5)/visible.length)*chartW;
+    const x=(i:number)=>left+((i+.5)/visible.length)*plotW;
     const y=(p:number)=>top+((hi-p)/range)*chartH;
 
-    ctx.fillStyle="#151a1d";ctx.fillRect(0,0,width,height);ctx.font="11px system-ui";ctx.lineWidth=1;
+    ctx.fillStyle="#11181c";ctx.fillRect(0,0,width,height);ctx.font="13px system-ui";ctx.lineWidth=1;
     for(let i=0;i<=6;i++){const yy=top+chartH*i/6;ctx.strokeStyle="rgba(255,255,255,.07)";ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.fillStyle="rgba(245,239,228,.64)";ctx.fillText(fmt(hi-range*i/6),width-right+6,yy+4)}
     const timeLines=Math.min(7,visible.length);
     for(let i=0;i<timeLines;i++){const idx=Math.round(i*(visible.length-1)/Math.max(1,timeLines-1)),xx=x(idx);ctx.strokeStyle="rgba(255,255,255,.05)";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.stroke();ctx.fillStyle="rgba(245,239,228,.54)";ctx.fillText(new Date(visible[idx]!.time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),Math.max(left,xx-25),height-10)}
-    const slot=chartW/visible.length,bodyW=Math.max(2,Math.min(12,slot*.65));
+    const slot=plotW/visible.length,bodyW=Math.max(3,Math.min(15,slot*.72));
     visible.forEach((c,i)=>{const xx=x(i),color=c.close>=c.open?"#5fd4aa":"#e98484";ctx.strokeStyle=color;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(xx,y(c.high));ctx.lineTo(xx,y(c.low));ctx.stroke();const y1=y(c.open),y2=y(c.close);ctx.fillRect(xx-bodyW/2,Math.min(y1,y2),bodyW,Math.max(1.5,Math.abs(y2-y1)))});
 
     const line=(values:Array<number|null>,color:string,width=1.25)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();let started=false;values.forEach((v,i)=>{if(v==null||!Number.isFinite(v))return;started?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v));started=true});if(started)ctx.stroke();ctx.lineWidth=1};
@@ -254,7 +267,34 @@ export function ZerionProChart({
     if(livePrice!=null&&livePrice>=lo&&livePrice<=hi){const yy=y(livePrice);ctx.setLineDash([5,4]);ctx.strokeStyle="#efe1c9";ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#efe1c9";ctx.fillRect(width-right,yy-10,right,20);ctx.fillStyle="#191c1f";ctx.fillText(fmt(livePrice),width-right+5,yy+4)}
 
     const lineColor:Record<ChartPriceLine["kind"],string>={entry:"#8fc7ff",stop:"#e98484",target:"#5fd4aa"};
-    priceLines.forEach(pl=>{if(pl.price<lo||pl.price>hi)return;const yy=y(pl.price);ctx.setLineDash(pl.kind==="entry"?[]:[4,4]);ctx.strokeStyle=lineColor[pl.kind];ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=lineColor[pl.kind];const label=`${pl.label}${typeof pl.pnl==="number"?` ${pl.pnl>=0?"+":""}${fmt(pl.pnl)}`:""}`;ctx.fillText(label,left+8,yy-4)});
+    priceLines.forEach(pl=>{
+      if(pl.price<lo||pl.price>hi)return;
+      const yy=y(pl.price);
+      ctx.setLineDash(pl.kind==="entry"?[]:[4,4]);
+      ctx.strokeStyle=lineColor[pl.kind];
+      ctx.lineWidth=pl.kind==="entry"?1.6:1.2;
+      ctx.beginPath();
+      ctx.moveTo(left,yy);
+      ctx.lineTo(width-right,yy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.lineWidth=1;
+      const pnlText=typeof pl.pnl==="number"?` ${pl.pnl>=0?"+":""}${fmt(pl.pnl)}`:"";
+      const label=`${pl.label}${pnlText}`;
+      ctx.fillStyle=lineColor[pl.kind];
+      ctx.fillText(label,left+8,yy-6);
+      if(pl.kind==="entry"&&pl.exit){
+        const bx=width-right-28,by=yy-12;
+        ctx.fillStyle=exitBusyId===pl.id?"rgba(255,255,255,.22)":"rgba(20,24,27,.92)";
+        ctx.fillRect(bx,by,24,24);
+        ctx.strokeStyle=lineColor.entry;
+        ctx.strokeRect(bx,by,24,24);
+        ctx.fillStyle="#f7f4ed";
+        ctx.font="bold 15px system-ui";
+        ctx.fillText("×",bx+7,by+17);
+        ctx.font="13px system-ui";
+      }
+    });
 
     function ax(a:Anchor){return x(Math.max(0,Math.min(visible.length-1,a.index)))} function ay(a:Anchor){return y(a.price)}
     drawings.forEach(d=>{ctx.strokeStyle="rgba(230,216,195,.9)";ctx.fillStyle="rgba(230,216,195,.9)";ctx.lineWidth=1.2;const aX=ax(d.a),aY=ay(d.a),b=d.b,bX=b?ax(b):aX,bY=b?ay(b):aY;
@@ -267,7 +307,7 @@ export function ZerionProChart({
     });
 
     if(hoverIndex!=null&&visible[hoverIndex]){const xx=x(hoverIndex),yy=y(visible[hoverIndex]!.close);ctx.setLineDash([3,3]);ctx.strokeStyle="rgba(255,255,255,.28)";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([])}
-  }, [drawings,height,hoverIndex,indicators,livePrice,priceLines,series,visible]);
+  }, [drawings,exitBusyId,height,hoverIndex,indicators,livePrice,priceLines,series,visible]);
 
   const hovered = hoverIndex != null ? visible[hoverIndex] : visible.at(-1);
   const remaining = useMemo(() => {
@@ -280,12 +320,30 @@ export function ZerionProChart({
   useEffect(()=>{const t=setInterval(()=>setClock(v=>v+1),1000);return()=>clearInterval(t)},[]);
   void clock;
 
+  function exitLineFromEvent(event: React.PointerEvent<HTMLDivElement>) {
+    if (!onExitPriceLine || !visible.length) return null;
+    const rect=event.currentTarget.getBoundingClientRect();
+    const width=rect.width;
+    const right=Math.max(118,Math.min(170,width*.16)),left=12,top=28;
+    const rsiH=indicators.has("rsi")?85:0,macdH=indicators.has("macd")?85:0,volumeH=indicators.has("volume")?82:0;
+    const bottom=38+rsiH+macdH+volumeH,chartH=Math.max(180,height-top-bottom);
+    const lows=visible.map(c=>c.low),highs=visible.map(c=>c.high);
+    if(livePrice!=null){lows.push(livePrice);highs.push(livePrice)}
+    priceLines.forEach(line=>{lows.push(line.price);highs.push(line.price)});
+    const min=Math.min(...lows),max=Math.max(...highs),pad=Math.max((max-min)*.1,Math.abs(max)*.0005,.01),lo=min-pad,hi=max+pad,range=hi-lo||1;
+    const y=(price:number)=>top+((hi-price)/range)*chartH;
+    const px=event.clientX-rect.left,py=event.clientY-rect.top;
+    if(px<width-right-38||px>width-right+4)return null;
+    return priceLines.find(line=>line.kind==="entry"&&line.exit&&Math.abs(py-y(line.price))<=16)??null;
+  }
+
   function anchorFromEvent(event: React.PointerEvent<HTMLDivElement>): Anchor | null {
     if (!visible.length) return null;
-    const rect=event.currentTarget.getBoundingClientRect(),right=78,left=8,top=24,chartW=rect.width-left-right;
+    const rect=event.currentTarget.getBoundingClientRect(),right=Math.max(118,Math.min(170,rect.width*.16)),left=12,top=28,chartW=(rect.width-left-right)*.91;
     const idx=Math.max(0,Math.min(visible.length-1,Math.floor((event.clientX-rect.left-left)/Math.max(1,chartW)*visible.length)));
     const lows=visible.map(c=>c.low),highs=visible.map(c=>c.high);if(livePrice!=null){lows.push(livePrice);highs.push(livePrice)}
-    const min=Math.min(...lows),max=Math.max(...highs),pad=Math.max((max-min)*.1,Math.abs(max)*.0005,.01),lo=min-pad,hi=max+pad,chartH=Math.max(180,height-top-34-(indicators.has("volume")?82:0)-(indicators.has("rsi")?85:0)-(indicators.has("macd")?85:0));
+    priceLines.forEach(line=>{lows.push(line.price);highs.push(line.price)});
+    const min=Math.min(...lows),max=Math.max(...highs),pad=Math.max((max-min)*.1,Math.abs(max)*.0005,.01),lo=min-pad,hi=max+pad,chartH=Math.max(180,height-top-38-(indicators.has("volume")?82:0)-(indicators.has("rsi")?85:0)-(indicators.has("macd")?85:0));
     const yy=event.clientY-rect.top; const price=hi-((yy-top)/chartH)*(hi-lo);
     return {index:idx,price};
   }
@@ -312,7 +370,9 @@ export function ZerionProChart({
     <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 p-2 text-xs">
       <strong className="mr-1">{symbol}</strong><span className="rounded border border-white/10 px-2 py-1">{timeframe}</span>
       {(["sma","ema","vwap","volume","rsi","macd","bb","atr","supertrend"] as Indicator[]).map(k=><button key={k} onClick={()=>toggle(k)} className={`rounded border px-2 py-1 ${indicators.has(k)?"border-amber-100/30 bg-amber-100/10":"border-white/10"}`}>{k.toUpperCase()}</button>)}
-      <button onClick={()=>{setVisibleCount(100);setPan(0)}} className="rounded border border-white/10 px-2 py-1">Fit</button>
+      <button onClick={()=>setVisibleCount(v=>Math.max(20,v-12))} className="rounded border border-white/10 px-2 py-1">Zoom +</button>
+      <button onClick={()=>setVisibleCount(v=>Math.min(300,v+12))} className="rounded border border-white/10 px-2 py-1">Zoom -</button>
+      <button onClick={()=>{setVisibleCount(72);setPan(0)}} className="rounded border border-white/10 px-2 py-1">Fit</button>
       <button onClick={()=>void stageRef.current?.requestFullscreen()} className="rounded border border-white/10 px-2 py-1">Fullscreen</button>
     </div>
     <div className="flex flex-wrap gap-1 border-b border-white/10 p-2 text-xs">
@@ -326,9 +386,20 @@ export function ZerionProChart({
       {hovered?<><span>{new Date(hovered.time).toLocaleString()}</span><span>O {fmt(hovered.open)}</span><span>H {fmt(hovered.high)}</span><span>L {fmt(hovered.low)}</span><span>C {fmt(hovered.close)}</span><span>V {fmt(Number(hovered.volume??0))}</span></>:<span>No candles</span>}
       <span className="ml-auto">Candle {Math.floor(remaining/60000).toString().padStart(2,"0")}:{Math.floor((remaining%60000)/1000).toString().padStart(2,"0")}</span>
     </div>
-    <div ref={stageRef} className="relative w-full touch-none select-none" style={{height}}
+    <div ref={stageRef} className="zx-pro-chart-stage relative w-full touch-none select-none" style={{height}}
       onWheel={e=>{e.preventDefault();setVisibleCount(v=>Math.max(20,Math.min(300,v+(e.deltaY>0?8:-8))))}}
-      onPointerDown={e=>{pointers.current.set(e.pointerId,{x:e.clientX,y:e.clientY});if(tool!=="cursor"){applyTool(e);return}drag.current={x:e.clientX,pan};e.currentTarget.setPointerCapture(e.pointerId)}}
+      onPointerDown={e=>{
+        const exitLine=tool==="cursor"?exitLineFromEvent(e):null;
+        if(exitLine){
+          e.preventDefault();
+          onExitPriceLine?.(exitLine);
+          return;
+        }
+        pointers.current.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if(tool!=="cursor"){applyTool(e);return}
+        drag.current={x:e.clientX,pan};
+        e.currentTarget.setPointerCapture(e.pointerId)
+      }}
       onPointerMove={e=>{const rect=e.currentTarget.getBoundingClientRect();const idx=Math.max(0,Math.min(visible.length-1,Math.floor((e.clientX-rect.left)/rect.width*visible.length)));setHoverIndex(idx);pointers.current.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.current.size===2){const pts=[...pointers.current.values()];const d=Math.abs(pts[0]!.x-pts[1]!.x);const last=(e.currentTarget.dataset.pinch?Number(e.currentTarget.dataset.pinch):d);if(Math.abs(d-last)>8){setVisibleCount(v=>Math.max(20,Math.min(300,v+(d>last?-6:6))));e.currentTarget.dataset.pinch=String(d)}return}if(drag.current){const slot=Math.max(1,rect.width/Math.max(20,visible.length));setPan(drag.current.pan+Math.round((drag.current.x-e.clientX)/slot))}}}
       onPointerUp={e=>{pointers.current.delete(e.pointerId);drag.current=null;delete e.currentTarget.dataset.pinch;try{e.currentTarget.releasePointerCapture(e.pointerId)}catch{}}}
       onPointerCancel={e=>{pointers.current.delete(e.pointerId);drag.current=null}}

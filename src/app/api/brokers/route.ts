@@ -5,10 +5,11 @@ import {
   type OAuthBrokerKey,
 } from "@/lib/brokers/oauth-config";
 import {
-  coinDcxServerCredentials,
+  type CoinDcxCredentials,
   verifyCoinDcxCredentials,
 } from "@/lib/brokers/coindcx-core";
 import { sealBrokerSecret } from "@/lib/brokers/token-vault";
+import { normalizeCoinDcxUserCredentials } from "@/lib/brokers/coindcx-user-credentials";
 import { fail, ok } from "@/lib/security/api-response";
 import {
   currentUser,
@@ -23,7 +24,9 @@ function isOAuthBroker(key: string): key is OAuthBrokerKey {
 }
 
 function configured(key: string) {
-  if (key === "coindcx") return Boolean(coinDcxServerCredentials());
+  if (key === "coindcx") {
+    return Boolean(process.env.BROKER_TOKEN_ENCRYPTION_KEY);
+  }
   return isOAuthBroker(key) ? brokerConfigured(key) : false;
 }
 
@@ -34,26 +37,51 @@ export async function GET() {
     `owner_id=eq.${user.id}&order=updated_at.desc`,
   );
 
+  const safeConnections = connections.map((row) => {
+    const metadata = row.metadata as Record<string, unknown> | undefined;
+    return {
+      ...row,
+      metadata: metadata
+        ? {
+            provider: metadata.provider,
+            verified_at: metadata.verified_at,
+            account_info_present: metadata.account_info_present,
+            auth_mode: metadata.auth_mode,
+          }
+        : undefined,
+    };
+  });
+
   const catalog = brokerCatalog.map((broker) => ({
     ...broker,
     configured:
-      broker.availability !== "coming-soon" ? configured(broker.key) : false,
+      broker.availability !== "coming-soon"
+        ? configured(broker.key)
+        : false,
   }));
 
-  return ok({ catalog, connections });
+  return ok({ catalog, connections: safeConnections });
 }
 
-async function connectCoinDcx(userId: string) {
-  const credentials = coinDcxServerCredentials();
-  if (!credentials) {
+async function connectCoinDcx(
+  userId: string,
+  credentials: CoinDcxCredentials,
+) {
+  if (!process.env.BROKER_TOKEN_ENCRYPTION_KEY) {
     return fail(
       "BROKER_NOT_CONFIGURED",
-      "CoinDCX API key and secret are not configured on the server.",
+      "BROKER_TOKEN_ENCRYPTION_KEY is not configured on the deployed server.",
       503,
     );
   }
 
-  const info = await verifyCoinDcxCredentials(credentials);
+  const { apiKey, apiSecret } =
+    normalizeCoinDcxUserCredentials(
+      credentials.apiKey,
+      credentials.apiSecret,
+    );
+
+  const info = await verifyCoinDcxCredentials({ apiKey, apiSecret });
   const existing = (
     await select(
       "broker_connections",
@@ -63,9 +91,10 @@ async function connectCoinDcx(userId: string) {
 
   const metadata = {
     provider: "coindcx",
+    auth_mode: "user-api-credentials",
     token_envelope: sealBrokerSecret({
-      api_key: credentials.apiKey,
-      api_secret: credentials.apiSecret,
+      api_key: apiKey,
+      api_secret: apiSecret,
     }),
     verified_at: new Date().toISOString(),
     account_info_present: Array.isArray(info) && info.length > 0,
@@ -91,16 +120,27 @@ async function connectCoinDcx(userId: string) {
     });
   }
 
-  return ok({ connected: true, brokerKey: "coindcx" });
+  return ok({
+    connected: true,
+    brokerKey: "coindcx",
+    authMode: "user-api-credentials",
+  });
 }
 
 export async function POST(request: Request) {
   const user = await currentUser();
-  const body = (await request.json().catch(() => null)) as {
-    brokerKey?: string;
-  } | null;
+  const body = (await request.json().catch(() => null)) as
+    | {
+        brokerKey?: string;
+        apiKey?: string;
+        apiSecret?: string;
+      }
+    | null;
 
-  const broker = brokerCatalog.find((item) => item.key === body?.brokerKey);
+  const broker = brokerCatalog.find(
+    (item) => item.key === body?.brokerKey,
+  );
+
   if (!broker) {
     return fail("VALIDATION_ERROR", "Unsupported broker", 400);
   }
@@ -115,7 +155,10 @@ export async function POST(request: Request) {
 
   if (broker.key === "coindcx") {
     try {
-      return await connectCoinDcx(user.id);
+      return await connectCoinDcx(user.id, {
+        apiKey: body?.apiKey ?? "",
+        apiSecret: body?.apiSecret ?? "",
+      });
     } catch (error) {
       return fail(
         "BROKER_AUTH_FAILED",
@@ -155,6 +198,7 @@ export async function POST(request: Request) {
     oauth_state: state,
     oauth_started_at: new Date().toISOString(),
     provider: broker.key,
+    auth_mode: "oauth",
   };
 
   if (existing) {
@@ -178,16 +222,24 @@ export async function POST(request: Request) {
   }
 
   const response = ok({
-    authorizationUrl: authorizationUrl(request, broker.key, state),
+    authorizationUrl: authorizationUrl(
+      request,
+      broker.key,
+      state,
+    ),
   });
 
-  response.cookies.set("zx_broker_oauth", `${broker.key}:${state}`, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 10 * 60,
-  });
+  response.cookies.set(
+    "zx_broker_oauth",
+    `${broker.key}:${state}`,
+    {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 10 * 60,
+    },
+  );
 
   return response;
 }
@@ -196,7 +248,9 @@ export async function DELETE(request: Request) {
   const user = await currentUser();
   const id = new URL(request.url).searchParams.get("id");
 
-  if (!id) return fail("VALIDATION_ERROR", "id is required", 400);
+  if (!id) {
+    return fail("VALIDATION_ERROR", "id is required", 400);
+  }
 
   await remove(
     "broker_connections",

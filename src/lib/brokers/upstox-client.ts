@@ -4,6 +4,7 @@ import { getConnectedBrokerConnection } from "@/lib/brokers/connection-store";
 
 const API_V2 = "https://api.upstox.com/v2";
 const API_V3 = "https://api.upstox.com/v3";
+const API_HFT_V3 = "https://api-hft.upstox.com/v3";
 
 type TokenScope = "account" | "market";
 
@@ -165,6 +166,48 @@ export const upstoxClient = {
       { method: "POST" },
       "account",
     ),
+
+  squareOffPositionV3: ({
+    instrumentToken,
+    quantity,
+    product,
+  }: {
+    instrumentToken: string;
+    quantity: number;
+    product: string;
+  }) => {
+    const signedQuantity = Math.trunc(quantity);
+
+    if (!instrumentToken || !signedQuantity) {
+      throw new Error(
+        "Upstox square-off requires instrument token and non-zero quantity",
+      );
+    }
+
+    return upstoxFetch(
+      API_HFT_V3,
+      "/order/place",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          quantity: Math.abs(signedQuantity),
+          product: product || "I",
+          validity: "DAY",
+          price: 0,
+          tag: "zerion-chart-exit",
+          instrument_token: instrumentToken,
+          order_type: "MARKET",
+          transaction_type: signedQuantity > 0 ? "SELL" : "BUY",
+          disclosed_quantity: 0,
+          trigger_price: 0,
+          is_amo: false,
+          slice: true,
+          market_protection: -1,
+        }),
+      },
+      "account",
+    );
+  },
 };
 
 export async function getUpstoxAccessTokenForUplink() {

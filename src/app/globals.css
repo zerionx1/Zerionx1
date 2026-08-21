@@ -1,3 +1,6 @@
+@import "../styles/repair-pack4-final-ui.css";
+@import "../styles/repair-pack4-chart.css";
+@import "../styles/repair-pack4-notifications.css";
 @import "./phase-2.css";
 @import "tailwindcss";
 @import "./zerion-premium.css";

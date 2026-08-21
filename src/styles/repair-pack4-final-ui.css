@@ -1,0 +1,305 @@
+:root{
+  --zx-bg:#f7f4ed;
+  --zx-surface:#ffffff;
+  --zx-surface-soft:#f3f1ec;
+  --zx-border:#ddd7cd;
+  --zx-text:#2f2a25;
+  --zx-muted:#6d665e;
+  --zx-accent:#6b8f7a;
+  --zx-deep:#3e4a3f;
+}
+
+html,body{
+  background:var(--zx-bg)!important;
+}
+
+body{
+  color:var(--zx-text);
+  font-size:16px;
+  line-height:1.55;
+}
+
+.dashboard-page,
+.dashboard-page>section,
+.dashboard-page>div{
+  min-width:0;
+}
+
+.dashboard-page{
+  color:var(--zx-text);
+}
+
+.dashboard-page p,
+.dashboard-page small,
+.dashboard-page label,
+.dashboard-page span{
+  font-size:max(13px,1em);
+}
+
+.dashboard-page h1{
+  font-size:clamp(28px,3vw,42px)!important;
+  line-height:1.12!important;
+}
+
+.dashboard-page h2{
+  font-size:clamp(22px,2.2vw,32px)!important;
+  line-height:1.18!important;
+}
+
+.dashboard-page h3{
+  font-size:18px!important;
+  line-height:1.3!important;
+}
+
+.page-heading,
+.panel,
+.zx-provider-intro,
+.zx-broker-card,
+.zx-live-panel,
+.zx-command-hero,
+.zx-trust-strip,
+.zx-stat-grid article,
+.zx-empty-state,
+.zx-final-message,
+.zx-live-note{
+  background:var(--zx-surface)!important;
+  color:var(--zx-text)!important;
+  border-color:var(--zx-border)!important;
+}
+
+.page-heading p,
+.zx-provider-intro p,
+.zx-broker-card p,
+.zx-live-panel p,
+.zx-command-hero p,
+.zx-trust-strip p,
+.zx-empty-state p{
+  color:var(--zx-muted)!important;
+}
+
+.zx-secondary-action,
+.zx-primary-action{
+  min-height:42px;
+  font-size:14px!important;
+  font-weight:750!important;
+  border-radius:12px!important;
+}
+
+.zx-primary-action{
+  background:var(--zx-deep)!important;
+  color:#fff!important;
+}
+
+.zx-secondary-action{
+  background:var(--zx-surface-soft)!important;
+  color:var(--zx-text)!important;
+  border:1px solid var(--zx-border)!important;
+}
+
+.data-badge,
+.status-pill{
+  font-size:12px!important;
+  font-weight:800!important;
+  letter-spacing:.02em!important;
+}
+
+.zx-market-tabs,
+.zx-switch-grid,
+.zx-live-broker-switch{
+  min-width:0;
+}
+
+.zx-market-tabs button,
+.zx-switch-grid button{
+  min-height:74px;
+  color:var(--zx-text)!important;
+  background:var(--zx-surface)!important;
+  border-color:var(--zx-border)!important;
+}
+
+.zx-market-tabs button.is-active,
+.zx-switch-grid button.is-active{
+  background:#e9eee9!important;
+  border-color:#9eafa5!important;
+  box-shadow:0 0 0 2px rgba(107,143,122,.10);
+}
+
+.zx-coindcx-connect{
+  display:grid;
+  gap:14px;
+  margin-top:18px;
+}
+
+.zx-coindcx-connect label{
+  display:grid;
+  gap:7px;
+  font-weight:750;
+  color:var(--zx-text);
+}
+
+.zx-coindcx-connect input{
+  width:100%;
+  min-width:0;
+  min-height:46px;
+  border:1px solid var(--zx-border);
+  border-radius:12px;
+  background:#fff;
+  color:var(--zx-text);
+  padding:10px 12px;
+  font-size:15px;
+  outline:none;
+}
+
+.zx-coindcx-connect input:focus{
+  border-color:#8fa69a;
+  box-shadow:0 0 0 3px rgba(107,143,122,.13);
+}
+
+.zx-auth-explainer,
+.zx-final-message,
+.zx-live-note{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:13px 14px;
+  border:1px solid var(--zx-border);
+  border-radius:13px;
+  background:#f7f4ed!important;
+  color:var(--zx-text)!important;
+}
+
+.zx-auth-explainer p,
+.zx-final-message p,
+.zx-live-note{
+  color:var(--zx-muted)!important;
+}
+
+.zx-balance-footnote{
+  margin-top:10px;
+  font-size:12px!important;
+  color:var(--zx-muted)!important;
+}
+
+/* Keep actual trading/chart surfaces dark and high contrast. */
+.zx-chart-stage,
+.zx-chart-workspace .zx-chart-stage,
+.zx-chart-workspace canvas,
+.zx-pro-chart-stage{
+  color:#f7f4ed;
+}
+
+.zx-chart-stage{
+  overflow:hidden;
+  border-radius:18px;
+}
+
+.zx-chart-commandbar{
+  min-width:0;
+}
+
+.zx-chart-search{
+  min-width:0;
+}
+
+.zx-chart-search input{
+  min-width:0;
+  width:100%;
+}
+
+/* Mobile: never let dashboard content render off-screen. */
+@media(max-width:900px){
+  .dashboard-page{
+    width:100%!important;
+    max-width:100vw!important;
+    overflow-x:hidden!important;
+    padding-left:14px!important;
+    padding-right:14px!important;
+  }
+
+  .dashboard-page *{
+    max-width:100%;
+  }
+
+  .grid,
+  .zx-stat-grid,
+  .zx-switch-grid,
+  .zx-live-broker-switch{
+    grid-template-columns:1fr!important;
+  }
+
+  .zx-market-tabs{
+    display:flex!important;
+    width:100%;
+    overflow-x:auto!important;
+    gap:8px;
+    padding-bottom:4px;
+    scrollbar-width:thin;
+  }
+
+  .zx-market-tabs button{
+    flex:0 0 auto;
+    min-width:145px;
+  }
+
+  .zx-provider-intro,
+  .zx-live-panel__head,
+  .page-heading{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+
+  .zx-broker-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+
+  .zx-broker-actions>*,
+  .zx-live-panel__head button{
+    width:100%!important;
+    justify-content:center!important;
+  }
+
+  .zx-capability-row{
+    display:flex!important;
+    overflow-x:auto!important;
+    flex-wrap:nowrap!important;
+    gap:7px!important;
+    padding-bottom:4px;
+  }
+
+  .zx-capability-row span{
+    flex:0 0 auto;
+  }
+}
+
+@media(max-width:560px){
+  body{
+    font-size:15px;
+  }
+
+  .dashboard-page{
+    padding-left:10px!important;
+    padding-right:10px!important;
+  }
+
+  .dashboard-page h1{
+    font-size:27px!important;
+  }
+
+  .dashboard-page h2{
+    font-size:22px!important;
+  }
+
+  .zx-broker-card,
+  .zx-live-panel,
+  .zx-provider-intro,
+  .zx-command-hero{
+    border-radius:15px!important;
+    padding:14px!important;
+  }
+
+  .zx-switch-grid button{
+    min-height:66px;
+  }
+}
