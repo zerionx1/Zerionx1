@@ -18,6 +18,7 @@ export type ZerionNotificationKind =
   | "stale-market-feed"
   | "market-alert"
   | "opportunity-signal"
+  | "trailing-stop-suggestion"
   | "system-warning";
 
 export type NotificationEventInput = {

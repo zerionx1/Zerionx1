@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './zerion-final-four.css';
 import { AppProviders } from '@/components/providers/app-providers';
 import { GlobalProviders } from '@/components/system/GlobalProviders';
 

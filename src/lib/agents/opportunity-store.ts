@@ -1,89 +1,126 @@
 import "server-only";
-
 import { adminInsert } from "@/lib/supabase/admin-rest";
 import type { ZerionScanResult } from "./types";
+import {
+  getSignalValidationSummary,
+  registerSignalOutcome,
+  resolveOpenSignalOutcomes,
+  validationAllowsPublishing,
+} from "./signal-validation";
 
 function inferMarket(symbol: string) {
   const s = symbol.toUpperCase();
-  if (
-    s.includes("USDT") ||
-    s.includes("USDC") ||
-    s.includes("BTC") ||
-    s.includes("ETH") ||
-    s.includes("SOL")
-  ) {
-    return "crypto";
-  }
-  if (
-    s.includes("XAU") ||
-    s.includes("XAG") ||
-    /^(EUR|GBP|USD|JPY|AUD|NZD|CAD|CHF)[/-]?(EUR|GBP|USD|JPY|AUD|NZD|CAD|CHF)$/.test(
-      s.replaceAll(" ", ""),
-    )
-  ) {
-    return "forex";
-  }
+  if (s.includes("USDT") || s.includes("USDC") || s.includes("BTC") || s.includes("ETH") || s.includes("SOL")) return "crypto";
+  if (s.includes("XAU") || s.includes("XAG") || /^(EUR|GBP|USD|JPY|AUD|NZD|CAD|CHF)[/-]?(EUR|GBP|USD|JPY|AUD|NZD|CAD|CHF)$/.test(s.replaceAll(" ", ""))) return "forex";
   return "india";
 }
-
 function directionCode(direction: string) {
   return direction === "long-watch" ? "L" : direction === "short-watch" ? "S" : "N";
 }
+function level(v: unknown) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toPrecision(6) : "na";
+}
 
 export async function persistScanOpportunities(result: ZerionScanResult) {
-  const qualified = result.candidates.filter(
-    (candidate) =>
-      candidate.direction !== "neutral" &&
-      candidate.confidence >= 64 &&
-      candidate.tradePlan.entry &&
-      candidate.tradePlan.stopLoss &&
-      candidate.tradePlan.targets.length >= 2,
-  );
+  await resolveOpenSignalOutcomes().catch(() => {});
+  const validation = await getSignalValidationSummary().catch(() => ({
+    sampleSize: 0,
+    wins: 0,
+    losses: 0,
+    expired: 0,
+    winRate: null,
+    calibrated: false,
+    minimumSample: 20,
+    minimumObservedWinRate: 70,
+  }));
 
-  if (!qualified.length) return [];
+  if (!validationAllowsPublishing(validation)) return [];
 
-  const rows = qualified.map((candidate) => {
-    // Dynamic validity replaces the old hard-coded one-hour expiry.
-    const generatedAt = new Date(result.scannedAt);
-    const expires = new Date(
-      generatedAt.getTime() + candidate.tradePlan.validityMinutes * 60_000,
-    ).toISOString();
+  const candidate = result.candidates
+    .filter(
+      (c) =>
+        c.direction !== "neutral" &&
+        c.confidence >= 70 &&
+        c.tradePlan.qualityScore >= 74 &&
+        c.tradePlan.entry &&
+        c.tradePlan.stopLoss &&
+        c.tradePlan.targets.length >= 1 &&
+        Number(c.tradePlan.riskReward) >= 3,
+    )
+    .sort((a, b) => {
+      if (b.tradePlan.qualityScore !== a.tradePlan.qualityScore) {
+        return b.tradePlan.qualityScore - a.tradePlan.qualityScore;
+      }
+      return b.confidence - a.confidence;
+    })[0];
 
-    // 15-minute regime bucket prevents notification spam while allowing a
-    // genuinely changed direction/setup to be surfaced without waiting 1 hour.
-    const bucketMs = 15 * 60_000;
-    const bucket = Math.floor(generatedAt.getTime() / bucketMs);
-    const fingerprint = `${bucket}:${candidate.symbol}:${directionCode(candidate.direction)}`;
+  if (!candidate) return [];
 
-    return {
-      fingerprint,
-      symbol: candidate.symbol,
-      market: inferMarket(candidate.symbol),
-      price: candidate.price,
-      direction: candidate.direction,
-      confidence: candidate.confidence,
-      reason: candidate.reason,
-      source: candidate.source,
-      mode: result.mode,
-      analysis: {
-        stages: result.stages,
-        tradePlan: candidate.tradePlan,
-        antiOvertrading: {
-          fingerprintBucketMinutes: 15,
-          requiresFreshQualifiedSetup: true,
-          neutralSignalsPersisted: false,
-        },
+  const generatedAt = new Date(result.scannedAt);
+  const expires = new Date(
+    generatedAt.getTime() + candidate.tradePlan.validityMinutes * 60_000,
+  ).toISOString();
+  const bucket = Math.floor(generatedAt.getTime() / (20 * 60_000));
+  const fingerprint = [
+    bucket,
+    candidate.symbol,
+    directionCode(candidate.direction),
+    level(candidate.tradePlan.entry),
+    level(candidate.tradePlan.stopLoss),
+    level(candidate.tradePlan.targets[0]),
+  ].join(":");
+
+  const row = {
+    fingerprint,
+    symbol: candidate.symbol,
+    market: inferMarket(candidate.symbol),
+    price: candidate.price,
+    direction: candidate.direction,
+    confidence: candidate.confidence,
+    reason: candidate.reason,
+    source: candidate.source,
+    mode: result.mode,
+    analysis: {
+      stages: result.stages,
+      tradePlan: candidate.tradePlan,
+      validation,
+      antiOvertrading: {
+        oneBestSetupPerScan: true,
+        fingerprintBucketMinutes: 20,
+        minimumConfidence: 70,
+        minimumQualityScore: 74,
+        minimumRiskReward: 3,
+        neutralSignalsPersisted: false,
       },
-      status: "active",
-      requires_user_approval: true,
-      generated_at: result.scannedAt,
-      expires_at: expires,
-    };
-  });
+    },
+    status: "active",
+    requires_user_approval: true,
+    generated_at: result.scannedAt,
+    expires_at: expires,
+  };
 
-  return adminInsert<Record<string, unknown>>(
+  const inserted = await adminInsert<Record<string, unknown>>(
     "agent_opportunities?on_conflict=fingerprint",
-    rows,
+    [row],
     "resolution=merge-duplicates,return=representation",
   );
+
+  const saved = inserted[0];
+  if (saved?.id && candidate.tradePlan.side !== "none") {
+    await registerSignalOutcome({
+      opportunityId: String(saved.id),
+      symbol: candidate.symbol,
+      side: candidate.tradePlan.side,
+      entry: Number(candidate.tradePlan.entry),
+      stopLoss: Number(candidate.tradePlan.stopLoss),
+      target: Number(candidate.tradePlan.targets[0]),
+      confidence: candidate.confidence,
+      qualityScore: candidate.tradePlan.qualityScore,
+      generatedAt: result.scannedAt,
+      expiresAt: expires,
+    }).catch(() => {});
+  }
+
+  return inserted;
 }
