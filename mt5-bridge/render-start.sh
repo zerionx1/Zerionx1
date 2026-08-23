@@ -31,6 +31,7 @@ wine "$PYTHON_EXE" -m pip install \
   fastapi==0.116.1 \
   uvicorn==0.35.0 \
   pydantic==2.11.7 \
+  numpy==1.26.4 \
   MetaTrader5
 
 echo "===== PYTHON PACKAGE CHECK ====="

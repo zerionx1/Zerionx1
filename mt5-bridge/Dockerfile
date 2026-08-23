@@ -8,18 +8,17 @@ ENV DISPLAY=:99
 RUN dpkg --add-architecture i386 && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-      wine \
-      wine32 \
-      wine64 \
-      xvfb \
-      winbind \
-      cabextract \
-      wget \
-      curl \
-      ca-certificates \
-      unzip \
-      procps \
-      tini && \
+      ca-certificates wget gnupg && \
+    mkdir -p /etc/apt/keyrings && \
+    wget -qO- https://dl.winehq.org/wine-builds/winehq.key \
+      | gpg --dearmor -o /etc/apt/keyrings/winehq-archive.gpg && \
+    printf 'Types: deb\\nURIs: https://dl.winehq.org/wine-builds/debian\\nSuites: bookworm\\nComponents: main\\nArchitectures: amd64 i386\\nSigned-By: /etc/apt/keyrings/winehq-archive.gpg\\n' \
+      > /etc/apt/sources.list.d/winehq-bookworm.sources && \
+    apt-get update && \
+    apt-get install -y --install-recommends winehq-stable && \
+    apt-get install -y --no-install-recommends \
+      xvfb winbind cabextract curl unzip procps tini && \
+    wine --version && \
     rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash mt5
