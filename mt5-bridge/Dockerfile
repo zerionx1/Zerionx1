@@ -12,8 +12,8 @@ RUN dpkg --add-architecture i386 && \
     mkdir -p /etc/apt/keyrings && \
     wget -qO- https://dl.winehq.org/wine-builds/winehq.key \
       | gpg --dearmor -o /etc/apt/keyrings/winehq-archive.gpg && \
-    printf 'Types: deb\\nURIs: https://dl.winehq.org/wine-builds/debian\\nSuites: bookworm\\nComponents: main\\nArchitectures: amd64 i386\\nSigned-By: /etc/apt/keyrings/winehq-archive.gpg\\n' \
-      > /etc/apt/sources.list.d/winehq-bookworm.sources && \
+    echo 'deb [arch=amd64,i386 signed-by=/etc/apt/keyrings/winehq-archive.gpg] https://dl.winehq.org/wine-builds/debian/ bookworm main' \
+      > /etc/apt/sources.list.d/winehq-bookworm.list && \
     apt-get update && \
     apt-get install -y --install-recommends winehq-stable && \
     apt-get install -y --no-install-recommends \
