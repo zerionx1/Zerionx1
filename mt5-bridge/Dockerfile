@@ -90,6 +90,27 @@ RUN wget -q \
     https://download.terminal.free/cdn/web/metaquotes.ltd/mt5/mt5setup.exe \
     -O /home/mt5/downloads/mt5setup.exe
 
+# Install MetaTrader 5 during image build so Render's 512 MiB
+# runtime does not have to run the heavy installer.
+RUN set -eux; \
+    Xvfb "$DISPLAY" -screen 0 1280x720x24 >/tmp/xvfb-mt5.log 2>&1 & \
+    xvfb_pid=$!; \
+    sleep 2; \
+    timeout 180s wine /home/mt5/downloads/mt5setup.exe /auto \
+      >/tmp/mt5-installer.log 2>&1 || true; \
+    sleep 10; \
+    MT5_EXE="$(find "$WINEPREFIX/drive_c" -type f -iname 'terminal64.exe' | head -1 || true)"; \
+    if [ -z "$MT5_EXE" ]; then \
+      echo "===== MT5 INSTALLER LOG ====="; \
+      cat /tmp/mt5-installer.log || true; \
+      echo "===== EXE AUDIT ====="; \
+      find "$WINEPREFIX/drive_c" -maxdepth 7 -type f -iname '*.exe' | tail -80 || true; \
+      exit 1; \
+    fi; \
+    echo "MT5 installed at: $MT5_EXE"; \
+    wineserver -k || true; \
+    kill "$xvfb_pid" 2>/dev/null || true
+
 COPY --chown=mt5:mt5 render-start.sh \
     /app/mt5-bridge/render-start.sh
 

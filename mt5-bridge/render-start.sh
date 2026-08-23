@@ -42,16 +42,6 @@ wine "$PYTHON_EXE" -c \
 
 MT5_EXE="$WINEPREFIX/drive_c/Program Files/MetaTrader 5/terminal64.exe"
 
-if [ ! -f "$MT5_EXE" ]; then
-  echo "===== INSTALL METATRADER 5 ====="
-
-  timeout 120s \
-    wine /home/mt5/downloads/mt5setup.exe /auto \
-    >/tmp/mt5-installer.log 2>&1 || true
-
-  sleep 10
-fi
-
 echo "===== FIND MT5 TERMINAL ====="
 
 if [ ! -f "$MT5_EXE" ]; then
