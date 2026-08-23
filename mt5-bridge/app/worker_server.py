@@ -57,6 +57,19 @@ class Handler(BaseHTTPRequestHandler):
             == f"Bearer {TOKEN}"
         )
 
+    def do_HEAD(self):
+        if self.path == "/healthz":
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", "0")
+            self.send_header("connection", "close")
+            self.end_headers()
+            return
+
+        self.send_response(404)
+        self.send_header("content-length", "0")
+        self.end_headers()
+
     def do_GET(self):
         if self.path == "/healthz":
             self.send_json(
