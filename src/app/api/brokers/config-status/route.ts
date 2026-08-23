@@ -1,4 +1,5 @@
 import { brokerConfigured } from "@/lib/brokers/oauth-config";
+import { mt5BridgeConfigured } from "@/lib/brokers/mt5-bridge-client";
 import { ok } from "@/lib/security/api-response";
 
 export async function GET() {
@@ -18,13 +19,13 @@ export async function GET() {
       authMode: "user-api-credentials",
       userCredentialsRequired: true,
     },
-    ctrader: {
-      configured: brokerConfigured("ctrader"),
-      clientId: Boolean(process.env.CTRADER_CLIENT_ID),
-      clientSecret: Boolean(process.env.CTRADER_CLIENT_SECRET),
-      redirectUri: Boolean(process.env.CTRADER_REDIRECT_URI),
+    "exness-mt5": {
+      configured: mt5BridgeConfigured(),
       encryptionKey,
-      authMode: "oauth",
+      bridgeUrl: Boolean(process.env.MT5_BRIDGE_URL),
+      bridgeToken: Boolean(process.env.MT5_BRIDGE_TOKEN),
+      authMode: "user-mt5-credentials",
+      userCredentialsRequired: true,
     },
     appUrl: Boolean(process.env.NEXT_PUBLIC_APP_URL),
   });

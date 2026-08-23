@@ -9,6 +9,7 @@ import {
   verifyCoinDcxCredentials,
 } from "@/lib/brokers/coindcx-core";
 import { sealBrokerSecret } from "@/lib/brokers/token-vault";
+import { mt5BridgeClient, mt5BridgeConfigured } from "@/lib/brokers/mt5-bridge-client";
 import { normalizeCoinDcxUserCredentials } from "@/lib/brokers/coindcx-user-credentials";
 import { fail, ok } from "@/lib/security/api-response";
 import {
@@ -20,12 +21,15 @@ import {
 } from "@/lib/supabase/rest";
 
 function isOAuthBroker(key: string): key is OAuthBrokerKey {
-  return key === "upstox" || key === "ctrader";
+  return key === "upstox";
 }
 
 function configured(key: string) {
   if (key === "coindcx") {
     return Boolean(process.env.BROKER_TOKEN_ENCRYPTION_KEY);
+  }
+  if (key === "exness-mt5") {
+    return mt5BridgeConfigured();
   }
   return isOAuthBroker(key) ? brokerConfigured(key) : false;
 }
@@ -134,6 +138,10 @@ export async function POST(request: Request) {
         brokerKey?: string;
         apiKey?: string;
         apiSecret?: string;
+        mt5Login?: string;
+        mt5Password?: string;
+        mt5Server?: string;
+        mt5Environment?: "demo" | "real";
       }
     | null;
 
@@ -165,6 +173,81 @@ export async function POST(request: Request) {
         error instanceof Error
           ? error.message
           : "CoinDCX credential verification failed.",
+        401,
+      );
+    }
+  }
+
+  if (broker.key === "exness-mt5") {
+    if (!mt5BridgeConfigured()) {
+      return fail(
+        "BROKER_NOT_CONFIGURED",
+        "MT5_BRIDGE_URL, MT5_BRIDGE_TOKEN and BROKER_TOKEN_ENCRYPTION_KEY are required.",
+        503,
+      );
+    }
+
+    const login = body?.mt5Login?.trim() ?? "";
+    const password = body?.mt5Password ?? "";
+    const server = body?.mt5Server?.trim() ?? "";
+    const environment: "demo" | "real" =
+      body?.mt5Environment === "real" ? "real" : "demo";
+
+    if (!login || !password || !server) {
+      return fail(
+        "VALIDATION_ERROR",
+        "MT5 login, trading password and server are required.",
+        400,
+      );
+    }
+
+    const credentials = { login, password, server, environment };
+
+    try {
+      const verified = await mt5BridgeClient.verify(credentials);
+      const existing = (
+        await select(
+          "broker_connections",
+          `owner_id=eq.${user.id}&broker_key=eq.exness-mt5&limit=1`,
+        )
+      )[0];
+
+      const metadata = {
+        provider: "exness-mt5",
+        auth_mode: "user-mt5-credentials",
+        token_envelope: sealBrokerSecret(credentials),
+        verified_at: new Date().toISOString(),
+        account_info_present: true,
+        environment,
+        verification: verified,
+      };
+
+      if (existing) {
+        await update(
+          "broker_connections",
+          `id=eq.${String(existing.id)}&owner_id=eq.${user.id}`,
+          { status: "connected", metadata, updated_at: new Date().toISOString() },
+        );
+      } else {
+        await insert("broker_connections", {
+          owner_id: user.id,
+          broker_key: "exness-mt5",
+          display_name: "Exness MT5",
+          status: "connected",
+          metadata,
+        });
+      }
+
+      return ok({
+        connected: true,
+        brokerKey: "exness-mt5",
+        authMode: "user-mt5-credentials",
+        environment,
+      });
+    } catch (error) {
+      return fail(
+        "BROKER_AUTH_FAILED",
+        error instanceof Error ? error.message : "Exness MT5 verification failed.",
         401,
       );
     }
