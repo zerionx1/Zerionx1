@@ -26,7 +26,7 @@ RUN useradd -m -s /bin/bash mt5
 
 WORKDIR /app
 
-COPY mt5-bridge /app/mt5-bridge
+COPY . /app/mt5-bridge
 
 RUN chown -R mt5:mt5 /app /home/mt5
 
@@ -44,7 +44,7 @@ RUN wget -q \
     https://download.terminal.free/cdn/web/metaquotes.ltd/mt5/mt5setup.exe \
     -O /home/mt5/downloads/mt5setup.exe
 
-COPY --chown=mt5:mt5 mt5-bridge/render-start.sh /app/mt5-bridge/render-start.sh
+COPY --chown=mt5:mt5 render-start.sh /app/mt5-bridge/render-start.sh
 
 RUN chmod +x /app/mt5-bridge/render-start.sh
 
