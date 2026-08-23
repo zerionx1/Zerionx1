@@ -10,6 +10,14 @@ from pydantic import BaseModel, Field
 import MetaTrader5 as mt5
 
 app = FastAPI(title="Zerion X1 Multi-User MT5 Bridge", version="2.0.0")
+
+
+@app.get("/healthz")
+def healthz():
+    return {
+        "ok": True,
+        "service": "zerion-mt5-bridge",
+    }
 BRIDGE_TOKEN = os.getenv("MT5_BRIDGE_TOKEN", "").strip()
 TERMINAL_PATH = os.getenv("MT5_TERMINAL_PATH", "").strip() or None
 lock = threading.RLock()

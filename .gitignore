@@ -9,3 +9,6 @@ coverage
 tsconfig.tsbuildinfo
 .runtime/
 .fixpack-backups/
+
+__pycache__/
+*.pyc
