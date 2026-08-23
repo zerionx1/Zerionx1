@@ -3,7 +3,12 @@ FROM --platform=linux/amd64 debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 ENV WINEDEBUG=-all
 ENV WINEPREFIX=/home/mt5/.wine
+ENV WINEARCH=win64
 ENV DISPLAY=:99
+ENV XDG_RUNTIME_DIR=/home/mt5/.xdg-runtime
+ENV WINEDLLOVERRIDES=mscoree,mshtml=
+ENV WINE_SKIP_MONO_INSTALLATION=1
+ENV WINE_SKIP_GECKO_INSTALLATION=1
 
 RUN dpkg --add-architecture i386 && \
     apt-get update && \
@@ -17,7 +22,13 @@ RUN dpkg --add-architecture i386 && \
     apt-get update && \
     apt-get install -y --install-recommends winehq-stable && \
     apt-get install -y --no-install-recommends \
-      xvfb winbind cabextract curl unzip procps tini && \
+      xvfb \
+      winbind \
+      cabextract \
+      curl \
+      unzip \
+      procps \
+      tini && \
     wine --version && \
     rm -rf /var/lib/apt/lists/*
 
@@ -33,25 +44,48 @@ USER mt5
 
 RUN mkdir -p \
     /home/mt5/downloads \
-    /home/mt5/runtime/python311
+    /home/mt5/runtime/python311 \
+    /home/mt5/.xdg-runtime && \
+    chmod 700 /home/mt5/.xdg-runtime
 
-# Portable Windows Python — no GUI installer
 RUN wget -q \
     https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip \
     -O /home/mt5/downloads/python-embed.zip && \
     unzip -q /home/mt5/downloads/python-embed.zip \
       -d /home/mt5/runtime/python311
 
-# Enable site-packages in embedded Python
 RUN sed -i 's/^#import site/import site/' \
     /home/mt5/runtime/python311/python311._pth
 
-# pip bootstrap
 RUN wget -q \
     https://bootstrap.pypa.io/get-pip.py \
     -O /home/mt5/downloads/get-pip.py
 
-# Official MetaTrader 5 installer
+# Build the Wine prefix now, not during Render startup.
+# Mono/Gecko prompts are disabled for headless operation.
+RUN set -eux; \
+    Xvfb "$DISPLAY" -screen 0 1280x720x24 >/tmp/xvfb-build.log 2>&1 & \
+    xvfb_pid=$!; \
+    sleep 2; \
+    timeout 180s wineboot -u; \
+    timeout 30s wineserver -w || true; \
+    test -f "$WINEPREFIX/drive_c/windows/system32/kernel32.dll"; \
+    wine /home/mt5/runtime/python311/python.exe --version; \
+    wine /home/mt5/runtime/python311/python.exe \
+      /home/mt5/downloads/get-pip.py; \
+    wine /home/mt5/runtime/python311/python.exe -m pip install \
+      --disable-pip-version-check \
+      --no-warn-script-location \
+      fastapi==0.116.1 \
+      uvicorn==0.35.0 \
+      pydantic==2.11.7 \
+      numpy==1.26.4 \
+      MetaTrader5; \
+    wine /home/mt5/runtime/python311/python.exe -c \
+      "import MetaTrader5, fastapi, uvicorn, numpy; print('MT5 Python packages OK')"; \
+    wineserver -k || true; \
+    kill "$xvfb_pid" 2>/dev/null || true
+
 RUN wget -q \
     https://download.terminal.free/cdn/web/metaquotes.ltd/mt5/mt5setup.exe \
     -O /home/mt5/downloads/mt5setup.exe
