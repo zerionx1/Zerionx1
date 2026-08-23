@@ -32,19 +32,33 @@ RUN chown -R mt5:mt5 /app /home/mt5
 
 USER mt5
 
-RUN mkdir -p /home/mt5/downloads /home/mt5/runtime
+RUN mkdir -p \
+    /home/mt5/downloads \
+    /home/mt5/runtime/python311
 
-# Windows Python 3.11
+# Portable Windows Python — no GUI installer
 RUN wget -q \
-    https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe \
-    -O /home/mt5/downloads/python.exe
+    https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip \
+    -O /home/mt5/downloads/python-embed.zip && \
+    unzip -q /home/mt5/downloads/python-embed.zip \
+      -d /home/mt5/runtime/python311
 
-# Official MetaQuotes MT5 installer
+# Enable site-packages in embedded Python
+RUN sed -i 's/^#import site/import site/' \
+    /home/mt5/runtime/python311/python311._pth
+
+# pip bootstrap
+RUN wget -q \
+    https://bootstrap.pypa.io/get-pip.py \
+    -O /home/mt5/downloads/get-pip.py
+
+# Official MetaTrader 5 installer
 RUN wget -q \
     https://download.terminal.free/cdn/web/metaquotes.ltd/mt5/mt5setup.exe \
     -O /home/mt5/downloads/mt5setup.exe
 
-COPY --chown=mt5:mt5 render-start.sh /app/mt5-bridge/render-start.sh
+COPY --chown=mt5:mt5 render-start.sh \
+    /app/mt5-bridge/render-start.sh
 
 RUN chmod +x /app/mt5-bridge/render-start.sh
 
