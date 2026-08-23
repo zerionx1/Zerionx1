@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { GoChartingChartHost } from "@/components/markets/gocharting-chart-host";
+import { ZerionProviderChart } from "@/components/markets/zerion-provider-chart";
 import type { ChartPriceLine } from "@/components/charts/zerion-pro-chart";
 import { useZerionMarketStream } from "@/hooks/use-zerion-market-stream";
 import { positionPnl } from "@/lib/charts/position-pnl";
@@ -345,7 +345,7 @@ export function MarketChartTerminal() {
         <span className="data-badge">Own chart · provider-backed</span>
       </header>
 
-      <GoChartingChartHost
+      <ZerionProviderChart
         instrument={selected}
         symbol={selected?.symbol??query}
         timeframe={timeframe}

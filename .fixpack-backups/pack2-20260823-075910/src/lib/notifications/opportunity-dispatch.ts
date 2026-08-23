@@ -19,41 +19,12 @@ function planAllowsMarket(planId: string, market: string) {
   }
 }
 
-function tradePlan(opportunity: Opportunity) {
-  const analysis =
-    opportunity.analysis && typeof opportunity.analysis === "object"
-      ? (opportunity.analysis as Record<string, unknown>)
-      : {};
-  const plan =
-    analysis.tradePlan && typeof analysis.tradePlan === "object"
-      ? (analysis.tradePlan as Record<string, unknown>)
-      : {};
-
-  const targets = Array.isArray(plan.targets)
-    ? plan.targets.map(Number).filter(Number.isFinite)
-    : [];
-
-  return {
-    side: String(plan.side ?? ""),
-    entry: Number(plan.entry ?? 0),
-    stopLoss: Number(plan.stopLoss ?? 0),
-    targets,
-    maxLossPercent: Number(plan.maxLossPercent ?? 0),
-    maxProfitPercent: Number(plan.maxProfitPercent ?? 0),
-    riskReward: Number(plan.riskReward ?? 0),
-  };
-}
-
-export async function dispatchOpportunityNotifications(
-  opportunities: Opportunity[],
-) {
-  if (!opportunities.length) {
-    return { users: 0, notifications: 0, pushes: 0 };
-  }
+export async function dispatchOpportunityNotifications(opportunities: Opportunity[]) {
+  if (!opportunities.length) return { users: 0, notifications: 0, pushes: 0 };
 
   const subscriptions = await adminSelect(
     "subscriptions",
-    "status=eq.active&select=owner_id,plan_id,expires_at,created_at&order=created_at.desc",
+    "status=eq.active&select=owner_id,plan_id,expires_at,created_at&order=created_at.desc"
   );
 
   const latestByUser = new Map<string, Record<string, unknown>>();
@@ -80,23 +51,14 @@ export async function dispatchOpportunityNotifications(
 
       const existing = await adminSelect(
         "user_notifications",
-        `owner_id=eq.${ownerId}&opportunity_id=eq.${opportunityId}&limit=1`,
+        `owner_id=eq.${ownerId}&opportunity_id=eq.${opportunityId}&limit=1`
       );
       if (existing.length) continue;
 
       const symbol = String(opportunity.symbol ?? "Market");
       const confidence = Number(opportunity.confidence ?? 0);
       const direction = String(opportunity.direction ?? "watch");
-      const reason = String(
-        opportunity.reason ?? "A qualified market setup was detected.",
-      );
-      const plan = tradePlan(opportunity);
-      const side = direction === "short-watch" ? "SHORT" : "LONG";
-
-      const planText =
-        plan.entry && plan.stopLoss && plan.targets.length
-          ? `${side} · Entry ${plan.entry} · SL ${plan.stopLoss} · T1 ${plan.targets[0]} · T2 ${plan.targets[1] ?? "—"} · Max risk ${plan.maxLossPercent || "—"}%`
-          : `${side} · ${reason}`;
+      const reason = String(opportunity.reason ?? "A market condition was detected.");
 
       await adminInsert(
         "user_notifications",
@@ -104,17 +66,17 @@ export async function dispatchOpportunityNotifications(
           owner_id: ownerId,
           opportunity_id: opportunityId,
           kind: "agent-opportunity",
-          title: `${symbol} ${side} opportunity`,
-          body: `${confidence}% confidence · ${planText}`,
+          title: `${symbol} opportunity`,
+          body: `${direction} · ${confidence}% confidence · ${reason}`,
           priority: confidence >= 75 ? "high" : "normal",
         },
-        "return=minimal",
+        "return=minimal"
       );
       notifications += 1;
 
       const result = await sendPushToUser(ownerId, {
-        title: `${symbol} · ${side} · ${confidence}%`,
-        body: planText,
+        title: `${symbol} · ${confidence}% Zerion signal`,
+        body: `${direction} · ${reason}`,
         url: "/dashboard/notifications",
         tag: `zx-${opportunityId}`.slice(0, 32),
       });

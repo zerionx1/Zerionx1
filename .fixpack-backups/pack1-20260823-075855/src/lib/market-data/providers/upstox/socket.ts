@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
+
 import WebSocket from "ws";
+
 import { getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken } from "@/lib/brokers/upstox-feed-auth-core";
+
 import { decodeUpstoxV3Feed } from "./protobuf";
 
 export type UpstoxV3Mode = "ltpc" | "option_greeks" | "full" | "full_d30";
@@ -10,8 +13,6 @@ export interface UpstoxV3SocketOptions {
   mode?: UpstoxV3Mode;
   accessToken?: string;
   onMessage: (message: unknown) => void;
-  onOpen?: () => void;
-  onFrame?: () => void;
   onError?: (error: Error) => void;
   onClose?: () => void;
 }
@@ -32,7 +33,10 @@ function subscriptionPayload(
     JSON.stringify({
       guid: randomUUID(),
       method,
-      data: { mode, instrumentKeys },
+      data: {
+        mode,
+        instrumentKeys,
+      },
     }),
     "utf8",
   );
@@ -41,29 +45,33 @@ function subscriptionPayload(
 export async function connectUpstoxV3MarketFeed(
   options: UpstoxV3SocketOptions,
 ): Promise<UpstoxV3FeedHandle> {
-  const initialKeys = [...new Set(options.instrumentKeys.filter(Boolean))];
-  if (!initialKeys.length) throw new Error("At least one Upstox instrument key is required");
-  if (!options.accessToken) throw new Error("Upstox worker access token is required");
+  if (options.instrumentKeys.length === 0) {
+    throw new Error("At least one Upstox instrument key is required");
+  }
+
+  if (!options.accessToken) {
+    throw new Error("Upstox worker access token is required");
+  }
 
   const authorizedUrl =
-    await getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken(options.accessToken);
+    await getUpstoxMarketDataFeedV3AuthorizeUrlForAccessToken(
+      options.accessToken,
+    );
 
   const socket = new WebSocket(authorizedUrl, {
     followRedirects: true,
-    handshakeTimeout: 15_000,
   });
 
   socket.binaryType = "arraybuffer";
 
   socket.on("open", () => {
-    socket.send(subscriptionPayload(initialKeys, options.mode ?? "ltpc"), {
-      binary: true,
-    });
-    options.onOpen?.();
+    socket.send(
+      subscriptionPayload(options.instrumentKeys, options.mode ?? "ltpc"),
+      { binary: true },
+    );
   });
 
   socket.on("message", async (data) => {
-    options.onFrame?.();
     try {
       const bytes =
         data instanceof ArrayBuffer
@@ -83,37 +91,55 @@ export async function connectUpstoxV3MarketFeed(
     }
   });
 
-  socket.on("ping", () => options.onFrame?.());
-  socket.on("pong", () => options.onFrame?.());
-
   socket.on("error", (error) => {
     options.onError?.(
       error instanceof Error ? error : new Error("Upstox WebSocket error"),
     );
   });
 
-  socket.on("close", () => options.onClose?.());
+  socket.on("close", () => {
+    options.onClose?.();
+  });
 
   return {
     socket,
-    subscribe(instrumentKeys, mode = options.mode ?? "ltpc") {
-      const keys = [...new Set(instrumentKeys.filter(Boolean))];
-      if (!keys.length || socket.readyState !== WebSocket.OPEN) return false;
+
+    subscribe(
+      instrumentKeys: string[],
+      mode: UpstoxV3Mode = options.mode ?? "ltpc",
+    ) {
+      const keys = [...new Set<string>(instrumentKeys.filter(Boolean))];
+
+      if (!keys.length || socket.readyState !== WebSocket.OPEN) {
+        return false;
+      }
+
       socket.send(subscriptionPayload(keys, mode, "sub"), { binary: true });
+
       return true;
     },
-    unsubscribe(instrumentKeys, mode = options.mode ?? "ltpc") {
-      const keys = [...new Set(instrumentKeys.filter(Boolean))];
-      if (!keys.length || socket.readyState !== WebSocket.OPEN) return false;
+
+    unsubscribe(
+      instrumentKeys: string[],
+      mode: UpstoxV3Mode = options.mode ?? "ltpc",
+    ) {
+      const keys = [...new Set<string>(instrumentKeys.filter(Boolean))];
+
+      if (!keys.length || socket.readyState !== WebSocket.OPEN) {
+        return false;
+      }
+
       socket.send(subscriptionPayload(keys, mode, "unsub"), { binary: true });
+
       return true;
     },
+
     close: async () => {
       if (
         socket.readyState === WebSocket.OPEN ||
         socket.readyState === WebSocket.CONNECTING
       ) {
-        socket.close(1000, "Zerion market feed shutdown");
+        socket.close();
       }
     },
   };

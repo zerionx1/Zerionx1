@@ -9,7 +9,7 @@ export type ZerionFeedStatus =
   | "DISCONNECTED";
 
 export type ZerionLiveQuote = {
-  provider: "upstox" | "coindcx" | "forex";
+  provider: "upstox" | "coindcx";
   symbol: string;
   providerSymbol: string;
   instrumentId: string;
@@ -27,7 +27,11 @@ export type ZerionLiveQuote = {
   delayed?: boolean;
 };
 
-type GatewayEnvelope = { type?: string; data?: unknown };
+type GatewayEnvelope = {
+  type?: string;
+  data?: unknown;
+};
+
 type Listener = () => void;
 
 function norm(value: string) {
@@ -44,22 +48,16 @@ function quoteAliases(quote: ZerionLiveQuote) {
   ];
 }
 
-function reconnectDelay(attempt: number) {
-  const base = Math.min(20_000, 750 * 2 ** Math.min(5, attempt));
-  return Math.round(base * (0.8 + Math.random() * 0.4));
-}
-
 class ZerionRealtimeGateway {
   socket: WebSocket | null = null;
   refs = new Map<string, number>();
   quotes = new Map<string, ZerionLiveQuote>();
   listeners = new Set<Listener>();
   reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  healthTimer: ReturnType<typeof setInterval> | null = null;
+  staleTimer: ReturnType<typeof setInterval> | null = null;
   reconnectAttempt = 0;
   status: ZerionFeedStatus = "DISCONNECTED";
   lastQuoteAt = 0;
-  lastGatewayMessageAt = 0;
 
   private url() {
     return (
@@ -78,40 +76,29 @@ class ZerionRealtimeGateway {
     this.emit();
   }
 
-  private startHealthWatch() {
-    if (this.healthTimer) return;
-    this.healthTimer = setInterval(() => {
+  private startStaleWatch() {
+    if (this.staleTimer) return;
+    this.staleTimer = setInterval(() => {
       if (this.socket?.readyState !== WebSocket.OPEN) return;
-
-      // A quiet symbol is not a disconnected transport.
-      if (
-        this.lastGatewayMessageAt > 0 &&
-        Date.now() - this.lastGatewayMessageAt > 45_000
-      ) {
-        this.setStatus("STALE");
-        return;
-      }
-      if (this.status !== "LIVE") this.setStatus("LIVE");
-    }, 5_000);
+      if (!this.lastQuoteAt) return;
+      if (Date.now() - this.lastQuoteAt > 15_000) this.setStatus("STALE");
+    }, 2500);
   }
 
   private ingest(value: unknown) {
-    if (!value || typeof value !== "object") return null;
+    if (!value || typeof value !== "object") return;
     const quote = value as ZerionLiveQuote;
     if (
-      !["upstox", "coindcx", "forex"].includes(quote.provider) ||
+      (quote.provider !== "upstox" && quote.provider !== "coindcx") ||
       !quote.instrumentId ||
       !quote.symbol ||
       !Number.isFinite(quote.price)
-    ) {
-      return null;
-    }
+    ) return;
 
     for (const alias of quoteAliases(quote)) this.quotes.set(alias, quote);
     this.lastQuoteAt = Date.now();
     this.setStatus("LIVE");
     this.emit();
-    return quote;
   }
 
   connect() {
@@ -127,9 +114,7 @@ class ZerionRealtimeGateway {
 
     socket.addEventListener("open", () => {
       this.reconnectAttempt = 0;
-      this.lastGatewayMessageAt = Date.now();
-      this.setStatus("LIVE");
-      this.startHealthWatch();
+      this.startStaleWatch();
       const instruments = [...this.refs.keys()];
       if (instruments.length) {
         socket.send(JSON.stringify({ type: "subscribe", instruments }));
@@ -137,28 +122,19 @@ class ZerionRealtimeGateway {
     });
 
     socket.addEventListener("message", (event) => {
-      this.lastGatewayMessageAt = Date.now();
       try {
         const frame = JSON.parse(event.data) as GatewayEnvelope;
         if (frame.type === "snapshot" && Array.isArray(frame.data)) {
           for (const item of frame.data) this.ingest(item);
-          this.setStatus("LIVE");
           return;
         }
-        if (frame.type === "quote") {
-          this.ingest(frame.data);
-          return;
-        }
-        this.setStatus("LIVE");
+        if (frame.type === "quote") this.ingest(frame.data);
       } catch {
-        // A malformed frame does not tear down a healthy transport.
+        // Malformed gateway frames are ignored; provider prices are never synthesized.
       }
     });
 
-    socket.addEventListener("error", () => {
-      if (socket.readyState === WebSocket.OPEN) socket.close();
-    });
-
+    socket.addEventListener("error", () => socket.close());
     socket.addEventListener("close", () => {
       if (this.socket === socket) this.socket = null;
       if (!this.refs.size) {
@@ -166,7 +142,7 @@ class ZerionRealtimeGateway {
         return;
       }
       this.setStatus("RECONNECTING");
-      const delay = reconnectDelay(this.reconnectAttempt++);
+      const delay = Math.min(15_000, 1000 * 2 ** Math.min(4, this.reconnectAttempt++));
       if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
       this.reconnectTimer = setTimeout(() => this.connect(), delay);
     });
@@ -192,15 +168,12 @@ class ZerionRealtimeGateway {
     return () => {
       this.listeners.delete(listener);
       const removed: string[] = [];
-
       for (const id of wanted) {
         const count = this.refs.get(id) ?? 0;
         if (count <= 1) {
           this.refs.delete(id);
           removed.push(id);
-        } else {
-          this.refs.set(id, count - 1);
-        }
+        } else this.refs.set(id, count - 1);
       }
 
       if (removed.length && this.socket?.readyState === WebSocket.OPEN) {
@@ -217,35 +190,17 @@ class ZerionRealtimeGateway {
     };
   }
 
-  quoteFor(instruments: string[]) {
-    for (const instrument of instruments.map(norm)) {
-      const quote = this.quotes.get(instrument);
-      if (quote) return quote;
-    }
-    return null;
-  }
-
   snapshot(wanted: Set<string>) {
     const out: Record<string, ZerionLiveQuote> = {};
     for (const id of wanted) {
       const quote = this.quotes.get(id);
       if (quote) out[id] = quote;
     }
-    return { quotes: out };
+    return { quotes: out, status: this.status, lastQuoteAt: this.lastQuoteAt };
   }
 }
 
 const gateway = new ZerionRealtimeGateway();
-
-export function subscribeZerionRealtime(
-  instruments: string[],
-  listener: (quote: ZerionLiveQuote | null) => void,
-) {
-  const notify = () => listener(gateway.quoteFor(instruments));
-  const unsubscribe = gateway.subscribe(instruments, notify);
-  notify();
-  return unsubscribe;
-}
 
 export function useZerionMarketStream(instruments: string[]) {
   const key = instruments.map(norm).filter(Boolean).sort().join("|");
@@ -269,11 +224,8 @@ export function useZerionFeedStatus() {
       gateway.listeners.delete(listener);
     };
   }, []);
-
   return {
     status: gateway.status,
     lastQuoteAt: gateway.lastQuoteAt,
-    lastGatewayMessageAt: gateway.lastGatewayMessageAt,
-    transportOpen: gateway.socket?.readyState === WebSocket.OPEN,
   };
 }

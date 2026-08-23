@@ -9,23 +9,70 @@ function allowed(request: Request) {
   return request.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-export async function GET(request: Request) {
-  if (!allowed(request)) return fail("UNAUTHORIZED", "Cron authorization required", 401);
+const DEFAULT_UNIVERSE = [
+  // India
+  "NIFTY 50",
+  "BANKNIFTY",
+  "FINNIFTY",
+  "RELIANCE",
+  "HDFCBANK",
+  "ICICIBANK",
+  "SBIN",
+  "TCS",
+  "INFY",
+  "BHARTIARTL",
+  "ITC",
+  "LT",
+  "AXISBANK",
+  "KOTAKBANK",
+  "MARUTI",
+  "TATAMOTORS",
+  "SUNPHARMA",
+  "HINDUNILVR",
+  // Crypto
+  "BTC/USDT",
+  "ETH/USDT",
+  "SOL/USDT",
+  "XRP/USDT",
+  "BNB/USDT",
+  "ADA/USDT",
+  "DOGE/USDT",
+  "AVAX/USDT",
+  "LINK/USDT",
+  // Forex / metals - active only when the configured provider resolves them
+  "XAUUSD",
+  "EURUSD",
+  "GBPUSD",
+  "USDJPY",
+  "AUDUSD",
+];
 
-  const raw =
-    process.env.ZERION_SCAN_SYMBOLS ??
-    "BTC/USDT,ETH/USDT,SOL/USDT,NIFTY 50,BANKNIFTY,RELIANCE,TCS,HDFCBANK";
-  const symbols = raw.split(",").map((value) => value.trim()).filter(Boolean);
+export async function GET(request: Request) {
+  if (!allowed(request)) {
+    return fail("UNAUTHORIZED", "Cron authorization required", 401);
+  }
+
+  const raw = process.env.ZERION_SCAN_SYMBOLS;
+  const symbols = raw
+    ? raw.split(",").map((value) => value.trim()).filter(Boolean)
+    : DEFAULT_UNIVERSE;
 
   try {
-    const scan = await runZerionScan(symbols);
+    const scan = await runZerionScan([...new Set(symbols)]);
     const persisted = await persistScanOpportunities(scan);
     const delivery = await dispatchOpportunityNotifications(persisted);
+
     return ok({
       ...scan,
+      scannedSymbols: symbols.length,
+      qualifiedCount: scan.candidates.filter(
+        (c) => c.direction !== "neutral" && c.confidence >= 64,
+      ).length,
       persistedCount: persisted.length,
       delivery,
       executionPolicy: "user-approval-required",
+      signalPolicy:
+        "bidirectional-multi-factor-dynamic-validity-anti-overtrading",
     });
   } catch (error) {
     return fail(

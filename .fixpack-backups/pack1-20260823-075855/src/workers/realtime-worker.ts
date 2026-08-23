@@ -30,18 +30,7 @@ import { connectUpstoxV3MarketFeed } from "@/lib/market-data/providers/upstox/so
 const PORT = Number(process.env.PORT ?? 10000);
 const UPSTOX_KEYS = Object.values(UPSTOX_INSTRUMENTS);
 const COINDCX_KEYS = Object.values(COINDCX_PAIRS);
-const UPSTOX_RECONNECT_BASE_MS = 1_000;
-const UPSTOX_RECONNECT_MAX_MS = 30_000;
-
-function upstoxReconnectDelay(attempt: number) {
-  const base = Math.min(
-    UPSTOX_RECONNECT_MAX_MS,
-    UPSTOX_RECONNECT_BASE_MS * 2 ** Math.min(5, attempt),
-  );
-  return Math.round(base * (0.8 + Math.random() * 0.4));
-}
-
-const upstoxReconnectAttempts = new Map<string, number>();
+const RECONNECT_MS = 5_000;
 
 const UPSTOX_ANALYTICS_TOKEN =
   process.env.UPSTOX_ANALYTICS_TOKEN?.trim() ?? "";
@@ -256,7 +245,6 @@ async function runUpstoxConnection(
   let counted = false;
 
   let feedHandle: UpstoxFeedHandle | null = null;
-  const reconnectKey = connection.connectionId || connection.ownerId || "market-data";
 
   try {
     feedHandle = await connectUpstoxV3MarketFeed({
@@ -265,9 +253,6 @@ async function runUpstoxConnection(
         ...new Set([...UPSTOX_KEYS, ...upstoxDynamicRefs.keys()]),
       ],
       mode: "full",
-      onOpen: () => {
-        upstoxReconnectAttempts.set(reconnectKey, 0);
-      },
       onMessage: (message) => {
         const response = message as { feeds?: Record<string, unknown> };
         for (const [instrumentKey, feed] of Object.entries(
@@ -297,12 +282,7 @@ async function runUpstoxConnection(
           counted = false;
         }
         if (!shuttingDown) {
-          const attempt = upstoxReconnectAttempts.get(reconnectKey) ?? 0;
-          upstoxReconnectAttempts.set(reconnectKey, attempt + 1);
-          setTimeout(
-            () => void runUpstoxConnection(connection),
-            upstoxReconnectDelay(attempt),
-          );
+          setTimeout(() => void runUpstoxConnection(connection), RECONNECT_MS);
         }
       },
     });
@@ -315,12 +295,7 @@ async function runUpstoxConnection(
     providers.upstox.lastError =
       error instanceof Error ? error.message : "Upstox connection failed";
     if (!shuttingDown) {
-      const attempt = upstoxReconnectAttempts.get(reconnectKey) ?? 0;
-          upstoxReconnectAttempts.set(reconnectKey, attempt + 1);
-          setTimeout(
-            () => void runUpstoxConnection(connection),
-            upstoxReconnectDelay(attempt),
-          );
+      setTimeout(() => void runUpstoxConnection(connection), RECONNECT_MS);
     }
   }
 }
@@ -350,13 +325,9 @@ async function startUpstox() {
     return;
   }
 
-  // Shared chart market-data must not create a socket per trading user.
-  // Prefer UPSTOX_ANALYTICS_TOKEN above; otherwise use one account only as
-  // market-data fallback. User OAuth remains available for execution/P&L.
-  const fallbackConnection = scan.connections[0];
-  if (fallbackConnection) {
-    await runUpstoxConnection(fallbackConnection);
-  }
+  await Promise.all(
+    scan.connections.map((connection) => runUpstoxConnection(connection)),
+  );
 }
 
 function normalizeCoinDcxPriceEvent(
