@@ -17,7 +17,21 @@ export function mt5BridgeConfigured() {
   return Boolean(process.env.MT5_BRIDGE_URL?.trim() && process.env.MT5_BRIDGE_TOKEN?.trim() && process.env.BROKER_TOKEN_ENCRYPTION_KEY);
 }
 async function post<T>(path: string, credentials: Mt5UserCredentials, payload: Json = {}, idempotencyKey?: string): Promise<T> {
-  const response = await fetch(`${bridgeUrl()}${path}`, {
+  const url = `${bridgeUrl()}${path}`;
+  const safeOrigin = (() => {
+    try {
+      return new URL(url).origin;
+    } catch {
+      return "invalid-url";
+    }
+  })();
+
+  console.info("[ZERION_MT5_DIAG] request", {
+    origin: safeOrigin,
+    path,
+  });
+
+  const response = await fetch(url, {
     method: "POST",
     cache: "no-store",
     headers: {
@@ -28,7 +42,24 @@ async function post<T>(path: string, credentials: Mt5UserCredentials, payload: J
     },
     body: JSON.stringify({ credentials, ...payload }),
   });
-  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const rawText = await response.text();
+  let body: Record<string, unknown> = {};
+
+  try {
+    body = JSON.parse(rawText) as Record<string, unknown>;
+  } catch {
+    body = {};
+  }
+
+  console.info("[ZERION_MT5_DIAG] response", {
+    origin: safeOrigin,
+    path,
+    status: response.status,
+    ok: response.ok,
+    contentType: response.headers.get("content-type"),
+    bodyPreview: response.ok ? undefined : rawText.slice(0, 180),
+  });
+
   if (!response.ok) {
     const message = typeof body.detail === "string" ? body.detail : typeof body.message === "string" ? body.message : `MT5 bridge request failed (${response.status})`;
     throw new Error(message);
