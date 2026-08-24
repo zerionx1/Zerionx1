@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BellRing,
   CheckCircle2,
-  Clock3,
   RefreshCw,
   ShieldAlert,
   TrendingDown,
@@ -13,7 +12,6 @@ import {
 import {
   directionOf,
   displayNumber,
-  expiryOf,
   isOpportunityExpired,
 } from "@/lib/notifications/opportunity-display";
 
@@ -30,6 +28,27 @@ type NotificationRow = {
   event_data?: Record<string, unknown> | null;
 };
 type TradeMode = "paper" | "live";
+
+type ApiBody = {
+  data?: { message?: string };
+  error?: {
+    code?: string;
+    message?: string;
+    details?: {
+      proposedNotional?: number;
+      defaultGuardNotional?: number;
+      defaultGuardPercent?: number;
+      userRiskBudget?: number;
+      quantity?: number;
+      symbol?: string;
+    };
+  };
+};
+
+function amount(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—";
+}
 
 export function AgentOpportunityInbox() {
   const [rows, setRows] = useState<NotificationRow[]>([]);
@@ -50,6 +69,15 @@ export function AgentOpportunityInbox() {
     const saved = window.localStorage.getItem("zerion-opportunity-mode");
     if (saved === "live") setMode("live");
     setAutoTrailing(window.localStorage.getItem("zerion-auto-trailing") === "on");
+    const poll = window.setInterval(() => void load(), 15_000);
+    const refresh = () => void load();
+    window.addEventListener("online", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(poll);
+      window.removeEventListener("online", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [load]);
 
   useEffect(() => {
@@ -70,47 +98,73 @@ export function AgentOpportunityInbox() {
     return [...active.slice(0, 1), ...others.slice(0, 8)];
   }, [rows, clock]);
 
+  async function submitApproval(row: NotificationRow, riskOverrideConfirmed: boolean) {
+    if (!row.opportunity_id) return false;
+    const r = await fetch(
+      `/api/agents/opportunities/${encodeURIComponent(row.opportunity_id)}/approve`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          confirmed: true,
+          mode,
+          autoTrailing,
+          riskOverrideConfirmed,
+        }),
+      },
+    );
+    const j = (await r.json().catch(() => ({}))) as ApiBody;
+
+    if (r.status === 409 && j.error?.code === "RISK_CONFIRMATION_REQUIRED") {
+      const d = j.error.details ?? {};
+      const accepted = window.confirm(
+        `Risk confirmation required for ${d.symbol ?? "this trade"}.\n\n` +
+          `Your saved risk sizing produced order notional ${amount(d.proposedNotional)}.\n` +
+          `Zerion's default paper guard is ${amount(d.defaultGuardNotional)} (${amount(d.defaultGuardPercent)}%).\n` +
+          `Your calculated max-loss budget remains ${amount(d.userRiskBudget)}.\n\n` +
+          `Continue with YOUR saved risk settings anyway?`,
+      );
+      if (!accepted) {
+        setMessage("Trade not executed. Your risk confirmation was not given.");
+        return false;
+      }
+      return submitApproval(row, true);
+    }
+
+    setMessage(r.ok ? j.data?.message ?? "Trade executed." : j.error?.message ?? "Execution failed.");
+    if (!r.ok) return false;
+
+    await fetch("/api/notifications/inbox", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: row.id }),
+    });
+    window.location.href = "/dashboard/positions";
+    return true;
+  }
+
   async function approve(row: NotificationRow) {
     if (!row.opportunity_id) return;
     const data = row.event_data ?? {};
     if (isOpportunityExpired(data, Date.now())) {
-      setMessage("This setup expired. Zerion will wait for a fresh qualified setup.");
+      setMessage("This setup is stale. Zerion is continuously scanning for a fresh qualified setup.");
+      void load();
       return;
     }
     const side = directionOf(data) || "TRADE";
     const symbol = String(data.symbol ?? row.title);
     if (
       !window.confirm(
-        `Approve and EXECUTE ${mode.toUpperCase()} ${side} ${symbol}? Zerion will risk-size the order and send Entry + SL + minimum 1:3 target immediately.`,
+        `Approve and EXECUTE ${mode.toUpperCase()} ${side} ${symbol}? Zerion will use your saved risk controls and send Entry + SL + minimum 1:3 target.`,
       )
-    )
+    ) {
       return;
+    }
 
     setBusy(row.id);
     setMessage("");
     try {
-      const r = await fetch(
-        `/api/agents/opportunities/${encodeURIComponent(row.opportunity_id)}/approve`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ confirmed: true, mode, autoTrailing }),
-        },
-      );
-      const j = await r.json().catch(() => ({}));
-      setMessage(
-        r.ok
-          ? j.data?.message ?? "Trade executed."
-          : j.error?.message ?? "Execution failed.",
-      );
-      if (r.ok) {
-        await fetch("/api/notifications/inbox", {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ id: row.id }),
-        });
-        window.location.href = "/dashboard/positions";
-      }
+      await submitApproval(row, false);
     } finally {
       setBusy("");
     }
@@ -123,16 +177,16 @@ export function AgentOpportunityInbox() {
           <span className="x1-kicker">ZERION INTELLIGENCE</span>
           <h3>Best qualified trade setup</h3>
           <p>
-            One strongest setup at a time. No qualified structure means no trade.
-            Approve once and Zerion sends the risk-sized order with SL and 1:3 target.
+            Zerion re-checks the market continuously. Only the strongest currently-qualified setup is shown;
+            no qualified structure means no trade.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="zx-agent-controls">
           <div className="zx-trade-mode">
             <button className={mode === "paper" ? "is-active" : ""} onClick={() => chooseMode("paper")}>Paper</button>
             <button className={mode === "live" ? "is-active" : ""} onClick={() => chooseMode("live")}>Real</button>
           </div>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="zx-auto-trailing-control">
             <input
               type="checkbox"
               checked={autoTrailing}
@@ -140,7 +194,6 @@ export function AgentOpportunityInbox() {
                 setAutoTrailing(e.target.checked);
                 window.localStorage.setItem("zerion-auto-trailing", e.target.checked ? "on" : "off");
               }}
-              style={{ width: 16, height: 16 }}
             />
             Auto trailing
           </label>
@@ -150,15 +203,17 @@ export function AgentOpportunityInbox() {
         </div>
       </div>
 
+      <div className="zx-live-scan-note">
+        <RefreshCw className="h-4 w-4" /> Continuous revalidation active · background scan about every 30 seconds
+      </div>
+
       {message ? <div className="zx-agent-message">{message}</div> : null}
 
       <div className="zx-agent-notification-list">
         {visible.map((row) => {
           const data = row.event_data ?? {};
           const side = directionOf(data);
-          const expiresAt = expiryOf(data);
           const expired = row.opportunity_id ? isOpportunityExpired(data, clock) : false;
-          const remaining = expiresAt === null ? null : Math.max(0, expiresAt - clock);
           const SideIcon = side === "SELL" || side === "SHORT" ? TrendingDown : TrendingUp;
           return (
             <article key={row.id} className={`${row.read_at ? "zx-agent-notification" : "zx-agent-notification is-unread"} ${expired ? "is-expired" : ""}`}>
@@ -182,12 +237,10 @@ export function AgentOpportunityInbox() {
                       <div><small>Trailing</small><strong>{autoTrailing ? "Auto · market behaviour" : "Notify before move"}</strong></div>
                     </div>
                     <div className={`zx-expiry ${expired ? "is-expired" : ""}`}>
-                      {expired ? <ShieldAlert className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
+                      {expired ? <ShieldAlert className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                       {expired
-                        ? "Opportunity expired"
-                        : remaining === null
-                          ? "Valid while structure remains qualified"
-                          : `Re-check in ${Math.floor(remaining / 60000)}m ${Math.floor((remaining % 60000) / 1000)}s`}
+                        ? "Structure changed or expired · refreshing for a new setup"
+                        : "Live structure · continuously revalidated while it remains qualified"}
                     </div>
                   </>
                 ) : null}
@@ -197,14 +250,16 @@ export function AgentOpportunityInbox() {
                 <div className="zx-agent-notification__actions">
                   <button className="zx-primary-action" disabled={expired || busy === row.id} onClick={() => void approve(row)}>
                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                    {expired ? "Expired" : busy === row.id ? "Executing…" : `Approve & execute ${mode}`}
+                    {expired ? "Refreshing" : busy === row.id ? "Executing…" : `Approve & execute ${mode}`}
                   </button>
                 </div>
               ) : null}
             </article>
           );
         })}
-        {!visible.length ? <div className="zx-agent-empty">No fresh qualified setup right now.</div> : null}
+        {!visible.length ? (
+          <div className="zx-agent-empty">Continuous scan active. No 70%+ confidence / qualified 1:3 setup right now.</div>
+        ) : null}
       </div>
     </section>
   );

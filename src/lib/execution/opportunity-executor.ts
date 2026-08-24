@@ -15,6 +15,23 @@ import type { MarketKind } from "@/types/market";
 type Row = Record<string, unknown>;
 const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
+export class RiskConfirmationRequiredError extends Error {
+  readonly code = "RISK_CONFIRMATION_REQUIRED";
+  constructor(
+    readonly details: {
+      proposedNotional: number;
+      defaultGuardNotional: number;
+      defaultGuardPercent: number;
+      userRiskBudget: number;
+      quantity: number;
+      symbol: string;
+    },
+  ) {
+    super("This order exceeds Zerion's default paper notional guard. Your saved risk sizing is still being used; explicit confirmation is required to continue.");
+    this.name = "RiskConfirmationRequiredError";
+  }
+}
+
 export type ApprovedTradePlan = {
   opportunityId: string;
   symbol: string;
@@ -29,14 +46,11 @@ export type ApprovedTradePlan = {
   instrumentId?: string | null;
   executionSymbol?: string | null;
   autoTrailing: boolean;
-  trailing?: {
-    enabled?: boolean;
-    trigger?: number | null;
-    distance?: number | null;
-  } | null;
+  riskOverrideConfirmed?: boolean;
+  trailing?: { enabled?: boolean; trigger?: number | null; distance?: number | null } | null;
 };
 
-function riskBudget(balance: number, mode: "paper" | "live", controls: Awaited<ReturnType<typeof getRiskControls>>) {
+function riskBudget(balance: number, controls: Awaited<ReturnType<typeof getRiskControls>>) {
   if (!(balance > 0)) throw new Error("Account balance/equity is unavailable for automatic risk sizing");
   const percentBudget = balance * (Math.max(0.1, controls.riskPerTradePct || 1) / 100);
   return controls.maxLossPerTrade != null
@@ -64,7 +78,7 @@ async function executePaper(plan: ApprovedTradePlan) {
 
   const perUnitRisk = Math.abs(plan.entry - plan.stopLoss);
   if (!(perUnitRisk > 0)) throw new Error("Invalid trade risk distance");
-  const budget = riskBudget(account.equity, "paper", controls);
+  const budget = riskBudget(account.equity, controls);
   const quantity = Math.max(0.000001, budget / perUnitRisk);
   const now = new Date().toISOString();
   const order: PaperOrder = {
@@ -86,10 +100,25 @@ async function executePaper(plan: ApprovedTradePlan) {
     clientOrderId: createClientOrderId(),
   };
 
-  const result = executePaperOrder({ account, quote, order });
+  const result = executePaperOrder({
+    account,
+    quote,
+    order,
+    riskOverrideConfirmed: Boolean(plan.riskOverrideConfirmed),
+  });
+
+  if (!result.accepted && result.reason === "risk_confirmation_required" && result.guard) {
+    throw new RiskConfirmationRequiredError({
+      ...result.guard,
+      userRiskBudget: budget,
+      quantity,
+      symbol: plan.symbol,
+    });
+  }
+
   await paperStore.addOrder(result.order);
   if (!result.accepted || !result.order.averageFillPrice) {
-    throw new Error(result.reason ?? result.order.rejectionReason ?? "Paper order rejected");
+    throw new Error(result.order.rejectionReason ?? result.reason ?? "Paper order rejected");
   }
   await paperStore.applyFill(result.order, result.order.averageFillPrice);
 
@@ -102,6 +131,7 @@ async function executePaper(plan: ApprovedTradePlan) {
     protectiveStop: plan.stopLoss,
     target: plan.takeProfit,
     autoTrailing: plan.autoTrailing,
+    riskOverrideConfirmed: Boolean(plan.riskOverrideConfirmed),
   };
 }
 
@@ -136,7 +166,6 @@ function upstoxFundsTotal(value: Row) {
 async function resolveUpstoxInstrument(plan: ApprovedTradePlan) {
   const fromPlan = String(plan.instrumentId ?? "").replace(/^upstox:/i, "");
   if (fromPlan.includes("|")) return { instrumentToken: fromPlan, lotSize: 1 };
-
   const query = encodeURIComponent(plan.symbol);
   const result = await upstoxJson(`/v2/instruments/search?query=${query}`);
   const rows = Array.isArray(result.data) ? (result.data as Row[]) : [];
@@ -154,25 +183,18 @@ async function resolveUpstoxInstrument(plan: ApprovedTradePlan) {
 
 async function executeUpstox(plan: ApprovedTradePlan) {
   const controls = await getRiskControls("live");
-  const funds = await upstoxJson("/v3/user/get-funds-and-margin", {
-    headers: { "Api-Version": "3.0" },
-  });
+  const funds = await upstoxJson("/v3/user/get-funds-and-margin", { headers: { "Api-Version": "3.0" } });
   const available = upstoxFundsTotal(funds);
-  const budget = riskBudget(available, "live", controls);
+  const budget = riskBudget(available, controls);
   const perUnitRisk = Math.abs(plan.entry - plan.stopLoss);
   if (!(perUnitRisk > 0)) throw new Error("Invalid trade risk distance");
-
   const { instrumentToken, lotSize } = await resolveUpstoxInstrument(plan);
   const rawQty = Math.floor(budget / perUnitRisk);
   const quantity = Math.floor(rawQty / lotSize) * lotSize;
-  if (quantity < lotSize) {
-    throw new Error(`Risk budget is too small for the minimum Upstox lot size (${lotSize})`);
-  }
-
+  if (quantity < lotSize) throw new Error(`Risk budget is too small for the minimum Upstox lot size (${lotSize})`);
   const trailingGap = plan.autoTrailing && plan.trailing?.distance
     ? Math.max(Math.abs(plan.entry - plan.stopLoss) * 0.1, Number(plan.trailing.distance))
     : undefined;
-
   const order = await upstoxJson("/v3/order/gtt/place", {
     method: "POST",
     body: JSON.stringify({
@@ -180,42 +202,15 @@ async function executeUpstox(plan: ApprovedTradePlan) {
       quantity,
       product: "I",
       rules: [
-        {
-          strategy: "ENTRY",
-          trigger_type: "IMMEDIATE",
-          trigger_price: plan.entry,
-          market_protection: -1,
-        },
-        {
-          strategy: "TARGET",
-          trigger_type: "IMMEDIATE",
-          trigger_price: plan.takeProfit,
-          market_protection: -1,
-        },
-        {
-          strategy: "STOPLOSS",
-          trigger_type: "IMMEDIATE",
-          trigger_price: plan.stopLoss,
-          market_protection: -1,
-          ...(trailingGap ? { trailing_gap: trailingGap } : {}),
-        },
+        { strategy: "ENTRY", trigger_type: "IMMEDIATE", trigger_price: plan.entry, market_protection: -1 },
+        { strategy: "TARGET", trigger_type: "IMMEDIATE", trigger_price: plan.takeProfit, market_protection: -1 },
+        { strategy: "STOPLOSS", trigger_type: "IMMEDIATE", trigger_price: plan.stopLoss, market_protection: -1, ...(trailingGap ? { trailing_gap: trailingGap } : {}) },
       ],
       instrument_token: instrumentToken,
       transaction_type: plan.side.toUpperCase(),
     }),
   });
-
-  return {
-    broker: "upstox",
-    executed: true,
-    quantity,
-    riskBudget: budget,
-    order,
-    protectiveStop: plan.stopLoss,
-    target: plan.takeProfit,
-    autoTrailing: plan.autoTrailing,
-    trailingMode: plan.autoTrailing ? "broker-native-gtt" : "manual-notification",
-  };
+  return { broker: "upstox", executed: true, quantity, riskBudget: budget, order, protectiveStop: plan.stopLoss, target: plan.takeProfit, autoTrailing: plan.autoTrailing, trailingMode: plan.autoTrailing ? "broker-native-gtt" : "manual-notification" };
 }
 
 async function resolveCoinDcxMarket(plan: ApprovedTradePlan) {
@@ -223,14 +218,9 @@ async function resolveCoinDcxMarket(plan: ApprovedTradePlan) {
   const wanted = baseSymbol(plan.symbol);
   const hit = details.find((row) => baseSymbol(String(row.coindcx_name ?? row.symbol ?? "")) === wanted)
     ?? details.find((row) => baseSymbol(String(row.pair ?? "")) === wanted);
-  if (!hit) {
-    return { market: wanted, ecode: "B" };
-  }
+  if (!hit) return { market: wanted, ecode: "B" };
   const pair = String(hit.pair ?? "");
-  return {
-    market: String(hit.coindcx_name ?? hit.symbol ?? wanted),
-    ecode: pair.includes("-") ? pair.split("-", 1)[0] || "B" : "B",
-  };
+  return { market: String(hit.coindcx_name ?? hit.symbol ?? wanted), ecode: pair.includes("-") ? pair.split("-", 1)[0] || "B" : "B" };
 }
 
 async function executeCoinDcx(plan: ApprovedTradePlan) {
@@ -240,39 +230,23 @@ async function executeCoinDcx(plan: ApprovedTradePlan) {
   const usdt = balances.find((b) => b.currency.toUpperCase() === "USDT");
   const inr = balances.find((b) => b.currency.toUpperCase() === "INR");
   const available = n(usdt?.balance) || n(inr?.balance);
-  const budget = riskBudget(available, "live", controls);
+  const budget = riskBudget(available, controls);
   const perUnitRisk = Math.abs(plan.entry - plan.stopLoss);
   if (!(perUnitRisk > 0)) throw new Error("Invalid trade risk distance");
   const quantity = Number(Math.max(0.000001, budget / perUnitRisk).toFixed(6));
   const market = await resolveCoinDcxMarket(plan);
-
-  const order = await coinDcxAuthRequest<Row>(
-    credentials,
-    "/exchange/v1/margin/create",
-    {
-      market: market.market,
-      quantity,
-      side: plan.side,
-      order_type: "market_order",
-      leverage: 1,
-      stop_price: plan.stopLoss,
-      target_price: plan.takeProfit,
-      trailing_sl: plan.autoTrailing,
-      ecode: market.ecode,
-    },
-  );
-
-  return {
-    broker: "coindcx",
-    executed: true,
+  const order = await coinDcxAuthRequest<Row>(credentials, "/exchange/v1/margin/create", {
+    market: market.market,
     quantity,
-    riskBudget: budget,
-    order,
-    protectiveStop: plan.stopLoss,
-    target: plan.takeProfit,
-    autoTrailing: plan.autoTrailing,
-    trailingMode: plan.autoTrailing ? "broker-native-margin-trailing" : "manual-notification",
-  };
+    side: plan.side,
+    order_type: "market_order",
+    leverage: 1,
+    stop_price: plan.stopLoss,
+    target_price: plan.takeProfit,
+    trailing_sl: plan.autoTrailing,
+    ecode: market.ecode,
+  });
+  return { broker: "coindcx", executed: true, quantity, riskBudget: budget, order, protectiveStop: plan.stopLoss, target: plan.takeProfit, autoTrailing: plan.autoTrailing, trailingMode: plan.autoTrailing ? "broker-native-margin-trailing" : "manual-notification" };
 }
 
 async function executeMt5(plan: ApprovedTradePlan) {
@@ -280,7 +254,7 @@ async function executeMt5(plan: ApprovedTradePlan) {
   const credentials = await getConnectedMt5Credentials();
   const account = (await mt5BridgeClient.account(credentials)) as Row;
   const balance = n(account.equity) || n(account.balance);
-  const budget = riskBudget(balance, "live", controls);
+  const budget = riskBudget(balance, controls);
   const symbol = String(plan.executionSymbol || plan.symbol).replace(/^forex:/i, "");
   const result = await mt5BridgeClient.orderPlace(
     credentials,
@@ -297,23 +271,10 @@ async function executeMt5(plan: ApprovedTradePlan) {
     },
     `opportunity-${plan.opportunityId}`,
   );
-
-  return {
-    broker: "exness-mt5",
-    executed: true,
-    riskBudget: budget,
-    order: result,
-    protectiveStop: plan.stopLoss,
-    target: plan.takeProfit,
-    autoTrailing: plan.autoTrailing,
-    trailingMode: plan.autoTrailing ? "mt5-market-behavior" : "manual-notification",
-  };
+  return { broker: "exness-mt5", executed: true, riskBudget: budget, order: result, protectiveStop: plan.stopLoss, target: plan.takeProfit, autoTrailing: plan.autoTrailing, trailingMode: plan.autoTrailing ? "mt5-market-behavior" : "manual-notification" };
 }
 
-export async function executeApprovedOpportunity(
-  mode: "paper" | "live",
-  plan: ApprovedTradePlan,
-) {
+export async function executeApprovedOpportunity(mode: "paper" | "live", plan: ApprovedTradePlan) {
   if (plan.riskReward < 3) throw new Error("Execution blocked: risk/reward is below 1:3");
   if (mode === "paper") return executePaper(plan);
   if (plan.market === "forex") return executeMt5(plan);

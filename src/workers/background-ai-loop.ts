@@ -1,54 +1,40 @@
+import "server-only";
+
+const DEFAULT_INTERVAL_MS = 30_000;
+const MIN_INTERVAL_MS = 30_000;
+let timer: ReturnType<typeof setInterval> | null = null;
+let running = false;
+
+async function tick() {
+  if (running) return;
+  running = true;
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+    const secret = process.env.CRON_SECRET;
+    if (!appUrl || !secret) return;
+    await fetch(`${appUrl}/api/automation/market-scan`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(25_000),
+    }).catch(() => null);
+  } finally {
+    running = false;
+  }
+}
+
 export function startBackgroundAiLoop() {
-  const secret = process.env.CRON_SECRET;
-  const base =
-    process.env.ZERION_APP_BASE_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "https://zerionx1.vercel.app";
+  if (timer) return;
+  const configured = Number(process.env.ZERION_AI_SCAN_INTERVAL_MS ?? DEFAULT_INTERVAL_MS);
   const intervalMs = Math.max(
-    30_000,
-    Number(process.env.ZERION_BACKGROUND_SCAN_MS ?? 60_000),
+    MIN_INTERVAL_MS,
+    Number.isFinite(configured) ? configured : DEFAULT_INTERVAL_MS,
   );
-
-  if (!secret) {
-    console.warn("Background AI loop disabled: CRON_SECRET is not configured on Render.");
-    return () => {};
-  }
-
-  let stopped = false;
-  let running = false;
-
-  async function tick() {
-    if (stopped || running) return;
-    running = true;
-    try {
-      const response = await fetch(
-        `${base.replace(/\/$/, "")}/api/automation/market-scan`,
-        {
-          headers: { authorization: `Bearer ${secret}` },
-          signal: AbortSignal.timeout(55_000),
-          cache: "no-store",
-        },
-      );
-      if (!response.ok) {
-        const body = await response.text();
-        console.error(`Background Zerion scan failed (${response.status}): ${body.slice(0, 300)}`);
-      }
-    } catch (error) {
-      console.error(
-        "Background Zerion scan failed:",
-        error instanceof Error ? error.message : error,
-      );
-    } finally {
-      running = false;
-    }
-  }
-
   void tick();
-  const timer = setInterval(() => void tick(), intervalMs);
-  console.log(`Zerion background AI scan loop active every ${Math.round(intervalMs / 1000)}s`);
+  timer = setInterval(() => void tick(), intervalMs);
+}
 
-  return () => {
-    stopped = true;
-    clearInterval(timer);
-  };
+export function stopBackgroundAiLoop() {
+  if (timer) clearInterval(timer);
+  timer = null;
 }

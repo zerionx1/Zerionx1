@@ -1,6 +1,9 @@
 import { currentUser, insert, select, update } from "@/lib/supabase/rest";
 import { fail, ok } from "@/lib/security/api-response";
-import { executeApprovedOpportunity } from "@/lib/execution/opportunity-executor";
+import {
+  executeApprovedOpportunity,
+  RiskConfirmationRequiredError,
+} from "@/lib/execution/opportunity-executor";
 
 function record(v: unknown) {
   return v && typeof v === "object" && !Array.isArray(v)
@@ -19,15 +22,16 @@ export async function POST(
     const user = await currentUser();
     const { opportunityId } = await context.params;
     const body = (await request.json().catch(() => null)) as
-      | { confirmed?: boolean; mode?: "paper" | "live"; autoTrailing?: boolean }
+      | {
+          confirmed?: boolean;
+          mode?: "paper" | "live";
+          autoTrailing?: boolean;
+          riskOverrideConfirmed?: boolean;
+        }
       | null;
 
     if (body?.confirmed !== true || !body.mode) {
-      return fail(
-        "CONFIRMATION_REQUIRED",
-        "Explicit Paper or Real confirmation is required",
-        400,
-      );
+      return fail("CONFIRMATION_REQUIRED", "Explicit Paper or Real confirmation is required", 400);
     }
 
     const opportunity = (
@@ -42,7 +46,7 @@ export async function POST(
 
     const expiresAt = Date.parse(String(opportunity.expires_at ?? ""));
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
-      return fail("OPPORTUNITY_EXPIRED", "This opportunity expired. Refresh for a fresh setup.", 410);
+      return fail("OPPORTUNITY_EXPIRED", "This setup is no longer current. Zerion is already scanning for the next qualified setup.", 410);
     }
 
     const analysis = record(opportunity.analysis);
@@ -90,6 +94,7 @@ export async function POST(
       executionSymbol: plan.executionSymbol ?? null,
       trailing: plan.trailing ?? null,
       autoTrailing: body.autoTrailing === true,
+      riskOverrideConfirmed: body.riskOverrideConfirmed === true,
       trailingLastStop: stopLoss,
     };
 
@@ -109,9 +114,7 @@ export async function POST(
       updated_at: now,
     });
     const proposal = proposals[0];
-    if (!proposal?.id) {
-      return fail("PROPOSAL_CREATE_FAILED", "Unable to create the approved trade record", 500);
-    }
+    if (!proposal?.id) return fail("PROPOSAL_CREATE_FAILED", "Unable to create the approved trade record", 500);
 
     try {
       const execution = await executeApprovedOpportunity(body.mode, {
@@ -128,6 +131,7 @@ export async function POST(
         instrumentId: plan.instrumentId ? String(plan.instrumentId) : null,
         executionSymbol: plan.executionSymbol ? String(plan.executionSymbol) : null,
         autoTrailing: body.autoTrailing === true,
+        riskOverrideConfirmed: body.riskOverrideConfirmed === true,
         trailing: (() => {
           const t = record(plan.trailing);
           return {
@@ -160,6 +164,19 @@ export async function POST(
         201,
       );
     } catch (executionError) {
+      if (executionError instanceof RiskConfirmationRequiredError) {
+        await update(
+          "trade_proposals",
+          `owner_id=eq.${user.id}&id=eq.${encodeURIComponent(String(proposal.id))}`,
+          {
+            status: "awaiting-risk-confirmation",
+            execution_result: { ok: false, code: executionError.code, ...executionError.details },
+            updated_at: new Date().toISOString(),
+          },
+        ).catch(() => {});
+        return fail(executionError.code, executionError.message, 409, executionError.details);
+      }
+
       const message = executionError instanceof Error ? executionError.message : "Trade execution failed";
       await update(
         "trade_proposals",

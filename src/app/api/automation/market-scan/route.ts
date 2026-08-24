@@ -10,47 +10,16 @@ function allowed(request: Request) {
 }
 
 const DEFAULT_UNIVERSE = [
-  // India
-  "NIFTY 50",
-  "BANKNIFTY",
-  "FINNIFTY",
-  "RELIANCE",
-  "HDFCBANK",
-  "ICICIBANK",
-  "SBIN",
-  "TCS",
-  "INFY",
-  "BHARTIARTL",
-  "ITC",
-  "LT",
-  "AXISBANK",
-  "KOTAKBANK",
-  "MARUTI",
-  "TATAMOTORS",
-  "SUNPHARMA",
-  "HINDUNILVR",
-  // Crypto
-  "BTC/USDT",
-  "ETH/USDT",
-  "SOL/USDT",
-  "XRP/USDT",
-  "BNB/USDT",
-  "ADA/USDT",
-  "DOGE/USDT",
-  "AVAX/USDT",
-  "LINK/USDT",
-  // Forex / metals - active only when the configured provider resolves them
-  "XAUUSD",
-  "EURUSD",
-  "GBPUSD",
-  "USDJPY",
-  "AUDUSD",
+  "NIFTY 50", "BANKNIFTY", "FINNIFTY", "RELIANCE", "HDFCBANK", "ICICIBANK",
+  "SBIN", "TCS", "INFY", "BHARTIARTL", "ITC", "LT", "AXISBANK", "KOTAKBANK",
+  "MARUTI", "TATAMOTORS", "SUNPHARMA", "HINDUNILVR",
+  "BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT", "ADA/USDT",
+  "DOGE/USDT", "AVAX/USDT", "LINK/USDT",
+  "XAUUSD", "EURUSD", "GBPUSD", "USDJPY", "AUDUSD",
 ];
 
 export async function GET(request: Request) {
-  if (!allowed(request)) {
-    return fail("UNAUTHORIZED", "Cron authorization required", 401);
-  }
+  if (!allowed(request)) return fail("UNAUTHORIZED", "Cron authorization required", 401);
 
   const raw = process.env.ZERION_SCAN_SYMBOLS;
   const symbols = raw
@@ -65,14 +34,17 @@ export async function GET(request: Request) {
     return ok({
       ...scan,
       scannedSymbols: symbols.length,
-      qualifiedCount: scan.candidates.filter(
-        (c) => c.direction !== "neutral" && c.confidence >= 64,
+      qualifiedCount: scan.candidates.filter((candidate) =>
+        candidate.direction !== "neutral" &&
+        candidate.confidence >= 70 &&
+        Number(candidate.tradePlan?.qualityScore ?? 0) >= 74 &&
+        Number(candidate.tradePlan?.riskReward ?? 0) >= 3
       ).length,
       persistedCount: persisted.length,
       delivery,
       executionPolicy: "user-approval-required",
-      signalPolicy:
-        "bidirectional-multi-factor-dynamic-validity-anti-overtrading",
+      scanCadenceSeconds: 30,
+      signalPolicy: "continuous-bidirectional-quality-gated-minimum-1-to-3",
     });
   } catch (error) {
     return fail(

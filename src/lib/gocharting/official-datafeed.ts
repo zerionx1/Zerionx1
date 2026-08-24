@@ -7,10 +7,12 @@ import {
 } from "@/hooks/use-zerion-market-stream";
 
 type GCSymbolInfo = {
+  key: string;
   exchange: string;
   segment: string;
   symbol: string;
   name: string;
+  ticker: string;
   asset_type: "CRYPTO" | "EQUITY" | "FOREX" | "COMMODITY";
   source_id: string;
   tradeable: boolean;
@@ -19,6 +21,16 @@ type GCSymbolInfo = {
   full_name: string;
   description: string;
   type: string;
+  session: string;
+  timezone: string;
+  has_intraday: boolean;
+  has_daily: boolean;
+  has_weekly_and_monthly: boolean;
+  supported_resolutions: string[];
+  tick_size: number;
+  display_tick_size: number;
+  max_tick_precision: number;
+  max_volume_precision: number;
 };
 
 type GCBar = {
@@ -35,37 +47,62 @@ type PeriodParams = {
   to?: Date;
   firstDataRequest?: boolean;
   rows?: number;
+  countBack?: number;
 };
 
-type Resolution =
-  | string
-  | { scale?: string; units?: number };
+type Resolution = string | { scale?: string; units?: number; type?: string; baseType?: string };
 
 type SearchResult = {
+  key: string;
   symbol: string;
   full_name: string;
   description: string;
   exchange: string;
+  segment: string;
   type: string;
   ticker: string;
 };
 
-function clean(value: string) {
-  return value.trim().toUpperCase().replaceAll("/", "").replaceAll("-", "");
+const SUPPORTED = ["1m", "3m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"];
+
+export function cleanGoChartingSymbol(value: string) {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "");
+}
+
+function cleanLookup(value: string) {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function segmentOf(item: MarketInstrument) {
+  const asset = marketType(item);
+  if (asset === "CRYPTO") return "SPOT";
+  if (asset === "FOREX" || asset === "COMMODITY") return "FOREX";
+  if (item.market === "indian-options") return "OPTIONS";
+  if (item.market === "indian-futures") return "FUTURES";
+  if (item.market === "indian-index") return "INDEX";
+  return "EQUITY";
+}
+
+function exchangeOf(item: MarketInstrument) {
+  const raw = (item.exchange || "ZERION").trim().toUpperCase();
+  return cleanGoChartingSymbol(raw) || "ZERION";
+}
+
+export function goChartingSymbolKey(item: MarketInstrument) {
+  return `${exchangeOf(item)}:${segmentOf(item)}:${cleanGoChartingSymbol(item.symbol)}`;
+}
+
+function keyLookup(value: string) {
+  const last = value.split(":").at(-1) ?? value;
+  return cleanLookup(last);
 }
 
 function marketType(item: MarketInstrument): GCSymbolInfo["asset_type"] {
   const market = String(item.market).toLowerCase();
   const symbol = item.symbol.toUpperCase();
   if (market.includes("crypto") || symbol.includes("USDT")) return "CRYPTO";
-  if (
-    market.includes("forex") ||
-    symbol.includes("XAU") ||
-    symbol.includes("XAG")
-  ) {
-    return symbol.includes("XAU") || symbol.includes("XAG")
-      ? "COMMODITY"
-      : "FOREX";
+  if (market.includes("forex") || symbol.includes("XAU") || symbol.includes("XAG")) {
+    return symbol.includes("XAU") || symbol.includes("XAG") ? "COMMODITY" : "FOREX";
   }
   return "EQUITY";
 }
@@ -74,10 +111,10 @@ function timeframe(resolution: Resolution): Timeframe {
   const raw =
     typeof resolution === "string"
       ? resolution
-      : `${resolution.units ?? 1}${resolution.scale ?? "minutes"}`;
-
+      : resolution.type ||
+        resolution.baseType ||
+        `${resolution.units ?? 1}${resolution.scale ?? "minutes"}`;
   const value = raw.trim().toLowerCase();
-
   if (["1", "1m", "1min", "1minute", "1minutes"].includes(value)) return "1m";
   if (["3", "3m", "3min", "3minutes"].includes(value)) return "3m";
   if (["5", "5m", "5min", "5minutes"].includes(value)) return "5m";
@@ -105,36 +142,53 @@ function bucketMs(tf: Timeframe) {
   return map[tf];
 }
 
+function precisionFromTick(tick: number) {
+  if (!(tick > 0)) return 2;
+  const text = tick.toFixed(10).replace(/0+$/, "");
+  return Math.max(0, text.includes(".") ? text.split(".")[1]?.length ?? 0 : 0);
+}
+
 function toInfo(item: MarketInstrument): GCSymbolInfo {
   const asset = marketType(item);
-  const segment =
-    asset === "CRYPTO"
-      ? "SPOT"
-      : asset === "FOREX" || asset === "COMMODITY"
-        ? "FOREX"
-        : String(item.market).toUpperCase();
+  const segment = segmentOf(item);
+  const exchange = exchangeOf(item);
+  const symbol = cleanGoChartingSymbol(item.symbol);
+  const key = `${exchange}:${segment}:${symbol}`;
+  const tick = Number(item.tickSize) > 0 ? Number(item.tickSize) : 0.01;
 
   return {
-    exchange: item.exchange || "ZERION",
+    key,
+    exchange,
     segment,
-    symbol: item.symbol,
+    symbol,
     name: item.displayName || item.symbol,
+    ticker: symbol,
     asset_type: asset,
     source_id: item.id,
     tradeable: true,
     is_index: String(item.market).toLowerCase().includes("index"),
     is_formula: false,
-    full_name: `${item.exchange || "ZERION"}:${item.symbol}`,
+    full_name: key,
     description: item.displayName || item.symbol,
     type: asset.toLowerCase(),
+    session: asset === "CRYPTO" ? "24x7" : "24x7",
+    timezone: "UTC",
+    has_intraday: true,
+    has_daily: true,
+    has_weekly_and_monthly: true,
+    supported_resolutions: SUPPORTED,
+    tick_size: tick,
+    display_tick_size: tick,
+    max_tick_precision: precisionFromTick(tick),
+    max_volume_precision: 8,
   };
 }
 
 async function search(query: string): Promise<MarketInstrument[]> {
-  const response = await fetch(
-    `/api/markets/search?q=${encodeURIComponent(query)}`,
-    { cache: "no-store" },
-  );
+  const normalized = query.split(":").at(-1)?.trim() || query.trim();
+  const response = await fetch(`/api/markets/search?q=${encodeURIComponent(normalized)}`, {
+    cache: "no-store",
+  });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) return [];
   return Array.isArray(body.data) ? (body.data as MarketInstrument[]) : [];
@@ -147,17 +201,7 @@ class GoChartingZerionDatafeed {
   onReady(callback: (config: Record<string, unknown>) => void) {
     queueMicrotask(() =>
       callback({
-        supported_resolutions: [
-          "1m",
-          "3m",
-          "5m",
-          "15m",
-          "30m",
-          "1H",
-          "4H",
-          "1D",
-          "1W",
-        ],
+        supported_resolutions: SUPPORTED,
         supports_search: true,
         supports_group_request: false,
         supports_marks: false,
@@ -168,32 +212,39 @@ class GoChartingZerionDatafeed {
 
   searchSymbols(
     userInput: string,
-    exchange: string,
-    symbolType: string,
-    onResult: (result: { searchInProgress: boolean; items: SearchResult[] }) => void,
+    exchange: string | ((result: { searchInProgress: boolean; items: SearchResult[] }) => void),
+    symbolType?: string,
+    onResult?: (result: { searchInProgress: boolean; items: SearchResult[] }) => void,
   ) {
-    void search(userInput).then((rows) => {
-      const filtered = rows.filter((item) => {
-        if (exchange && item.exchange !== exchange) return false;
-        if (!symbolType) return true;
-        return marketType(item).toLowerCase() === symbolType.toLowerCase();
-      });
+    const callback = typeof exchange === "function" ? exchange : onResult;
+    if (!callback) return;
+    const exchangeFilter = typeof exchange === "string" ? exchange : "";
 
-      onResult({
-        searchInProgress: false,
-        items: filtered.slice(0, 50).map((item) => {
-          const info = toInfo(item);
-          return {
-            symbol: info.symbol,
-            full_name: info.full_name,
-            description: info.description,
-            exchange: info.exchange,
-            type: info.type,
-            ticker: info.source_id,
-          };
-        }),
-      });
-    });
+    void search(userInput)
+      .then((rows) => {
+        const filtered = rows.filter((item) => {
+          if (exchangeFilter && exchangeOf(item) !== exchangeFilter.toUpperCase()) return false;
+          if (!symbolType) return true;
+          return marketType(item).toLowerCase() === symbolType.toLowerCase();
+        });
+        callback({
+          searchInProgress: false,
+          items: filtered.slice(0, 50).map((item) => {
+            const info = toInfo(item);
+            return {
+              key: info.key,
+              symbol: info.symbol,
+              full_name: info.full_name,
+              description: info.description,
+              exchange: info.exchange,
+              segment: info.segment,
+              type: info.type,
+              ticker: info.ticker,
+            };
+          }),
+        });
+      })
+      .catch(() => callback({ searchInProgress: false, items: [] }));
   }
 
   resolveSymbol(
@@ -203,13 +254,11 @@ class GoChartingZerionDatafeed {
   ) {
     void search(symbolName)
       .then((rows) => {
+        const wanted = keyLookup(symbolName);
         const hit =
-          rows.find(
-            (item) =>
-              clean(item.symbol) === clean(symbolName) ||
-              clean(item.id) === clean(symbolName),
-          ) ?? rows[0];
-
+          rows.find((item) => cleanLookup(item.symbol) === wanted) ??
+          rows.find((item) => cleanLookup(item.id) === wanted) ??
+          rows[0];
         if (!hit) {
           onError(`Instrument not found: ${symbolName}`);
           return;
@@ -227,18 +276,15 @@ class GoChartingZerionDatafeed {
     periodParams: PeriodParams,
   ) {
     const tf = timeframe(resolution);
-    const rows = Math.max(100, Math.min(2000, Number(periodParams.rows ?? 500)));
-
+    const requested = Number(periodParams.countBack ?? periodParams.rows ?? 500);
+    const rows = Math.max(100, Math.min(2000, Number.isFinite(requested) ? requested : 500));
     const response = await fetch(
-      `/api/market/candles?instrument=${encodeURIComponent(
-        symbolInfo.source_id,
-      )}&timeframe=${encodeURIComponent(tf)}&limit=${rows}`,
+      `/api/market/candles?instrument=${encodeURIComponent(symbolInfo.source_id)}&timeframe=${encodeURIComponent(tf)}&limit=${rows}`,
       { cache: "no-store" },
     );
-
     const body = await response.json().catch(() => ({}));
+    if (!response.ok) return { bars: [], meta: { noData: true } };
     const candles = Array.isArray(body.data) ? body.data : [];
-
     const bars = candles
       .map((candle: Record<string, unknown>): GCBar | null => {
         const time = Date.parse(String(candle.time ?? ""));
@@ -258,12 +304,10 @@ class GoChartingZerionDatafeed {
         }
         return { time, open, high, low, close, volume };
       })
-      .filter((bar: GCBar | null): bar is GCBar => Boolean(bar));
+      .filter((bar: GCBar | null): bar is GCBar => Boolean(bar))
+      .sort((a: GCBar, b: GCBar) => a.time - b.time);
 
-    return {
-      bars,
-      meta: { noData: bars.length === 0 },
-    };
+    return { bars, meta: { noData: bars.length === 0 } };
   }
 
   subscribeBars(
@@ -273,45 +317,37 @@ class GoChartingZerionDatafeed {
     subscriberUID: string,
   ) {
     this.unsubscribeBars(subscriberUID);
-
     const tf = timeframe(resolution);
     const width = bucketMs(tf);
-
     const stop = subscribeZerionRealtime(
-      [symbolInfo.source_id, symbolInfo.symbol],
+      [symbolInfo.source_id, symbolInfo.symbol, symbolInfo.full_name],
       (quote: ZerionLiveQuote | null) => {
         if (!quote || !Number.isFinite(quote.price)) return;
-
         const quoteTime = Date.parse(quote.timestamp) || Date.now();
         const start = Math.floor(quoteTime / width) * width;
         const previous = this.liveBars.get(subscriberUID);
-
-        let next: GCBar;
-        if (!previous || previous.time !== start) {
-          next = {
-            time: start,
-            open: quote.price,
-            high: quote.price,
-            low: quote.price,
-            close: quote.price,
-            volume: quote.volume,
-          };
-        } else {
-          next = {
-            time: previous.time,
-            open: previous.open,
-            high: Math.max(previous.high, quote.price),
-            low: Math.min(previous.low, quote.price),
-            close: quote.price,
-            volume: quote.volume ?? previous.volume,
-          };
-        }
-
+        const next: GCBar =
+          !previous || previous.time !== start
+            ? {
+                time: start,
+                open: quote.price,
+                high: quote.price,
+                low: quote.price,
+                close: quote.price,
+                volume: quote.volume,
+              }
+            : {
+                time: previous.time,
+                open: previous.open,
+                high: Math.max(previous.high, quote.price),
+                low: Math.min(previous.low, quote.price),
+                close: quote.price,
+                volume: quote.volume ?? previous.volume,
+              };
         this.liveBars.set(subscriberUID, next);
         onRealtimeCallback(next);
       },
     );
-
     this.subscriptions.set(subscriberUID, stop);
   }
 
@@ -319,6 +355,43 @@ class GoChartingZerionDatafeed {
     this.subscriptions.get(subscriberUID)?.();
     this.subscriptions.delete(subscriberUID);
     this.liveBars.delete(subscriberUID);
+  }
+
+  async subscribeTicks(
+    symbolInfo: GCSymbolInfo,
+    _resolution: Resolution,
+    onRealtimeCallback: (tick: Record<string, unknown>) => void,
+    subscriberUID: string,
+  ) {
+    const key = `tick:${subscriberUID}`;
+    this.subscriptions.get(key)?.();
+    const stop = subscribeZerionRealtime(
+      [symbolInfo.source_id, symbolInfo.symbol, symbolInfo.full_name],
+      (quote: ZerionLiveQuote | null) => {
+        if (!quote || !Number.isFinite(quote.price)) return;
+        const when = new Date(quote.timestamp || Date.now());
+        onRealtimeCallback({
+          type: "trade",
+          productId: symbolInfo.full_name,
+          symbol: symbolInfo.symbol,
+          exchange: symbolInfo.exchange,
+          segment: symbolInfo.segment,
+          timeStamp: Number.isNaN(when.getTime()) ? new Date() : when,
+          tradeID: `${subscriberUID}-${Date.parse(quote.timestamp) || Date.now()}`,
+          price: quote.price,
+          quantity: quote.volume ?? 0,
+          amount: quote.price * (quote.volume ?? 0),
+          side: quote.change >= 0 ? "BUY" : "SELL",
+        });
+      },
+    );
+    this.subscriptions.set(key, stop);
+  }
+
+  unsubscribeTicks(subscriberUID: string) {
+    const key = `tick:${subscriberUID}`;
+    this.subscriptions.get(key)?.();
+    this.subscriptions.delete(key);
   }
 }
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { adminInsert } from "@/lib/supabase/admin-rest";
+import { adminInsert, adminRest } from "@/lib/supabase/admin-rest";
 import type { ZerionScanResult } from "./types";
 import {
   getSignalValidationSummary,
@@ -22,8 +22,19 @@ function level(v: unknown) {
   return Number.isFinite(n) ? n.toPrecision(6) : "na";
 }
 
+async function expirePreviousActiveSetups() {
+  await adminRest("agent_opportunities?status=eq.active", {
+    method: "PATCH",
+    body: JSON.stringify({ status: "expired" }),
+  });
+}
+
 export async function persistScanOpportunities(result: ZerionScanResult) {
   await resolveOpenSignalOutcomes().catch(() => {});
+  // Every scan is a revalidation pass. Old cards must not remain actionable when
+  // the current market structure no longer qualifies.
+  await expirePreviousActiveSetups().catch(() => {});
+
   const validation = await getSignalValidationSummary().catch(() => ({
     sampleSize: 0,
     wins: 0,
@@ -61,7 +72,9 @@ export async function persistScanOpportunities(result: ZerionScanResult) {
   const expires = new Date(
     generatedAt.getTime() + candidate.tradePlan.validityMinutes * 60_000,
   ).toISOString();
-  const bucket = Math.floor(generatedAt.getTime() / (20 * 60_000));
+  // Five-minute fingerprint buckets allow a continuing setup to refresh often
+  // without flooding users with a brand-new notification every 30 seconds.
+  const bucket = Math.floor(generatedAt.getTime() / (5 * 60_000));
   const fingerprint = [
     bucket,
     candidate.symbol,
@@ -87,7 +100,9 @@ export async function persistScanOpportunities(result: ZerionScanResult) {
       validation,
       antiOvertrading: {
         oneBestSetupPerScan: true,
-        fingerprintBucketMinutes: 20,
+        continuousRevalidation: true,
+        scanCadenceSeconds: 30,
+        fingerprintBucketMinutes: 5,
         minimumConfidence: 70,
         minimumQualityScore: 74,
         minimumRiskReward: 3,

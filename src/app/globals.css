@@ -3,19 +3,14 @@
 @import "../styles/repair-pack4-notifications.css";
 @import "./phase-2.css";
 @import "tailwindcss";
-@import "./zerion-premium.css";
-@import "./phase-13-premium.css";
 @import "./phase-14-live.css";
 @import "./phase-15-ai.css";
 @import "./phase-16-billing.css";
 @import "./phase-17-cms.css";
 @import "./phase-18-pro-max.css";
 @import "./phase-19-fno.css";
-@import "./final-prepush.css";
-@import "./zerion-luxury-palette.css";
 @import "./trading-workflow-final.css";
 @import "./payment-upgrade-flow.css";
-@import "./zerion-luxury-v2.css";
 @import "./trading-workspace-v2.css";
 @import "./agent-finalization.css";
 :root{--ink:#2F2A25;--espresso:#2F2A25;--walnut:#8C8A81;--bronze:#8C8A81;--gold:#E4E0DF;--ivory:#E4E0DF;--mist:#E4E0DF;--danger:#2F2A25;--success:#8C8A81;--radius:22px}

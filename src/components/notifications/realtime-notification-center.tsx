@@ -19,20 +19,32 @@ type NotificationRow = {
   kind: string;
   priority?: string;
   action_url?: string | null;
+  event_key?: string | null;
+  opportunity_id?: string | null;
   event_data?: Record<string, unknown> | null;
   read_at?: string | null;
   created_at: string;
 };
 
+const SEEN_STORAGE = "zerion-notification-seen-v2";
+
+function rowKey(row: NotificationRow) {
+  return (
+    row.event_key ||
+    row.opportunity_id ||
+    `${row.kind}:${row.title}:${row.body}`
+  );
+}
+
 function iconFor(row: NotificationRow) {
   const side = String(
     row.event_data?.direction ?? row.event_data?.side ?? "",
   ).toLowerCase();
-
   if (side === "buy" || side === "long") return TrendingUp;
   if (side === "sell" || side === "short") return TrendingDown;
-  if (row.kind.includes("feed") || row.kind.includes("disconnect"))
+  if (row.kind.includes("feed") || row.kind.includes("disconnect")) {
     return ShieldAlert;
+  }
   if (row.kind.includes("order")) return CheckCircle2;
   return BellRing;
 }
@@ -41,17 +53,26 @@ function toneFor(row: NotificationRow) {
   const side = String(
     row.event_data?.direction ?? row.event_data?.side ?? "",
   ).toLowerCase();
-
   if (side === "buy" || side === "long") return "is-buy";
   if (side === "sell" || side === "short") return "is-sell";
   if (
     row.kind.includes("feed") ||
     row.kind.includes("disconnect") ||
     row.priority === "high"
-  )
+  ) {
     return "is-danger";
-
+  }
   return "is-info";
+}
+
+function uniqueRows(rows: NotificationRow[]) {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const key = rowKey(row);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function RealtimeNotificationCenter() {
@@ -66,26 +87,37 @@ export function RealtimeNotificationCenter() {
     [rows],
   );
 
+  const rememberSeen = useCallback(() => {
+    try {
+      const values = [...seen.current].slice(-250);
+      window.localStorage.setItem(SEEN_STORAGE, JSON.stringify(values));
+    } catch {
+      // Storage can be unavailable in private browser modes.
+    }
+  }, []);
+
   const load = useCallback(async () => {
     const response = await fetch("/api/notifications/inbox", {
       cache: "no-store",
     });
     if (!response.ok) return;
 
-    const body = await response.json();
-    const next = (body.data?.notifications ?? []) as NotificationRow[];
+    const body = await response.json().catch(() => ({}));
+    const next = uniqueRows((body.data?.notifications ?? []) as NotificationRow[]);
     setRows(next);
 
     if (initial.current) {
-      next.forEach((row) => seen.current.add(row.id));
+      next.forEach((row) => seen.current.add(rowKey(row)));
+      rememberSeen();
       initial.current = false;
       return;
     }
 
-    const fresh = next.find((row) => !seen.current.has(row.id));
-    next.forEach((row) => seen.current.add(row.id));
+    const fresh = next.find((row) => !seen.current.has(rowKey(row)));
+    next.forEach((row) => seen.current.add(rowKey(row)));
+    rememberSeen();
     if (fresh) setToast(fresh);
-  }, []);
+  }, [rememberSeen]);
 
   const markRead = useCallback(async (id: string) => {
     await fetch("/api/notifications/inbox", {
@@ -96,16 +128,41 @@ export function RealtimeNotificationCenter() {
 
     setRows((value) =>
       value.map((row) =>
-        row.id === id
-          ? { ...row, read_at: new Date().toISOString() }
-          : row,
+        row.id === id ? { ...row, read_at: new Date().toISOString() } : row,
       ),
     );
   }, []);
 
+  const markAllRead = useCallback(async () => {
+    const now = new Date().toISOString();
+    setRows((value) => value.map((row) => ({ ...row, read_at: row.read_at ?? now })));
+    await fetch("/api/notifications/inbox", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    }).catch(() => {});
+  }, []);
+
+  const toggleCenter = useCallback(() => {
+    setOpen((value) => {
+      const next = !value;
+      if (next) void markAllRead();
+      return next;
+    });
+  }, [markAllRead]);
+
   useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(SEEN_STORAGE) ?? "[]");
+      if (Array.isArray(saved)) {
+        saved.filter((value): value is string => typeof value === "string").forEach((value) => seen.current.add(value));
+      }
+    } catch {
+      // Ignore malformed local state.
+    }
+
     void load();
-    const timer = window.setInterval(() => void load(), 5000);
+    const timer = window.setInterval(() => void load(), 8000);
     return () => window.clearInterval(timer);
   }, [load]);
 
@@ -124,13 +181,11 @@ export function RealtimeNotificationCenter() {
           type="button"
           className="zx-notification-bell"
           aria-label="Open notifications"
-          onClick={() => setOpen((value) => !value)}
+          onClick={toggleCenter}
         >
           <Bell className="h-5 w-5" />
           {unread > 0 ? (
-            <span className="zx-notification-count">
-              {Math.min(unread, 99)}
-            </span>
+            <span className="zx-notification-count">{Math.min(unread, 99)}</span>
           ) : null}
         </button>
 
@@ -139,14 +194,9 @@ export function RealtimeNotificationCenter() {
             <div className="zx-notification-popover__head">
               <div>
                 <strong>Notifications</strong>
-                <small>
-                  {unread ? `${unread} unread` : "You're up to date"}
-                </small>
+                <small>{unread ? `${unread} unread` : "You're up to date"}</small>
               </div>
-              <Link
-                href="/dashboard/notifications"
-                onClick={() => setOpen(false)}
-              >
+              <Link href="/dashboard/notifications" onClick={() => setOpen(false)}>
                 View all
               </Link>
             </div>
@@ -157,12 +207,8 @@ export function RealtimeNotificationCenter() {
                 return (
                   <Link
                     key={row.id}
-                    href={
-                      row.action_url || "/dashboard/notifications"
-                    }
-                    className={`zx-notification-mini ${toneFor(
-                      row,
-                    )} ${row.read_at ? "" : "is-unread"}`}
+                    href={row.action_url || "/dashboard/notifications"}
+                    className={`zx-notification-mini ${toneFor(row)} ${row.read_at ? "" : "is-unread"}`}
                     onClick={() => {
                       void markRead(row.id);
                       setOpen(false);
@@ -176,11 +222,8 @@ export function RealtimeNotificationCenter() {
                   </Link>
                 );
               })}
-
               {!rows.length ? (
-                <div className="zx-notification-empty">
-                  No notifications yet.
-                </div>
+                <div className="zx-notification-empty">No notifications yet.</div>
               ) : null}
             </div>
           </div>
@@ -188,11 +231,7 @@ export function RealtimeNotificationCenter() {
       </div>
 
       {toast ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className={`zx-live-toast ${toneFor(toast)}`}
-        >
+        <div role="status" aria-live="polite" className={`zx-live-toast ${toneFor(toast)}`}>
           <div className="zx-live-toast__icon">
             <ToastIcon className="h-5 w-5" />
           </div>
@@ -213,7 +252,10 @@ export function RealtimeNotificationCenter() {
           </div>
           <button
             aria-label="Dismiss notification"
-            onClick={() => setToast(null)}
+            onClick={() => {
+              void markRead(toast.id);
+              setToast(null);
+            }}
           >
             <X className="h-4 w-4" />
           </button>
