@@ -4,7 +4,10 @@ import type { ComponentProps } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { ZerionProviderChart } from "@/components/markets/zerion-provider-chart";
-import { goChartingZerionDatafeed, goChartingSymbolKey } from "@/lib/gocharting/official-datafeed";
+import {
+  goChartingSymbolKey,
+  goChartingZerionDatafeed,
+} from "@/lib/gocharting/official-datafeed";
 
 type LegacyProps = ComponentProps<typeof ZerionProviderChart>;
 type GoChartInstance = {
@@ -12,12 +15,11 @@ type GoChartInstance = {
   destroy?: () => void;
   resubscribeAll?: () => void;
 };
-type GoChartingRuntime = {
-  createChart?: (
-    target: string | HTMLElement,
-    config: Record<string, unknown>,
-  ) => GoChartInstance;
-};
+type CreateChart = (
+  target: string | HTMLElement,
+  config: Record<string, unknown>,
+) => GoChartInstance;
+type GoChartingRuntime = { createChart?: CreateChart };
 
 declare global {
   interface Window {
@@ -25,9 +27,9 @@ declare global {
   }
 }
 
-const GOCHARTING_UMD = "https://gocharting.com/sdk/library/index.umd.js";
+const GOCHARTING_PROXY = "/api/gocharting/sdk";
 const SCRIPT_TIMEOUT_MS = 20_000;
-let loader: Promise<GoChartingRuntime> | null = null;
+let loader: Promise<CreateChart> | null = null;
 
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -35,85 +37,83 @@ function errorMessage(error: unknown) {
   return "GoCharting initialization failed";
 }
 
-function removeLoaderScript() {
-  const nodes = new Set<HTMLScriptElement>([
-    ...document.querySelectorAll<HTMLScriptElement>('script[data-zerion-gocharting="true"]'),
-    ...document.querySelectorAll<HTMLScriptElement>(`script[src="${GOCHARTING_UMD}"]`),
-  ]);
-  nodes.forEach((node) => node.remove());
+function removeSdkScripts() {
+  document
+    .querySelectorAll<HTMLScriptElement>('script[data-zerion-gocharting="true"]')
+    .forEach((node) => node.remove());
 }
 
-function loadSdk(force = false): Promise<GoChartingRuntime> {
+function loadCreateChart(force = false): Promise<CreateChart> {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("GoCharting requires browser runtime"));
   }
 
-  if (!force && window.GoChartingSDK?.createChart) {
-    return Promise.resolve(window.GoChartingSDK);
+  if (!force && typeof window.GoChartingSDK?.createChart === "function") {
+    return Promise.resolve(window.GoChartingSDK.createChart);
   }
   if (!force && loader) return loader;
 
   if (force) {
     loader = null;
     delete window.GoChartingSDK;
-    removeLoaderScript();
+    removeSdkScripts();
   }
 
   loader = new Promise((resolve, reject) => {
-    let settled = false;
-    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const script = document.createElement("script");
+    script.async = true;
+    script.dataset.zerionGocharting = "true";
+    script.src = `${GOCHARTING_PROXY}?v=${force ? Date.now() : "1"}`;
 
+    let settled = false;
     const finish = (fn: () => void) => {
       if (settled) return;
       settled = true;
-      if (timeout) clearTimeout(timeout);
+      clearTimeout(timeout);
       fn();
     };
 
-    const ready = () => {
-      finish(() => {
-        if (window.GoChartingSDK?.createChart) {
-          resolve(window.GoChartingSDK);
-        } else {
-          loader = null;
-          reject(new Error("GoCharting SDK loaded but createChart is unavailable"));
-        }
-      });
-    };
-
-    const fail = () => {
-      finish(() => {
-        loader = null;
-        reject(new Error("GoCharting SDK failed to load from the official CDN"));
-      });
-    };
-
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[src="${GOCHARTING_UMD}"]`,
+    script.addEventListener(
+      "load",
+      () => {
+        finish(() => {
+          const createChart = window.GoChartingSDK?.createChart;
+          if (typeof createChart === "function") {
+            resolve(createChart);
+          } else {
+            loader = null;
+            reject(
+              new Error(
+                "Official GoCharting SDK loaded through Zerion, but createChart is unavailable",
+              ),
+            );
+          }
+        });
+      },
+      { once: true },
     );
-    if (existing) {
-      if (window.GoChartingSDK?.createChart) {
-        ready();
-        return;
-      }
-      existing.addEventListener("load", ready, { once: true });
-      existing.addEventListener("error", fail, { once: true });
-    } else {
-      const script = document.createElement("script");
-      script.src = GOCHARTING_UMD;
-      script.async = true;
-      script.dataset.zerionGocharting = "true";
-      // Do not set crossOrigin here. GoCharting's official UMD example loads
-      // this script directly; forcing anonymous CORS can make a valid CDN
-      // response fail before the SDK is evaluated.
-      script.addEventListener("load", ready, { once: true });
-      script.addEventListener("error", fail, { once: true });
-      document.head.appendChild(script);
-    }
 
-    timeout = setTimeout(() => {
+    script.addEventListener(
+      "error",
+      () => {
+        finish(() => {
+          loader = null;
+          reject(
+            new Error(
+              "Zerion could not fetch the official GoCharting SDK. Check /api/gocharting/sdk for the upstream status.",
+            ),
+          );
+        });
+      },
+      { once: true },
+    );
+
+    document.head.appendChild(script);
+
+    const timeout = window.setTimeout(() => {
       finish(() => {
         loader = null;
+        script.remove();
         reject(new Error("GoCharting SDK load timed out"));
       });
     }, SCRIPT_TIMEOUT_MS);
@@ -138,33 +138,52 @@ export function GoChartingChartHost(props: LegacyProps) {
   const id = useId();
   const domId = useMemo(() => `zx-gocharting-${id.replaceAll(":", "")}`, [id]);
   const instance = useRef<GoChartInstance | null>(null);
+  const observer = useRef<MutationObserver | null>(null);
+  const readyRef = useRef(false);
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error">(
     "idle",
   );
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
 
-  const engine = (process.env.NEXT_PUBLIC_ZERION_CHART_ENGINE || "gocharting").toLowerCase();
-  const legacy = engine === "legacy" || engine === "canvas" || engine === "zerion";
+  const engine = (
+    process.env.NEXT_PUBLIC_ZERION_CHART_ENGINE || "gocharting"
+  ).toLowerCase();
+  const legacy =
+    engine === "legacy" || engine === "canvas" || engine === "zerion";
 
   useEffect(() => {
-    if (legacy || !props.instrument) {
+    const instrument = props.instrument;
+    if (legacy || !instrument) {
       setState("idle");
       return;
     }
 
     let cancelled = false;
     let readyTimer: ReturnType<typeof setTimeout> | null = null;
+    let frame = 0;
+    readyRef.current = false;
 
     const cleanup = () => {
       if (readyTimer) clearTimeout(readyTimer);
+      if (frame) cancelAnimationFrame(frame);
+      observer.current?.disconnect();
+      observer.current = null;
       try {
         instance.current?.remove?.();
         instance.current?.destroy?.();
       } catch {
-        // Cleanup must never block navigation.
+        // Navigation cleanup must not block the page.
       }
       instance.current = null;
+    };
+
+    const markReady = () => {
+      if (cancelled || readyRef.current) return;
+      readyRef.current = true;
+      if (readyTimer) clearTimeout(readyTimer);
+      readyTimer = null;
+      setState("ready");
     };
 
     void (async () => {
@@ -173,27 +192,27 @@ export function GoChartingChartHost(props: LegacyProps) {
       cleanup();
 
       try {
-        const sdk = await loadSdk(retry > 0);
+        const createChart = await loadCreateChart(retry > 0);
         if (cancelled) return;
-        const create = sdk.createChart;
-        if (typeof create !== "function") {
-          throw new Error("GoCharting createChart is unavailable");
-        }
 
-        const licenseKey = process.env.NEXT_PUBLIC_GOCHARTING_LICENSE_KEY?.trim();
+        const host = document.getElementById(domId);
+        if (!host) throw new Error("GoCharting chart container is unavailable");
+
+        observer.current = new MutationObserver(() => {
+          if (host.childElementCount > 0) markReady();
+        });
+        observer.current.observe(host, { childList: true, subtree: true });
+
+        const licenseKey =
+          process.env.NEXT_PUBLIC_GOCHARTING_LICENSE_KEY?.trim();
         const config: Record<string, unknown> = {
-          symbol: goChartingSymbolKey(props.instrument!),
+          symbol: goChartingSymbolKey(instrument),
           interval: interval(props.timeframe),
           datafeed: goChartingZerionDatafeed,
           autosize: true,
           theme: "light",
           debugLog: false,
-          onReady: () => {
-            if (cancelled) return;
-            if (readyTimer) clearTimeout(readyTimer);
-            readyTimer = null;
-            setState("ready");
-          },
+          onReady: markReady,
           onError: (value: unknown) => {
             if (cancelled) return;
             if (readyTimer) clearTimeout(readyTimer);
@@ -204,23 +223,23 @@ export function GoChartingChartHost(props: LegacyProps) {
         };
         if (licenseKey) config.licenseKey = licenseKey;
 
-        instance.current = create(`#${domId}`, config);
+        instance.current = createChart(`#${domId}`, config);
 
-        // A blank loader must never be treated as a successful chart. If the
-        // SDK does not report ready within a bounded window, surface a real
-        // retryable error instead of showing an empty canvas.
+        frame = requestAnimationFrame(() => {
+          if (host.childElementCount > 0) markReady();
+        });
+
         readyTimer = setTimeout(() => {
-          if (cancelled) return;
-          try {
-            instance.current?.remove?.();
-            instance.current?.destroy?.();
-          } catch {
-            // Ignore cleanup errors while surfacing the readiness failure.
+          if (cancelled || readyRef.current) return;
+          if (host.childElementCount > 0) {
+            markReady();
+            return;
           }
-          instance.current = null;
-          setError("GoCharting loaded but the chart did not become ready in time");
+          setError(
+            "GoCharting SDK loaded, but the chart did not render. If the SDK reports a license requirement, configure NEXT_PUBLIC_GOCHARTING_LICENSE_KEY.",
+          );
           setState("error");
-        }, 12_000);
+        }, 15_000);
       } catch (value) {
         console.error("GoCharting initialization failed", value);
         if (!cancelled) {
@@ -238,14 +257,14 @@ export function GoChartingChartHost(props: LegacyProps) {
 
   useEffect(() => {
     if (legacy) return;
-    const onVisible = () => {
+    const resubscribe = () => {
       if (!document.hidden) instance.current?.resubscribeAll?.();
     };
-    window.addEventListener("online", onVisible);
-    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", resubscribe);
+    document.addEventListener("visibilitychange", resubscribe);
     return () => {
-      window.removeEventListener("online", onVisible);
-      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", resubscribe);
+      document.removeEventListener("visibilitychange", resubscribe);
     };
   }, [legacy]);
 
@@ -268,10 +287,6 @@ export function GoChartingChartHost(props: LegacyProps) {
         <div>
           <strong>GoCharting could not start</strong>
           <p>{error}</p>
-          <p>
-            Zerion is using the official GoCharting CDN and will not silently fall
-            back to the old canvas chart.
-          </p>
           <button
             type="button"
             onClick={() => {
@@ -289,7 +304,9 @@ export function GoChartingChartHost(props: LegacyProps) {
   return (
     <div className="zx-gocharting-runtime" style={{ minHeight: props.height }}>
       <div
-        className={state === "loading" ? "zx-gc-loader is-loading" : "zx-gc-loader"}
+        className={
+          state === "loading" ? "zx-gc-loader is-loading" : "zx-gc-loader"
+        }
         aria-hidden={state !== "loading"}
       >
         <div className="zx-gc-loader-grid" />
