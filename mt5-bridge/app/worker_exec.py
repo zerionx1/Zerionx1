@@ -277,21 +277,21 @@ def handle(payload: dict[str, Any]) -> tuple[dict[str, Any], int]:
             if operation == "positions":
                 rows = mt5.positions_get() or []
                 return {"ok": True, "count": len(rows), "positions": [asdict(row) for row in rows]}, 200
-if operation == "market_symbols":
-    market = payload.get("market")
-    query = str((market or {}).get("query") or "").strip().upper()
-    rows = list(mt5.symbols_get() or [])
-    values = []
-    for row in rows:
-        name = str(getattr(row, "name", "") or "")
-        description = str(getattr(row, "description", "") or "")
-        path = str(getattr(row, "path", "") or "")
-        if query and query not in f"{name} {description} {path}".upper():
-            continue
-        values.append({"name":name,"description":description,"path":path,"currency_profit":str(getattr(row,"currency_profit","") or ""),"point":float(getattr(row,"point",0.0) or 0.0),"volume_min":float(getattr(row,"volume_min",0.01) or 0.01)})
-        if len(values) >= 150:
-            break
-    return {"ok": True, "symbols": values}, 200
+            if operation == "market_symbols":
+                market = payload.get("market")
+                query = str((market or {}).get("query") or "").strip().upper()
+                rows = list(mt5.symbols_get() or [])
+                values = []
+                for row in rows:
+                    name = str(getattr(row, "name", "") or "")
+                    description = str(getattr(row, "description", "") or "")
+                    path = str(getattr(row, "path", "") or "")
+                    if query and query not in f"{name} {description} {path}".upper():
+                        continue
+                    values.append({"name":name,"description":description,"path":path,"currency_profit":str(getattr(row,"currency_profit","") or ""),"point":float(getattr(row,"point",0.0) or 0.0),"volume_min":float(getattr(row,"volume_min",0.01) or 0.01)})
+                    if len(values) >= 150:
+                        break
+                return {"ok": True, "symbols": values}, 200
             if operation == "market_tick":
                 market=payload.get("market")
                 if not isinstance(market,dict): fail(400,"market payload is required")
