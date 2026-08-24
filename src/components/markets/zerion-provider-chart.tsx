@@ -49,7 +49,7 @@ export function ZerionProviderChart({
     const body = await response.json();
     const rows = (body.data ?? []) as MarketInstrument[];
     const selected = rows.find(
-      (row) => row.id.startsWith("upstox:") || row.id.startsWith("coindcx:"),
+      (row) => row.id.startsWith("upstox:") || row.id.startsWith("coindcx:") || row.market === "forex",
     );
 
     if (!selected) {
@@ -117,8 +117,8 @@ export function ZerionProviderChart({
 
   if (!candles.length) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center rounded-2xl border border-white/10 bg-[#151a1d]">
-        <div className="text-center text-sm text-white/55">
+      <div className="flex min-h-[420px] items-center justify-center rounded-2xl border border-[#E6D8C3] bg-[#2F2A25]">
+        <div className="text-center text-sm text-[#2F2A25]">
           <LoaderCircle className="mx-auto mb-3 h-6 w-6 animate-spin" />
           <p>{message}</p>
           <button
@@ -135,7 +135,7 @@ export function ZerionProviderChart({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/50">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#2F2A25]">
         <span>
           {resolved?.exchange} · {resolved?.symbol} · {message}
         </span>

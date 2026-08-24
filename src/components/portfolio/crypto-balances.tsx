@@ -53,7 +53,7 @@ export function CryptoBalances() {
           {state.balances.slice(0, 30).map((row) => (
             <div
               key={row.currency}
-              className="grid grid-cols-[1fr_auto_auto] gap-3 rounded-2xl border border-white/10 p-3"
+              className="grid grid-cols-[1fr_auto_auto] gap-3 rounded-2xl border border-[#E6D8C3] p-3"
             >
               <strong>{row.currency}</strong>
               <span>{Number(row.balance).toLocaleString()}</span>

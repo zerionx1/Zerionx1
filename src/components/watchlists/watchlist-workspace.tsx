@@ -167,13 +167,13 @@ export function WatchlistWorkspace() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-[30px] border border-white/10 bg-white/[0.035] p-4">
+      <section className="rounded-[30px] border border-[#E6D8C3] bg-[#F7F4ED]/[0.035] p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative min-w-[220px] flex-1">
             <select
               value={active?.id ?? ""}
               onChange={(event) => setActiveId(event.target.value)}
-              className="h-12 w-full appearance-none rounded-2xl border border-white/10 bg-[#2F2A25] px-4 pr-10 text-sm outline-none"
+              className="h-12 w-full appearance-none rounded-2xl border border-[#E6D8C3] bg-[#2F2A25] px-4 pr-10 text-sm outline-none"
             >
               {lists.map((list) => (
                 <option key={list.id} value={list.id}>
@@ -181,7 +181,7 @@ export function WatchlistWorkspace() {
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-3.5 h-5 w-5 text-white/40" />
+            <ChevronDown className="pointer-events-none absolute right-3 top-3.5 h-5 w-5 text-[#2F2A25]" />
           </div>
           <span className="status-pill">{feed.status}</span>
           <button onClick={createList} className="zx-primary-action">
@@ -204,8 +204,8 @@ export function WatchlistWorkspace() {
       </section>
 
       {showSearch ? (
-        <div className="fixed inset-0 z-[80] flex items-end bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
-          <div className="max-h-[86vh] w-full max-w-4xl overflow-y-auto rounded-[32px] border border-white/10 bg-[#2F2A25] p-4">
+        <div className="fixed inset-0 z-[80] flex items-end bg-[#F7F4ED] p-3 backdrop-blur-sm sm:items-center sm:justify-center">
+          <div className="max-h-[86vh] w-full max-w-4xl overflow-y-auto rounded-[32px] border border-[#E6D8C3] bg-[#2F2A25] p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Add provider instrument</h2>
               <button onClick={() => setShowSearch(false)}>
@@ -217,8 +217,8 @@ export function WatchlistWorkspace() {
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.035]">
-        <div className="flex items-center justify-between border-b border-white/8 p-5">
+      <section className="overflow-hidden rounded-[30px] border border-[#E6D8C3] bg-[#F7F4ED]/[0.035]">
+        <div className="flex items-center justify-between border-b border-[#E6D8C3] p-5">
           <div>
             <p className="eyebrow">REALTIME WATCHLIST</p>
             <h2>{active?.name ?? "Watchlists"}</h2>
@@ -240,9 +240,9 @@ export function WatchlistWorkspace() {
               return (
                 <article
                   key={item.id}
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-3 p-4 hover:bg-white/[0.025]"
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-3 p-4 hover:bg-[#F7F4ED]/[0.025]"
                 >
-                  <GripVertical className="h-4 w-4 text-white/20" />
+                  <GripVertical className="h-4 w-4 text-[#2F2A25]" />
                   <Link
                     className="min-w-0"
                     href={`/dashboard/charts?instrument=${encodeURIComponent(item.instrumentId)}&symbol=${encodeURIComponent(item.symbol)}&tf=5m`}
@@ -253,7 +253,7 @@ export function WatchlistWorkspace() {
                         {q?.provider ?? item.exchange ?? item.market}
                       </span>
                     </div>
-                    <p className="truncate text-xs text-white/40">
+                    <p className="truncate text-xs text-[#2F2A25]">
                       {item.displayName ?? item.instrumentId}
                     </p>
                   </Link>
@@ -269,11 +269,11 @@ export function WatchlistWorkspace() {
                         </p>
                       </Link>
                     ) : (
-                      <span className="text-xs text-white/35">Provider unavailable</span>
+                      <span className="text-xs text-[#2F2A25]">Provider unavailable</span>
                     )}
                     <button
                       onClick={() => void removeItem(item.id)}
-                      className="rounded-full border border-white/8 p-2"
+                      className="rounded-full border border-[#E6D8C3] p-2"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

@@ -161,14 +161,14 @@ export function InstrumentWorkspace({
           </div>
         </div>
 
-        <div className="mt-4 min-h-[380px] overflow-hidden rounded-[24px] border border-white/10 bg-black/15 p-3 md:min-h-[520px]">
+        <div className="mt-4 min-h-[380px] overflow-hidden rounded-[24px] border border-[#E6D8C3] bg-[#F7F4ED] p-3 md:min-h-[520px]">
           {candles.length ? (
             <div className="h-[360px] md:h-[500px] [&_.chart-frame]:h-full [&_.chart-frame_svg]:h-full [&_.chart-frame_svg]:w-full">
               <CandlestickChart candles={candles} />
             </div>
           ) : (
             <div className="flex h-[360px] items-center justify-center md:h-[500px]">
-              <div className="text-center text-white/50">
+              <div className="text-center text-[#2F2A25]">
                 <LoaderCircle className="mx-auto mb-3 h-6 w-6 animate-spin" />
                 <p>{status}</p>
               </div>

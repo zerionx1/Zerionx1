@@ -1,1 +1,1 @@
-import type { FeedQuality } from "@/types/market-data"; export function FeedQualityBadge({quality}:{quality:FeedQuality}){return <span className="rounded-full border border-white/15 px-2 py-1 text-xs uppercase tracking-wider">{quality}</span>}
+import type { FeedQuality } from "@/types/market-data"; export function FeedQualityBadge({quality}:{quality:FeedQuality}){return <span className="rounded-full border border-[#E6D8C3] px-2 py-1 text-xs uppercase tracking-wider">{quality}</span>}

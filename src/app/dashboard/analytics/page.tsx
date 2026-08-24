@@ -84,7 +84,7 @@ export default async function AnalyticsPage() {
             <thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Exit</th><th>P&L</th><th>Closed</th></tr></thead>
             <tbody>
               {closures.map((row) => (
-                <tr key={String(row.id)} className="border-t border-black/10">
+                <tr key={String(row.id)} className="border-t border-[#E6D8C3]">
                   <td className="py-3">{String(row.symbol)}</td>
                   <td>{num(row.quantity)}</td>
                   <td>{num(row.average_price).toLocaleString()}</td>

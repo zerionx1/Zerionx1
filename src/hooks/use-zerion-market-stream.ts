@@ -81,12 +81,14 @@ class Gateway {
         return;
       }
       const silence = this.lastGatewayMessageAt ? Date.now() - this.lastGatewayMessageAt : 0;
-      if (silence > 180_000) {
+      if (silence > 300_000) {
         this.setStatus("STALE");
         // An open-but-silent socket is not useful. Force a clean reconnect instead
         // of leaving the UI stale indefinitely.
         try {
-          this.socket.close(4000, "stale-gateway");
+          const instruments = [...this.refs.keys()];
+          if (instruments.length) this.socket.send(JSON.stringify({ type: "subscribe", instruments }));
+          if (silence > 600_000) this.socket.close(4000, "prolonged-silence");
         } catch {
           this.socket = null;
           this.scheduleReconnect();

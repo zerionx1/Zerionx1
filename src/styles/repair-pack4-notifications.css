@@ -1,36 +1,36 @@
 .zx-notification-dock{position:fixed;right:18px;top:16px;z-index:120}
-.zx-notification-bell{position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;border:1px solid #d9d4ca;background:#fff;color:#2f2a25;box-shadow:0 12px 34px rgba(47,42,37,.18)}
-.zx-notification-count{position:absolute;right:-3px;top:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;display:grid;place-items:center;background:#b33a3a;color:#fff;font-size:11px;font-weight:800;border:2px solid #fff}
-.zx-notification-popover{position:absolute;right:0;top:56px;width:min(420px,calc(100vw - 24px));overflow:hidden;border:1px solid #d9d4ca;border-radius:18px;background:#fff;color:#2f2a25;box-shadow:0 24px 70px rgba(47,42,37,.2)}
-.zx-notification-popover__head{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #ece8e0}
+.zx-notification-bell{position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;border:1px solid #E6D8C3;background:#F7F4ED;color:#2F2A25;box-shadow:0 12px 34px #E6D8C3}
+.zx-notification-count{position:absolute;right:-3px;top:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;display:grid;place-items:center;background:#3E4A3F;color:#F7F4ED;font-size:11px;font-weight:800;border:2px solid #F7F4ED}
+.zx-notification-popover{position:absolute;right:0;top:56px;width:min(420px,calc(100vw - 24px));overflow:hidden;border:1px solid #E6D8C3;border-radius:18px;background:#F7F4ED;color:#2F2A25;box-shadow:0 24px 70px #E6D8C3}
+.zx-notification-popover__head{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #F7F4ED}
 .zx-notification-popover__head div{display:grid}
-.zx-notification-popover__head small{color:#6d665e;margin-top:3px}
+.zx-notification-popover__head small{color:#3E4A3F;margin-top:3px}
 .zx-notification-popover__head a{font-weight:800;font-size:13px}
 .zx-notification-popover__list{max-height:460px;overflow:auto;padding:8px}
-.zx-notification-mini{display:grid;grid-template-columns:26px 1fr;gap:10px;padding:12px;border-radius:13px;margin:3px 0;color:#2f2a25}
-.zx-notification-mini.is-unread{background:#f4f1ea}
+.zx-notification-mini{display:grid;grid-template-columns:26px 1fr;gap:10px;padding:12px;border-radius:13px;margin:3px 0;color:#2F2A25}
+.zx-notification-mini.is-unread{background:#F7F4ED}
 .zx-notification-mini strong,.zx-notification-mini small{display:block}
-.zx-notification-mini small{margin-top:3px;color:#6d665e;line-height:1.4}
-.zx-notification-mini.is-buy{border-left:4px solid #23865f}
-.zx-notification-mini.is-sell{border-left:4px solid #b64a4a}
-.zx-notification-mini.is-danger{border-left:4px solid #a83f36}
-.zx-notification-mini.is-info{border-left:4px solid #55708a}
-.zx-live-toast{position:fixed;z-index:130;right:18px;top:76px;width:min(430px,calc(100vw - 24px));display:flex;gap:12px;align-items:flex-start;padding:15px 16px;border-radius:18px;background:#fff;color:#2f2a25;border:1px solid #d9d4ca;box-shadow:0 24px 70px rgba(47,42,37,.24)}
-.zx-live-toast.is-buy{border-left:5px solid #23865f}
-.zx-live-toast.is-sell{border-left:5px solid #b64a4a}
-.zx-live-toast.is-danger{border-left:5px solid #a83f36}
-.zx-live-toast.is-info{border-left:5px solid #55708a}
-.zx-live-toast__icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#f0ece4}
-.zx-live-toast p{margin:5px 0;color:#5e5851;line-height:1.45}
+.zx-notification-mini small{margin-top:3px;color:#3E4A3F;line-height:1.4}
+.zx-notification-mini.is-buy{border-left:4px solid #3E4A3F}
+.zx-notification-mini.is-sell{border-left:4px solid #3E4A3F}
+.zx-notification-mini.is-danger{border-left:4px solid #3E4A3F}
+.zx-notification-mini.is-info{border-left:4px solid #3E4A3F}
+.zx-live-toast{position:fixed;z-index:130;right:18px;top:76px;width:min(340px,calc(100vw - 24px));display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:18px;background:#F7F4ED;color:#2F2A25;border:1px solid #E6D8C3;box-shadow:0 24px 70px #E6D8C3}
+.zx-live-toast.is-buy{border-left:5px solid #3E4A3F}
+.zx-live-toast.is-sell{border-left:5px solid #3E4A3F}
+.zx-live-toast.is-danger{border-left:5px solid #3E4A3F}
+.zx-live-toast.is-info{border-left:5px solid #3E4A3F}
+.zx-live-toast__icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#F7F4ED}
+.zx-live-toast p{margin:5px 0;color:#3E4A3F;line-height:1.45}
 .zx-live-toast a{font-weight:800;text-decoration:underline}
 .zx-trade-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}
-.zx-trade-grid>div{background:#f7f4ed;border:1px solid #e6e0d6;border-radius:12px;padding:10px}
+.zx-trade-grid>div{background:#F7F4ED;border:1px solid #E6D8C3;border-radius:12px;padding:10px}
 .zx-trade-grid small,.zx-trade-grid strong{display:block}
-.zx-trade-grid small{color:#766e65;margin-bottom:4px}
-.zx-buy-text{color:#176548}
-.zx-sell-text{color:#8a3232}
-.zx-expiry{display:flex;align-items:center;gap:7px;font-weight:800;margin:10px 0;color:#5f594f}
-.zx-expiry.is-expired{color:#a23f39}
+.zx-trade-grid small{color:#3E4A3F;margin-bottom:4px}
+.zx-buy-text{color:#3E4A3F}
+.zx-sell-text{color:#3E4A3F}
+.zx-expiry{display:flex;align-items:center;gap:7px;font-weight:800;margin:10px 0;color:#3E4A3F}
+.zx-expiry.is-expired{color:#3E4A3F}
 .zx-agent-notification.is-expired{opacity:.62}
 @media(max-width:700px){
   .zx-notification-dock{right:12px;top:10px}

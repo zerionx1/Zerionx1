@@ -15,7 +15,7 @@ export default async function Page() {
           <h1 className="mt-2 text-4xl font-semibold md:text-5xl">
             Zerion Strategies
           </h1>
-          <p className="mt-3 max-w-2xl text-white/55">
+          <p className="mt-3 max-w-2xl text-[#2F2A25]">
             Install ready strategies, run them on provider-backed charts and
             control each runtime with enable, pause and delete actions.
           </p>

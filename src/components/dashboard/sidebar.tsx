@@ -80,7 +80,7 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
         })}
       </nav>
 
-      <div className="shrink-0 space-y-2 border-t border-[rgba(230,216,195,.14)] bg-inherit pt-5">
+      <div className="shrink-0 space-y-2 border-t border-[#E6D8C3] bg-inherit pt-5">
         <Link
           href="/dashboard/settings"
           onClick={onClose}

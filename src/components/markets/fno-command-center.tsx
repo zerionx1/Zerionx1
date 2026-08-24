@@ -209,15 +209,15 @@ export function FnoCommandCenter() {
                   const callG = row.call_options?.option_greeks;
                   const putG = row.put_options?.option_greeks;
                   return (
-                    <tr key={`${row.strike_price ?? index}-${row.expiry_date ?? ""}`} className="border-t border-black/10">
+                    <tr key={`${row.strike_price ?? index}-${row.expiry_date ?? ""}`} className="border-t border-[#E6D8C3]">
                       <td>{fmt(numberFrom(callMD, "oi", "open_interest"), 0)}</td>
                       <td>{fmt(numberFrom(callMD, "volume", "vol"), 0)}</td>
                       <td>{fmt(numberFrom(callG, "iv", "implied_volatility"))}</td>
-                      <td><Link href={href(callKey)} className="inline-block min-w-16 rounded-lg px-3 py-3 hover:bg-black/5">{fmt(numberFrom(callMD, "ltp", "last_price"))}</Link></td>
+                      <td><Link href={href(callKey)} className="inline-block min-w-16 rounded-lg px-3 py-3 hover:bg-[#F7F4ED]">{fmt(numberFrom(callMD, "ltp", "last_price"))}</Link></td>
                       <td><div className="flex gap-1"><Link className="luxury-filter" href={paperHref(callKey)}>Paper</Link><Link className="luxury-filter" href={liveHref(callKey)}>Live</Link></div></td>
-                      <td className="bg-black/[.035] py-3 font-semibold">{fmt(Number(row.strike_price ?? 0))}</td>
+                      <td className="bg-[#F7F4ED]/[.035] py-3 font-semibold">{fmt(Number(row.strike_price ?? 0))}</td>
                       <td><div className="flex gap-1"><Link className="luxury-filter" href={paperHref(putKey)}>Paper</Link><Link className="luxury-filter" href={liveHref(putKey)}>Live</Link></div></td>
-                      <td><Link href={href(putKey)} className="inline-block min-w-16 rounded-lg px-3 py-3 hover:bg-black/5">{fmt(numberFrom(putMD, "ltp", "last_price"))}</Link></td>
+                      <td><Link href={href(putKey)} className="inline-block min-w-16 rounded-lg px-3 py-3 hover:bg-[#F7F4ED]">{fmt(numberFrom(putMD, "ltp", "last_price"))}</Link></td>
                       <td>{fmt(numberFrom(putG, "iv", "implied_volatility"))}</td>
                       <td>{fmt(numberFrom(putMD, "volume", "vol"), 0)}</td>
                       <td>{fmt(numberFrom(putMD, "oi", "open_interest"), 0)}</td>

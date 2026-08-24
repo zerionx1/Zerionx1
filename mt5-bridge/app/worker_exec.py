@@ -253,6 +253,10 @@ def trailing_loop():
                     pass
 
 
+def mt5_timeframe(value: str):
+    mapping={"1m":mt5.TIMEFRAME_M1,"3m":mt5.TIMEFRAME_M3,"5m":mt5.TIMEFRAME_M5,"15m":mt5.TIMEFRAME_M15,"30m":mt5.TIMEFRAME_M30,"1h":mt5.TIMEFRAME_H1,"4h":mt5.TIMEFRAME_H4,"1d":mt5.TIMEFRAME_D1,"1w":mt5.TIMEFRAME_W1}
+    return mapping.get(str(value or "15m").lower(),mt5.TIMEFRAME_M15)
+
 def handle(payload: dict[str, Any]) -> tuple[dict[str, Any], int]:
     operation = str(payload.get("operation", ""))
     credentials = payload.get("credentials")
@@ -273,6 +277,37 @@ def handle(payload: dict[str, Any]) -> tuple[dict[str, Any], int]:
             if operation == "positions":
                 rows = mt5.positions_get() or []
                 return {"ok": True, "count": len(rows), "positions": [asdict(row) for row in rows]}, 200
+if operation == "market_symbols":
+    market = payload.get("market")
+    query = str((market or {}).get("query") or "").strip().upper()
+    rows = list(mt5.symbols_get() or [])
+    values = []
+    for row in rows:
+        name = str(getattr(row, "name", "") or "")
+        description = str(getattr(row, "description", "") or "")
+        path = str(getattr(row, "path", "") or "")
+        if query and query not in f"{name} {description} {path}".upper():
+            continue
+        values.append({"name":name,"description":description,"path":path,"currency_profit":str(getattr(row,"currency_profit","") or ""),"point":float(getattr(row,"point",0.0) or 0.0),"volume_min":float(getattr(row,"volume_min",0.01) or 0.01)})
+        if len(values) >= 150:
+            break
+    return {"ok": True, "symbols": values}, 200
+            if operation == "market_tick":
+                market=payload.get("market")
+                if not isinstance(market,dict): fail(400,"market payload is required")
+                symbol=str(market.get("symbol") or "").strip(); ensure_symbol(symbol)
+                tick=mt5.symbol_info_tick(symbol)
+                if tick is None: fail(503,f"No MT5 tick for {symbol}: {mt5.last_error()}")
+                data=asdict(tick)
+                return {"ok":True,"symbol":symbol,"bid":float(data.get("bid") or 0),"ask":float(data.get("ask") or 0),"last":float(data.get("last") or data.get("bid") or data.get("ask") or 0),"time_msc":int(data.get("time_msc") or 0)},200
+            if operation == "market_candles":
+                market=payload.get("market")
+                if not isinstance(market,dict): fail(400,"market payload is required")
+                symbol=str(market.get("symbol") or "").strip(); ensure_symbol(symbol); count=max(50,min(2000,int(market.get("count") or 500)))
+                rates=mt5.copy_rates_from_pos(symbol,mt5_timeframe(str(market.get("timeframe") or "15m")),0,count)
+                if rates is None: fail(503,f"MT5 candles unavailable for {symbol}: {mt5.last_error()}")
+                candles=[{"time":int(r["time"])*1000,"open":float(r["open"]),"high":float(r["high"]),"low":float(r["low"]),"close":float(r["close"]),"volume":float(r["tick_volume"])} for r in rates]
+                return {"ok":True,"symbol":symbol,"candles":candles},200
             if operation == "order_place":
                 order = payload.get("order")
                 if not isinstance(order, dict):

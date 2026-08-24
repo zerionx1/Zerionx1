@@ -9,7 +9,7 @@ type Status = Record<string,{configured:boolean}>;
 
 export function BrokerConnectionCenter(){
   const[catalog,setCatalog]=useState<Broker[]>([]),[connections,setConnections]=useState<Connection[]>([]),[status,setStatus]=useState<Status>({});
-  const[market,setMarket]=useState<"india"|"crypto"|"forex">("india"),[busy,setBusy]=useState<string|null>(null),[message,setMessage]=useState("");
+  const[market,setMarket]=useState<"india"|"crypto"|"forex">("india"),[busy,setBusy]=useState<string|null>(null),[message,setMessage]=useState(""),[mt5Warm,setMt5Warm]=useState<number|null>(null);
   const[coinDcxApiKey,setCoinDcxApiKey]=useState(""),[coinDcxApiSecret,setCoinDcxApiSecret]=useState("");
   const[mt5Login,setMt5Login]=useState(""),[mt5Password,setMt5Password]=useState(""),[mt5Server,setMt5Server]=useState(""),[mt5Environment,setMt5Environment]=useState<"demo"|"real">("demo");
 
@@ -17,6 +17,8 @@ export function BrokerConnectionCenter(){
   useEffect(()=>{void load()},[load]);
   const visible=useMemo(()=>catalog.filter(x=>x.kind===market),[catalog,market]);
   const connectionFor=(key:string)=>connections.find(x=>(x.broker_key??x.brokerKey)===key);
+
+  async function warmMt5(){const end=Date.now()+120000;while(Date.now()<end){setMt5Warm(Math.ceil((end-Date.now())/1000));try{const r=await fetch("/api/brokers/mt5-health",{cache:"no-store"});const j=await r.json().catch(()=>({}));if(r.ok&&j.data?.workerReachable===true){setMt5Warm(null);return true}}catch{}await new Promise(resolve=>setTimeout(resolve,5000))}setMt5Warm(null);return false}
 
   async function connect(broker:Broker){
     setBusy(broker.key);setMessage("");
@@ -28,6 +30,8 @@ export function BrokerConnectionCenter(){
       }
       if(broker.key==="exness-mt5"){
         if(!mt5Login.trim()||!mt5Password||!mt5Server.trim()){setMessage("Enter MT5 login, trading password and exact Exness MT5 server.");return}
+        setMessage("Waking MT5 server. Sleeping instances can need up to 120 seconds.");
+        if(!(await warmMt5())){setMessage("MT5 server did not become ready within 120 seconds. Retry once; credentials were not stored.");return}
         payload={...payload,mt5Login:mt5Login.trim(),mt5Password,mt5Server:mt5Server.trim(),mt5Environment};
       }
       const r=await fetch("/api/brokers",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const j=await r.json();
@@ -50,7 +54,7 @@ export function BrokerConnectionCenter(){
       <h3>{b.name}</h3><p>{b.description}</p>
       {b.key==="coindcx"&&!connected?<div className="zx-coindcx-connect"><label><span>CoinDCX API Key</span><input value={coinDcxApiKey} onChange={e=>setCoinDcxApiKey(e.target.value)}/></label><label><span>CoinDCX API Secret</span><input type="password" value={coinDcxApiSecret} onChange={e=>setCoinDcxApiSecret(e.target.value)}/></label></div>:null}
       {b.key==="exness-mt5"&&!connected?<div className="zx-coindcx-connect"><label><span>MT5 Login</span><input inputMode="numeric" value={mt5Login} onChange={e=>setMt5Login(e.target.value)} placeholder="MT5 account number"/></label><label><span>Trading Password</span><input type="password" value={mt5Password} onChange={e=>setMt5Password(e.target.value)} placeholder="MT5 trading password"/></label><label><span>MT5 Server</span><input value={mt5Server} onChange={e=>setMt5Server(e.target.value)} placeholder="Exness-MT5Trial..."/></label><label><span>Environment</span><select value={mt5Environment} onChange={e=>setMt5Environment(e.target.value==="real"?"real":"demo")}><option value="demo">Demo</option><option value="real">Real</option></select></label></div>:null}
-      <div className="zx-broker-actions">{connected&&c?<><button disabled className="zx-primary-action"><CheckCircle2 className="mr-2 h-4 w-4"/>Account linked</button><button disabled={busy===b.key} onClick={()=>void disconnect(b,c)} className="zx-secondary-action">{busy===b.key?"Disconnecting…":"Disconnect account"}</button></>:<><button disabled={busy===b.key||!configured} onClick={()=>void connect(b)} className="zx-primary-action">{busy===b.key?"Connecting securely…":"Connect account"}</button>{b.createAccountUrl?<a href={b.createAccountUrl} target="_blank" rel="noreferrer" className="zx-secondary-action">Create account <ExternalLink className="ml-2 h-4 w-4"/></a>:null}</>}</div>
+      <div className="zx-broker-actions">{connected&&c?<><button disabled className="zx-primary-action"><CheckCircle2 className="mr-2 h-4 w-4"/>Account linked</button><button disabled={busy===b.key} onClick={()=>void disconnect(b,c)} className="zx-secondary-action">{busy===b.key?"Disconnecting…":"Disconnect account"}</button></>:<><button disabled={busy===b.key||!configured} onClick={()=>void connect(b)} className="zx-primary-action">{busy===b.key?(mt5Warm!=null?`Waking MT5 · ${mt5Warm}s`:"Connecting securely…"):"Connect account"}</button>{b.createAccountUrl?<a href={b.createAccountUrl} target="_blank" rel="noreferrer" className="zx-secondary-action">Create account <ExternalLink className="ml-2 h-4 w-4"/></a>:null}</>}</div>
     </article>})}</div>
   </div>;
 }

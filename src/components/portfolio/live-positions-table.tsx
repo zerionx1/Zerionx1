@@ -55,7 +55,7 @@ export function LivePositionsTable() {
         {data.positions.map((row) => (
           <div
             key={row.id}
-            className="grid gap-2 rounded-2xl border border-white/10 p-3 sm:grid-cols-[1fr_auto_auto]"
+            className="grid gap-2 rounded-2xl border border-[#E6D8C3] p-3 sm:grid-cols-[1fr_auto_auto]"
           >
             <div>
               <strong>{row.symbol}</strong>

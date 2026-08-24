@@ -1,347 +1,42 @@
 "use client";
-
 import { Search } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-
-import { TradingViewChartHost } from "@/components/markets/tradingview-chart-host";
+import { useRouter,useSearchParams } from "next/navigation";
+import { useCallback,useEffect,useMemo,useState } from "react";
+import { ZerionProviderChart } from "@/components/markets/zerion-provider-chart";
 import type { ChartPriceLine } from "@/components/charts/zerion-pro-chart";
 import { useZerionMarketStream } from "@/hooks/use-zerion-market-stream";
 import { positionPnl } from "@/lib/charts/position-pnl";
-import type { MarketInstrument, Timeframe } from "@/types/market";
-
-const frames: Timeframe[] = ["1m", "3m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"];
-
-type PaperPosition = {
-  id: string;
-  symbol: string;
-  market: string;
-  quantity: number;
-  averagePrice: number;
-  markPrice?: number;
-  stopLoss?: number;
-  targetPrice?: number;
-  unrealizedPnl: number;
-};
-
-function clean(v: string) {
-  return v.trim().toUpperCase().replaceAll("/", "").replaceAll("-", "");
-}
-function num(v: unknown) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
-export function MarketChartTerminal() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const initialId = params.get("instrument") ?? "";
-  const initialSymbol = params.get("symbol") ?? "";
-  const rawTf = params.get("tf") as Timeframe | null;
-
-  const [query, setQuery] = useState(initialSymbol || "NIFTY 50");
-  const [selected, setSelected] = useState<MarketInstrument | null>(null);
-  const [results, setResults] = useState<MarketInstrument[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [timeframe, setTimeframe] = useState<Timeframe>(
-    frames.includes(rawTf as Timeframe) ? (rawTf as Timeframe) : "15m",
-  );
-  const [paper, setPaper] = useState<PaperPosition[]>([]);
-  const [liveRows, setLiveRows] = useState<Record<string, unknown>[]>([]);
-  const [exitBusy, setExitBusy] = useState("");
-  const [exitMessage, setExitMessage] = useState("");
-
-  const refreshPositions = useCallback(async () => {
-    await Promise.all([
-      fetch("/api/paper/positions", { cache: "no-store" })
-        .then((r) => r.json())
-        .then((b) => setPaper(b.data ?? []))
-        .catch(() => setPaper([])),
-      fetch("/api/live/account?broker=upstox", { cache: "no-store" })
-        .then((r) => r.json())
-        .then((b) => {
-          const rows = b.data?.positions?.data;
-          setLiveRows(Array.isArray(rows) ? rows : []);
-        })
-        .catch(() => setLiveRows([])),
-    ]);
-  }, []);
-
-  useEffect(() => {
-    void refreshPositions();
-    const timer = window.setInterval(() => {
-      if (!document.hidden) void refreshPositions();
-    }, 3000);
-    const onVisible = () => {
-      if (!document.hidden) void refreshPositions();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [refreshPositions]);
-
-  useEffect(() => {
-    if (!initialId) return;
-    void fetch(`/api/markets/search?q=${encodeURIComponent(initialSymbol || initialId)}`, {
-      cache: "no-store",
-    })
-      .then((r) => r.json())
-      .then((b) => {
-        const rows = (b.data ?? []) as MarketInstrument[];
-        const hit =
-          rows.find((x) => x.id === initialId) ??
-          rows.find((x) => clean(x.symbol) === clean(initialSymbol));
-        if (hit) {
-          setSelected(hit);
-          setQuery(hit.symbol);
-        }
-      })
-      .catch(() => {});
-  }, [initialId, initialSymbol]);
-
-  function choose(item: MarketInstrument) {
-    setSelected(item);
-    setQuery(item.symbol);
-    setResults([]);
-    const q = new URLSearchParams({ instrument: item.id, symbol: item.symbol, tf: timeframe });
-    router.replace(`/dashboard/charts?${q.toString()}`, { scroll: false });
-  }
-
-  useEffect(() => {
-    if (initialId || initialSymbol || selected) return;
-    const live = liveRows.find((r) => num(r.quantity ?? r.net_quantity) !== 0);
-    const paperOpen = paper.find((r) => num(r.quantity) !== 0);
-    const preferred = live
-      ? String(live.trading_symbol ?? live.tradingsymbol ?? live.symbol ?? "")
-      : paperOpen?.symbol ?? "";
-    if (!preferred) return;
-    setQuery(preferred);
-    void fetch(`/api/markets/search?q=${encodeURIComponent(preferred)}`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((b) => {
-        const rows = (b.data ?? []) as MarketInstrument[];
-        const hit = rows.find((x) => clean(x.symbol) === clean(preferred)) ?? rows[0];
-        if (hit) choose(hit);
-      })
-      .catch(() => {});
-    // Initial position bootstrap only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialId, initialSymbol, liveRows, paper, selected]);
-
-  useEffect(() => {
-    const v = query.trim();
-    if (v.length < 2) {
-      setResults([]);
-      return;
-    }
-    const c = new AbortController();
-    const t = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const r = await fetch(`/api/markets/search?q=${encodeURIComponent(v)}`, {
-          cache: "no-store",
-          signal: c.signal,
-        });
-        const b = await r.json();
-        setResults((b.data ?? []) as MarketInstrument[]);
-      } catch {
-        if (!c.signal.aborted) setResults([]);
-      } finally {
-        if (!c.signal.aborted) setSearching(false);
-      }
-    }, 180);
-    return () => {
-      c.abort();
-      clearTimeout(t);
-    };
-  }, [query]);
-
-  function changeTf(tf: Timeframe) {
-    setTimeframe(tf);
-    const q = new URLSearchParams({
-      instrument: selected?.id ?? initialId,
-      symbol: selected?.symbol ?? query,
-      tf,
-    });
-    router.replace(`/dashboard/charts?${q.toString()}`, { scroll: false });
-  }
-
-  const quoteKeys = useMemo(
-    () => (selected ? [selected.id, selected.symbol] : query ? [query] : []),
-    [query, selected],
-  );
-  const quotes = useZerionMarketStream(quoteKeys);
-  const markPrice = useMemo(() => {
-    if (selected) {
-      return quotes[selected.id.toUpperCase()]?.price ?? quotes[selected.symbol.toUpperCase()]?.price ?? null;
-    }
-    return quotes[query.toUpperCase()]?.price ?? null;
-  }, [query, quotes, selected]);
-
-  const priceLines = useMemo<ChartPriceLine[]>(() => {
-    const symbol = clean(selected?.symbol ?? query);
-    const lines: ChartPriceLine[] = [];
-    paper
-      .filter((p) => clean(p.symbol) === symbol && p.quantity !== 0)
-      .forEach((p) => {
-        lines.push({
-          id: `paper-entry-${p.id}`,
-          price: p.averagePrice,
-          label: "Paper entry",
-          kind: "entry",
-          pnl: positionPnl(markPrice, p.averagePrice, p.quantity, p.unrealizedPnl),
-          exit: { mode: "paper", positionId: p.id, symbol: p.symbol, quantity: p.quantity },
-        });
-        if (p.stopLoss) lines.push({ id: `paper-sl-${p.id}`, price: p.stopLoss, label: "SL", kind: "stop" });
-        if (p.targetPrice) lines.push({ id: `paper-tp-${p.id}`, price: p.targetPrice, label: "Target", kind: "target" });
-      });
-
-    liveRows.forEach((r, i) => {
-      const s = clean(String(r.trading_symbol ?? r.tradingsymbol ?? r.symbol ?? ""));
-      if (!s || s !== symbol) return;
-      const quantity = num(r.quantity ?? r.net_quantity);
-      if (!quantity) return;
-      const entry = num(r.average_price ?? r.averagePrice ?? r.buy_price);
-      const pnl = num(r.pnl ?? r.unrealised);
-      const instrumentToken = String(r.instrument_token ?? r.instrument_key ?? "");
-      const product = String(r.product ?? "I");
-      if (entry > 0) {
-        lines.push({
-          id: `live-entry-${i}`,
-          price: entry,
-          label: "Live entry",
-          kind: "entry",
-          pnl: positionPnl(markPrice, entry, quantity, pnl),
-          exit: instrumentToken
-            ? {
-                mode: "live",
-                broker: "upstox",
-                positionId: instrumentToken,
-                instrumentToken,
-                symbol: String(r.trading_symbol ?? r.tradingsymbol ?? r.symbol ?? ""),
-                quantity,
-                product,
-              }
-            : undefined,
-        });
-      }
-      const sl = num(r.stop_loss ?? r.stopLoss);
-      const target = num(r.target ?? r.target_price);
-      if (sl > 0) lines.push({ id: `live-sl-${i}`, price: sl, label: "Live SL", kind: "stop" });
-      if (target > 0) lines.push({ id: `live-tp-${i}`, price: target, label: "Live target", kind: "target" });
-    });
-    return lines;
-  }, [liveRows, markPrice, paper, query, selected]);
-
-  async function exitLine(line: ChartPriceLine) {
-    if (!line.exit || exitBusy) return;
-    const pnl = typeof line.pnl === "number" ? `${line.pnl >= 0 ? "+" : ""}${line.pnl.toFixed(2)}` : "—";
-    const confirmed = window.confirm(
-      line.exit.mode === "paper"
-        ? `Exit paper ${line.exit.symbol ?? "position"} now? Current P&L ${pnl}.`
-        : `LIVE EXIT: square off ${Math.abs(line.exit.quantity ?? 0)} ${line.exit.symbol ?? ""} at market? Current P&L ${pnl}.`,
-    );
-    if (!confirmed) return;
-    setExitBusy(line.id);
-    setExitMessage("");
-    try {
-      const response =
-        line.exit.mode === "paper"
-          ? await fetch("/api/paper/positions/close", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ positionId: line.exit.positionId }),
-            })
-          : await fetch("/api/live/positions/exit", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({
-                broker: "upstox",
-                instrumentToken: line.exit.instrumentToken,
-                quantity: line.exit.quantity,
-                product: line.exit.product,
-              }),
-            });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error?.message ?? body.message ?? "Position exit failed");
-      setExitMessage(line.exit.mode === "paper" ? "Paper position exited." : "Live square-off order submitted to Upstox.");
-      await refreshPositions();
-    } catch (error) {
-      setExitMessage(error instanceof Error ? error.message : "Position exit failed");
-    } finally {
-      setExitBusy("");
-    }
-  }
-
-  return (
-    <div className="zx-chart-workspace space-y-4">
-      <section className="zx-chart-commandbar">
-        <div className="relative zx-chart-search">
-          <Search className="h-4 w-4" />
-          <input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelected(null);
-            }}
-            placeholder="Search NIFTY 50, options, stocks, crypto or forex"
-          />
-          {searching ? <span className="zx-chart-muted">Searching…</span> : null}
-          {results.length && !selected ? (
-            <div className="zx-chart-results">
-              {results.slice(0, 40).map((item) => (
-                <button key={item.id} type="button" className="zx-chart-result" onClick={() => choose(item)}>
-                  <span>
-                    <strong>{item.symbol}</strong>
-                    <small>{item.displayName}</small>
-                  </span>
-                  <span className="zx-chart-result-meta">
-                    {item.exchange}
-                    <br />
-                    {item.market.replaceAll("-", " ")}
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <div className="zx-chart-timeframes">
-          {frames.map((tf) => (
-            <button key={tf} onClick={() => changeTf(tf)} className={timeframe === tf ? "is-active" : ""}>
-              {tf}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {exitMessage ? <div className="zx-chart-exit-message">{exitMessage}</div> : null}
-
-      <section className="zx-chart-stage">
-        <header>
-          <div>
-            <p className="eyebrow">ZERION X1 · TRADINGVIEW TERMINAL</p>
-            <h2>{selected?.displayName ?? query}</h2>
-            <p className="zx-chart-muted">
-              {selected
-                ? `${selected.exchange} · ${selected.market.replaceAll("-", " ")} · ${selected.id.startsWith("coindcx:") ? "CoinDCX" : "Upstox"}`
-                : "Select a provider-backed instrument"}
-            </p>
-          </div>
-          <span className="data-badge">TradingView · Zerion market layer</span>
-        </header>
-
-        <TradingViewChartHost
-          instrument={selected}
-          symbol={selected?.symbol ?? query}
-          timeframe={timeframe}
-          height={720}
-          priceLines={priceLines}
-          exitBusyId={exitBusy}
-          onExitPriceLine={exitLine}
-        />
-      </section>
-    </div>
-  );
+import type { MarketInstrument,Timeframe } from "@/types/market";
+const frames:Timeframe[]=["1m","3m","5m","15m","30m","1h","4h","1d","1w"];
+const clean=(v:string)=>v.trim().toUpperCase().replaceAll("/","").replaceAll("-","").replaceAll("_","").replaceAll(" ","").replace(/^B/,"");
+const num=(v:unknown)=>Number.isFinite(Number(v))?Number(v):0;
+const rec=(v:unknown)=>v&&typeof v==="object"&&!Array.isArray(v)?v as Record<string,unknown>:{};
+type Paper={id:string;symbol:string;quantity:number;averagePrice:number;stopLoss?:number;targetPrice?:number;unrealizedPnl:number};
+export function MarketChartTerminal(){
+ const router=useRouter(),params=useSearchParams(),initialId=params.get("instrument")??"",initialSymbol=params.get("symbol")??"",rawTf=params.get("tf") as Timeframe|null;
+ const[query,setQuery]=useState(initialSymbol||"NIFTY 50"),[selected,setSelected]=useState<MarketInstrument|null>(null),[results,setResults]=useState<MarketInstrument[]>([]),[searching,setSearching]=useState(false),[timeframe,setTimeframe]=useState<Timeframe>(frames.includes(rawTf as Timeframe)?rawTf as Timeframe:"15m");
+ const[paper,setPaper]=useState<Paper[]>([]),[upstox,setUpstox]=useState<Record<string,unknown>[]>([]),[mt5,setMt5]=useState<Record<string,unknown>[]>([]),[cdx,setCdx]=useState<Record<string,unknown>[]>([]),[ctx,setCtx]=useState<Record<string,unknown>>({}),[httpMark,setHttpMark]=useState<number|null>(null),[exitBusy,setExitBusy]=useState(""),[exitMessage,setExitMessage]=useState("");
+ const refresh=useCallback(async()=>{await Promise.all([
+  fetch("/api/paper/positions",{cache:"no-store"}).then(r=>r.json()).then(b=>setPaper(b.data??[])).catch(()=>setPaper([])),
+  fetch("/api/live/account?broker=upstox",{cache:"no-store"}).then(r=>r.json()).then(b=>setUpstox(Array.isArray(b.data?.positions?.data)?b.data.positions.data:[])).catch(()=>setUpstox([])),
+  fetch("/api/live/account?broker=exness-mt5",{cache:"no-store"}).then(r=>r.json()).then(b=>setMt5(Array.isArray(b.data?.positions?.positions)?b.data.positions.positions:[])).catch(()=>setMt5([])),
+  fetch("/api/live/account?broker=coindcx",{cache:"no-store"}).then(r=>r.json()).then(b=>setCdx(Array.isArray(b.data?.futuresPositions)?b.data.futuresPositions:[])).catch(()=>setCdx([])),
+ ])},[]);
+ useEffect(()=>{void refresh();const t=setInterval(()=>{if(!document.hidden)void refresh()},3000);return()=>clearInterval(t)},[refresh]);
+ function choose(x:MarketInstrument){setSelected(x);setQuery(x.symbol);setResults([]);router.replace(`/dashboard/charts?${new URLSearchParams({instrument:x.id,symbol:x.symbol,tf:timeframe})}`,{scroll:false})}
+ useEffect(()=>{if(!initialId)return;void fetch(`/api/markets/search?q=${encodeURIComponent(initialSymbol||initialId)}`,{cache:"no-store"}).then(r=>r.json()).then(b=>{const rows=(b.data??[]) as MarketInstrument[],hit=rows.find(x=>x.id===initialId)??rows.find(x=>clean(x.symbol)===clean(initialSymbol));if(hit){setSelected(hit);setQuery(hit.symbol)}}).catch(()=>{})},[initialId,initialSymbol]);
+ useEffect(()=>{const v=query.trim();if(v.length<2){setResults([]);return}const c=new AbortController(),t=setTimeout(async()=>{setSearching(true);try{const r=await fetch(`/api/markets/search?q=${encodeURIComponent(v)}`,{cache:"no-store",signal:c.signal}),b=await r.json();setResults(b.data??[])}catch{if(!c.signal.aborted)setResults([])}finally{if(!c.signal.aborted)setSearching(false)}},180);return()=>{c.abort();clearTimeout(t)}},[query]);
+ function tf(x:Timeframe){setTimeframe(x);router.replace(`/dashboard/charts?${new URLSearchParams({instrument:selected?.id??initialId,symbol:selected?.symbol??query,tf:x})}`,{scroll:false})}
+ const keys=useMemo(()=>selected?[selected.id,selected.symbol]:query?[query]:[],[query,selected]),quotes=useZerionMarketStream(keys),ws=useMemo(()=>selected?quotes[selected.id.toUpperCase()]?.price??quotes[selected.symbol.toUpperCase()]?.price??null:quotes[query.toUpperCase()]?.price??null,[query,quotes,selected]);
+ useEffect(()=>{if(!selected)return;let stop=false;const f=async()=>{try{const r=await fetch(`/api/markets/${encodeURIComponent(selected.id)}/quote`,{cache:"no-store"}),b=await r.json();if(!stop&&r.ok)setHttpMark(num(b.data?.price)||null)}catch{}};void f();const t=setInterval(()=>void f(),3000);return()=>{stop=true;clearInterval(t)}},[selected]);const mark=ws??httpMark;
+ useEffect(()=>{const s=selected?.symbol??query;if(!s)return;let stop=false;const f=async()=>{try{const r=await fetch(`/api/chart/context?symbol=${encodeURIComponent(s)}`,{cache:"no-store"}),b=await r.json();if(!stop&&r.ok)setCtx(b.data??{})}catch{}};void f();const t=setInterval(()=>void f(),5000);return()=>{stop=true;clearInterval(t)}},[query,selected]);
+ const analysis=useMemo(()=>{const o=rec(ctx.opportunity),a=rec(o.analysis),p=rec(a.tradePlan),pr=rec(ctx.proposal),op=rec(pr.order_payload);return{direction:String(o.direction??p.side??"").toUpperCase(),reason:String(o.reason??""),confidence:num(o.confidence),entry:num(p.entry??op.entry),stop:num(p.stopLoss??op.stopLoss),target:num((Array.isArray(p.targets)?p.targets[0]:undefined)??op.takeProfit),support:num(p.support??op.support),resistance:num(p.resistance??op.resistance),quantity:num(op.quantity)}} ,[ctx]);
+ const lines=useMemo<ChartPriceLine[]>(()=>{const s=clean(selected?.symbol??query),a:ChartPriceLine[]=[];
+  paper.filter(p=>clean(p.symbol)===s&&p.quantity!==0).forEach(p=>{a.push({id:`p-${p.id}`,price:p.averagePrice,label:"Paper entry",kind:"entry",pnl:positionPnl(mark,p.averagePrice,p.quantity,p.unrealizedPnl),exit:{mode:"paper",positionId:p.id,symbol:p.symbol,quantity:p.quantity}});if(p.stopLoss)a.push({id:`ps-${p.id}`,price:p.stopLoss,label:"SL",kind:"stop"});if(p.targetPrice)a.push({id:`pt-${p.id}`,price:p.targetPrice,label:"Target",kind:"target"})});
+  upstox.forEach((r,i)=>{if(clean(String(r.trading_symbol??r.tradingsymbol??r.symbol??""))!==s)return;const q=num(r.quantity??r.net_quantity),e=num(r.average_price??r.buy_price),token=String(r.instrument_token??r.instrument_key??"");if(q&&e)a.push({id:`u-${i}`,price:e,label:"Upstox entry",kind:"entry",pnl:positionPnl(mark,e,q,num(r.pnl??r.unrealised)),exit:token?{mode:"live",broker:"upstox",positionId:token,instrumentToken:token,symbol:String(r.trading_symbol??r.symbol??""),quantity:q,product:String(r.product??"I")}:undefined})});
+  mt5.forEach((r,i)=>{if(clean(String(r.symbol??""))!==s)return;const vol=num(r.volume),q=vol*(num(r.type)===1?-1:1),e=num(r.price_open),ticket=num(r.ticket);if(vol&&e)a.push({id:`m-${i}`,price:e,label:"MT5 entry",kind:"entry",pnl:positionPnl(mark,e,q,num(r.profit)),exit:ticket?{mode:"live",broker:"exness-mt5",positionId:String(ticket),ticket,volume:vol,symbol:String(r.symbol??"")}:undefined});if(num(r.sl))a.push({id:`ms-${i}`,price:num(r.sl),label:"SL",kind:"stop"});if(num(r.tp))a.push({id:`mt-${i}`,price:num(r.tp),label:"Target",kind:"target"})});
+  cdx.forEach((r,i)=>{if(clean(String(r.pair??""))!==s)return;const q=num(r.active_pos),e=num(r.avg_price),id=String(r.id??"");if(q&&e)a.push({id:`c-${i}`,price:e,label:"CoinDCX futures",kind:"entry",pnl:positionPnl(mark,e,q,0),exit:id?{mode:"live",broker:"coindcx",positionId:id,symbol:String(r.pair??""),quantity:q}:undefined});if(num(r.stop_loss_trigger))a.push({id:`cs-${i}`,price:num(r.stop_loss_trigger),label:"SL",kind:"stop"});if(num(r.take_profit_trigger))a.push({id:`ct-${i}`,price:num(r.take_profit_trigger),label:"Target",kind:"target"})});
+  if(analysis.support)a.push({id:"support",price:analysis.support,label:"Support",kind:"support"});if(analysis.resistance)a.push({id:"resistance",price:analysis.resistance,label:"Resistance",kind:"resistance"});if(analysis.entry&&!a.some(x=>x.kind==="entry"))a.push({id:"ai-entry",price:analysis.entry,label:`${analysis.direction||"AI"} entry`,kind:"entry",pnl:analysis.quantity?positionPnl(mark,analysis.entry,(analysis.direction==="SELL"||analysis.direction==="SHORT"?-1:1)*analysis.quantity,0):undefined});if(analysis.stop&&!a.some(x=>x.kind==="stop"))a.push({id:"ai-sl",price:analysis.stop,label:"Setup SL",kind:"stop"});if(analysis.target&&!a.some(x=>x.kind==="target"))a.push({id:"ai-tp",price:analysis.target,label:"Setup target",kind:"target"});if(analysis.support&&analysis.resistance>analysis.support){const d=analysis.resistance-analysis.support;[.236,.382,.5,.618,.786].forEach(x=>a.push({id:`fib-${x}`,price:analysis.support+d*x,label:`Fib ${(x*100).toFixed(1)}%`,kind:"fib"}))}return a},[analysis,cdx,mark,mt5,paper,query,selected,upstox]);
+ async function exit(line:ChartPriceLine){if(!line.exit||exitBusy)return;if(!window.confirm(`Exit ${line.exit.symbol??"position"} now?`))return;setExitBusy(line.id);try{let r:Response;if(line.exit.mode==="paper")r=await fetch("/api/paper/positions/close",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({positionId:line.exit.positionId})});else if(line.exit.broker==="exness-mt5")r=await fetch("/api/live/positions/exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({broker:"exness-mt5",ticket:line.exit.ticket,volume:line.exit.volume})});else if(line.exit.broker==="coindcx")r=await fetch("/api/live/positions/exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({broker:"coindcx",positionId:line.exit.positionId})});else r=await fetch("/api/live/positions/exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({broker:"upstox",instrumentToken:line.exit.instrumentToken,quantity:line.exit.quantity,product:line.exit.product})});const b=await r.json().catch(()=>({}));if(!r.ok)throw new Error(b.error?.message??"Exit failed");setExitMessage("Position exit submitted.");await refresh()}catch(e){setExitMessage(e instanceof Error?e.message:"Exit failed")}finally{setExitBusy("")}}
+ return <div className="zx-chart-workspace space-y-4"><section className="zx-chart-commandbar"><div className="relative zx-chart-search"><Search className="h-4 w-4"/><input value={query} onChange={e=>{setQuery(e.target.value);setSelected(null)}} placeholder="Search NIFTY, BANKNIFTY, SENSEX, F&O, crypto futures or forex"/>{searching?<span className="zx-chart-muted">Searching…</span>:null}{results.length&&!selected?<div className="zx-chart-results">{results.slice(0,80).map(x=><button key={x.id} className="zx-chart-result" onClick={()=>choose(x)}><span><strong>{x.symbol}</strong><small>{x.displayName}</small></span><span className="zx-chart-result-meta">{x.exchange}<br/>{x.market.replaceAll("-"," ")}</span></button>)}</div>:null}</div><div className="zx-chart-timeframes">{frames.map(x=><button key={x} onClick={()=>tf(x)} className={timeframe===x?"is-active":""}>{x}</button>)}</div></section>{exitMessage?<div className="zx-chart-exit-message">{exitMessage}</div>:null}<section className="zx-chart-stage"><header><div><p className="eyebrow">ZERION X1 · OWN CANVAS TERMINAL</p><h2>{selected?.displayName??query}</h2><p className="zx-chart-muted">{selected?`${selected.exchange} · ${selected.market.replaceAll("-"," ")}`:"Select a provider instrument"}</p></div><span className="data-badge">Provider data · Zerion analysis</span></header>{analysis.reason||analysis.entry?<div className="zx-chart-analysis"><div><small>ZERION ANALYSIS</small><strong>{analysis.direction||"ACTIVE SETUP"} · {analysis.confidence?`${analysis.confidence}%`:"qualified"}</strong></div><p>{analysis.reason||"Entry and risk structure are drawn automatically from the active Zerion setup."}</p></div>:null}<ZerionProviderChart instrument={selected} symbol={selected?.symbol??query} timeframe={timeframe} height={720} priceLines={lines} exitBusyId={exitBusy} onExitPriceLine={exit}/></section></div>
 }

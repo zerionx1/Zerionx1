@@ -122,8 +122,8 @@ async function post<T>(
   // Verification/account reads are safe to retry once if Render/Wine is waking up.
   // Order mutations are never retried here to avoid accidental duplicate execution.
   const retryableRead =
-    path === "/session/verify" || path === "/account" || path === "/positions";
-  const attempts = retryableRead ? 2 : 1;
+    path === "/session/verify" || path === "/account" || path === "/positions" || path === "/market/symbols" || path === "/market/tick" || path === "/market/candles";
+  const attempts = retryableRead ? 3 : 1;
 
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -138,7 +138,7 @@ async function post<T>(
       ) {
         throw error;
       }
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 2500 * (attempt + 1)));
     }
   }
 
@@ -151,6 +151,10 @@ export const mt5BridgeClient = {
   account: (credentials: Mt5UserCredentials) => post<Json>("/account", credentials),
   positions: (credentials: Mt5UserCredentials) =>
     post<Json>("/positions", credentials),
+  marketSymbols: (credentials: Mt5UserCredentials, query: string) =>
+    post<Json>("/market/symbols", credentials, { market: { query } }),
+  marketTick: (credentials: Mt5UserCredentials, symbol: string) => post<Json>("/market/tick", credentials, { market: { symbol } }),
+  marketCandles: (credentials: Mt5UserCredentials, symbol: string, timeframe: string, count = 500) => post<Json>("/market/candles", credentials, { market: { symbol, timeframe, count } }),
   orderPlace: (credentials: Mt5UserCredentials, order: Json, key: string) =>
     post<Json>("/order/place", credentials, { order }, key),
   orderModify: (credentials: Mt5UserCredentials, modification: Json) =>

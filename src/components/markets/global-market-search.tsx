@@ -72,14 +72,14 @@ export function GlobalMarketSearch({
   }, [query, market]);
 
   return (
-    <section className="relative rounded-[24px] border border-black/10 bg-[#F7F4ED] p-4 text-[#2F2A25] shadow-sm">
-      <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-[#F3F1EC] px-4">
+    <section className="relative rounded-[24px] border border-[#E6D8C3] bg-[#F7F4ED] p-4 text-[#2F2A25] shadow-sm">
+      <div className="flex items-center gap-3 rounded-2xl border border-[#E6D8C3] bg-[#F7F4ED] px-4">
         <Search className="h-5 w-5" />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search TATA, TCS, RELIANCE, HDFC, NIFTY, BANKNIFTY, BTC, ETH, SOL…"
-          className="h-14 min-w-0 flex-1 bg-transparent outline-none placeholder:text-black/35"
+          className="h-14 min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#2F2A25]"
         />
         {loading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : null}
       </div>
@@ -106,7 +106,7 @@ export function GlobalMarketSearch({
               onClick={() =>
                 onAdd ? onAdd(instrument) : router.push(hrefFor(instrument))
               }
-              className="flex min-h-[72px] items-center justify-between gap-3 rounded-2xl border border-black/10 p-4 text-left hover:bg-black/[.03]"
+              className="flex min-h-[72px] items-center justify-between gap-3 rounded-2xl border border-[#E6D8C3] p-4 text-left hover:bg-[#F7F4ED]/[.03]"
             >
               <div className="min-w-0">
                 <strong className="block truncate">{instrument.symbol}</strong>

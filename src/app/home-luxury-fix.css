@@ -3,10 +3,10 @@
 
 .zx-home-page {
   --zx-home-ivory: #F7F4ED;
-  --zx-home-paper: #F3F1EC;
-  --zx-home-soft: #E4E0DF;
-  --zx-home-muted: #8C8A81;
-  --zx-home-green: #6B8F7A;
+  --zx-home-paper: #F7F4ED;
+  --zx-home-soft: #E6D8C3;
+  --zx-home-muted: #3E4A3F;
+  --zx-home-green: #3E4A3F;
   --zx-home-deep-green: #3E4A3F;
   --zx-home-ink: #2F2A25;
   --zx-home-champagne: #E6D8C3;
@@ -21,15 +21,15 @@
 
 .zx-home-page .cinematic-background__fallback {
   background:
-    radial-gradient(circle at 12% 8%, rgba(107,143,122,.13), transparent 32%),
-    radial-gradient(circle at 88% 18%, rgba(230,216,195,.24), transparent 30%),
-    linear-gradient(145deg, #F7F4ED 0%, #F3F1EC 52%, #E4E0DF 100%) !important;
+    radial-gradient(circle at 12% 8%, #E6D8C3, transparent 32%),
+    radial-gradient(circle at 88% 18%, #E6D8C3, transparent 30%),
+    linear-gradient(145deg, #F7F4ED 0%, #F7F4ED 52%, #E6D8C3 100%) !important;
 }
 
 .zx-home-page .cinematic-background__overlay {
   background:
-    linear-gradient(180deg, rgba(247,244,237,.28), rgba(247,244,237,.86)),
-    linear-gradient(90deg, rgba(62,74,63,.05), transparent 45%, rgba(47,42,37,.04)) !important;
+    linear-gradient(180deg, #E6D8C3, #E6D8C3),
+    linear-gradient(90deg, #E6D8C3, transparent 45%, #E6D8C3) !important;
 }
 
 .zx-home-page .cinematic-background__grain {
@@ -37,9 +37,9 @@
 }
 
 .zx-home-page .marketing-header {
-  background: rgba(47,42,37,.94) !important;
-  border-color: rgba(230,216,195,.22) !important;
-  box-shadow: 0 10px 34px rgba(47,42,37,.12);
+  background: #E6D8C3 !important;
+  border-color: #E6D8C3 !important;
+  box-shadow: 0 10px 34px #E6D8C3;
 }
 
 .zx-home-page .brand-mark__name,
@@ -67,14 +67,14 @@
   align-items: flex-end;
   overflow: hidden;
   position: relative;
-  border: 1px solid rgba(230,216,195,.7);
+  border: 1px solid #E6D8C3;
   border-radius: 30px;
   padding: clamp(34px, 6vw, 76px);
   background:
-    radial-gradient(circle at 90% 10%, rgba(230,216,195,.15), transparent 33%),
-    radial-gradient(circle at 16% 82%, rgba(107,143,122,.18), transparent 34%),
+    radial-gradient(circle at 90% 10%, #E6D8C3, transparent 33%),
+    radial-gradient(circle at 16% 82%, #E6D8C3, transparent 34%),
     linear-gradient(132deg, #2F2A25 0%, #3E4A3F 68%, #2F2A25 100%) !important;
-  box-shadow: 0 28px 80px rgba(47,42,37,.18);
+  box-shadow: 0 28px 80px #E6D8C3;
 }
 
 .zx-home-page .zx-luxury-hero::after {
@@ -83,10 +83,10 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(rgba(230,216,195,.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(230,216,195,.035) 1px, transparent 1px);
+    linear-gradient(#E6D8C3 1px, transparent 1px),
+    linear-gradient(90deg, #E6D8C3 1px, transparent 1px);
   background-size: 46px 46px;
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,.78), transparent);
+  mask-image: linear-gradient(to bottom, #E6D8C3, transparent);
 }
 
 .zx-home-page .zx-luxury-hero__content {
@@ -113,7 +113,7 @@
 .zx-home-page .zx-luxury-hero__content > p:not(.eyebrow) {
   max-width: 720px;
   margin: 0;
-  color: #E4E0DF;
+  color: #E6D8C3;
   font-size: clamp(1rem, 1.5vw, 1.18rem);
   line-height: 1.75;
 }
@@ -146,8 +146,8 @@
 
 .zx-home-page .zx-secondary-action {
   color: #F7F4ED !important;
-  background: rgba(247,244,237,.06) !important;
-  border: 1px solid rgba(247,244,237,.25) !important;
+  background: #E6D8C3 !important;
+  border: 1px solid #E6D8C3 !important;
 }
 
 .zx-home-page .zx-primary-action:hover,
@@ -170,16 +170,16 @@
   border: 1px solid #E6D8C3 !important;
   border-radius: 18px !important;
   padding: 26px;
-  background: #F3F1EC !important;
+  background: #F7F4ED !important;
   color: #2F2A25 !important;
-  box-shadow: 0 16px 40px rgba(47,42,37,.055) !important;
+  box-shadow: 0 16px 40px #E6D8C3 !important;
   backdrop-filter: none !important;
 }
 
 .zx-home-page .zx-home-grid article:hover {
   transform: translateY(-3px);
-  border-color: #6B8F7A !important;
-  box-shadow: 0 22px 48px rgba(47,42,37,.09) !important;
+  border-color: #3E4A3F !important;
+  box-shadow: 0 22px 48px #E6D8C3 !important;
 }
 
 .zx-home-page .zx-home-grid article > svg {
@@ -200,7 +200,7 @@
 
 .zx-home-page .zx-home-grid p {
   margin: 0;
-  color: #6b665f !important;
+  color: #3E4A3F !important;
   line-height: 1.65;
 }
 
@@ -209,14 +209,14 @@
   border: 1px solid #E6D8C3 !important;
   border-radius: 20px !important;
   padding: clamp(28px, 5vw, 56px);
-  background: #F3F1EC !important;
+  background: #F7F4ED !important;
   color: #2F2A25 !important;
-  box-shadow: 0 16px 44px rgba(47,42,37,.05) !important;
+  box-shadow: 0 16px 44px #E6D8C3 !important;
 }
 
 .zx-home-page .zx-home-section .eyebrow,
 .zx-home-page .zx-home-section-heading .eyebrow {
-  color: #6B8F7A !important;
+  color: #3E4A3F !important;
 }
 
 .zx-home-page .zx-home-section h2,
@@ -233,7 +233,7 @@
 
 .zx-home-page .zx-home-section > p:not(.eyebrow) {
   max-width: 900px;
-  color: #6b665f !important;
+  color: #3E4A3F !important;
   line-height: 1.72;
 }
 
@@ -248,7 +248,7 @@
   min-height: 54px;
   display: flex;
   align-items: center;
-  border: 1px solid #E4E0DF;
+  border: 1px solid #E6D8C3;
   border-radius: 12px;
   padding: 12px 15px;
   color: #3E4A3F;
@@ -269,8 +269,8 @@
   border: 1px solid #E6D8C3;
   border-radius: 20px;
   padding: clamp(28px, 5vw, 56px);
-  background: #F3F1EC;
-  box-shadow: 0 16px 44px rgba(47,42,37,.05);
+  background: #F7F4ED;
+  box-shadow: 0 16px 44px #E6D8C3;
 }
 
 .zx-home-page .zx-home-section-heading {
@@ -305,7 +305,7 @@
 
 .zx-home-page .zx-home-pricing-preview article {
   min-height: 220px;
-  border: 1px solid #E4E0DF !important;
+  border: 1px solid #E6D8C3 !important;
   border-radius: 16px !important;
   padding: 24px;
   background: #F7F4ED !important;
@@ -314,13 +314,13 @@
 }
 
 .zx-home-page .zx-home-pricing-preview article:nth-child(2) {
-  border-color: #6B8F7A !important;
-  background: linear-gradient(145deg, #F7F4ED, #eef1eb) !important;
+  border-color: #3E4A3F !important;
+  background: linear-gradient(145deg, #F7F4ED, #F7F4ED) !important;
 }
 
 .zx-home-page .zx-home-pricing-preview span {
   display: block;
-  color: #6B8F7A;
+  color: #3E4A3F;
   font-size: .72rem;
   font-weight: 800;
   letter-spacing: .12em;
@@ -338,7 +338,7 @@
 
 .zx-home-page .zx-home-pricing-preview p {
   margin-top: 12px;
-  color: #6b665f;
+  color: #3E4A3F;
   line-height: 1.55;
 }
 
@@ -346,14 +346,14 @@
   position: relative;
   z-index: 2;
   margin-top: 0;
-  border-top: 1px solid rgba(230,216,195,.22) !important;
+  border-top: 1px solid #E6D8C3 !important;
   background: #2F2A25 !important;
-  color: #E4E0DF !important;
+  color: #E6D8C3 !important;
 }
 
 .zx-home-page .marketing-footer p,
 .zx-home-page .marketing-footer a {
-  color: #E4E0DF !important;
+  color: #E6D8C3 !important;
 }
 
 .zx-home-page .marketing-footer h3,
@@ -362,7 +362,7 @@
 }
 
 .zx-home-page .marketing-footer .brand-mark__tagline {
-  color: #6B8F7A !important;
+  color: #3E4A3F !important;
 }
 
 @media (max-width: 900px) {

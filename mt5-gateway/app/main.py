@@ -37,6 +37,15 @@ class Credentials(BaseModel):
 class CredentialsRequest(BaseModel):
     credentials: Credentials
 
+class Market(BaseModel):
+    symbol: str = ""
+    query: str = ""
+    timeframe: str = "15m"
+    count: int = Field(default=500, ge=50, le=2000)
+
+class MarketRequest(CredentialsRequest):
+    market: Market
+
 
 class Order(BaseModel):
     symbol: str = Field(min_length=2, max_length=32)
@@ -127,7 +136,7 @@ def _worker_once(operation: str, credentials: Credentials, extra: dict | None = 
 def worker_call(operation: str, credentials: Credentials, extra: dict | None = None) -> dict:
     # Only idempotent/read operations get one transient retry.
     # Order mutation endpoints are not retried here.
-    retryable = operation in {"verify", "account", "positions"}
+    retryable = operation in {"verify", "account", "positions", "market_symbols", "market_tick", "market_candles"}
     attempts = 2 if retryable else 1
     last: HTTPException | None = None
 
@@ -190,6 +199,23 @@ def account(payload: CredentialsRequest):
 @app.post("/positions", dependencies=[Depends(auth)])
 def positions(payload: CredentialsRequest):
     return worker_call("positions", payload.credentials)
+
+@app.post("/market/symbols", dependencies=[Depends(auth)])
+def market_symbols(payload: MarketRequest):
+    return worker_call(
+        "market_symbols",
+        payload.credentials,
+        {"market": payload.market.model_dump()},
+    )
+
+
+@app.post("/market/tick", dependencies=[Depends(auth)])
+def market_tick(payload: MarketRequest):
+    return worker_call("market_tick", payload.credentials, {"market": payload.market.model_dump()})
+
+@app.post("/market/candles", dependencies=[Depends(auth)])
+def market_candles(payload: MarketRequest):
+    return worker_call("market_candles", payload.credentials, {"market": payload.market.model_dump()})
 
 
 @app.post("/order/place", dependencies=[Depends(auth)])

@@ -86,44 +86,44 @@ body{
 
 /* Kill old dark/wine/amber/rose Tailwind surfaces inside dashboard only. */
 .dashboard-page :is(
-  [class*="bg-white"],
-  [class*="bg-black"],
-  [class*="bg-amber"],
-  [class*="bg-rose"],
-  [class*="bg-slate"],
-  [class*="bg-zinc"],
-  [class*="bg-neutral"],
+  [class*="bg-[#F7F4ED]"],
+  [class*="bg-[#F7F4ED]"],
+  [class*="bg-[#F7F4ED]"],
+  [class*="bg-[#F7F4ED]"],
+  [class*="bg-[#F7F4ED]"],
+  [class*="bg-[#F7F4ED]"],
+  [class*="bg-[#F7F4ED]"],
   [class*="bg-gradient"],
-  [class*="from-amber"],
-  [class*="from-rose"],
-  [class*="from-slate"],
-  [class*="to-amber"],
-  [class*="to-rose"],
-  [class*="to-slate"]
+  [class*="from-[#3E4A3F]"],
+  [class*="from-[#3E4A3F]"],
+  [class*="from-[#3E4A3F]"],
+  [class*="to-[#3E4A3F]"],
+  [class*="to-[#3E4A3F]"],
+  [class*="to-[#3E4A3F]"]
 ):not(.page-heading):not(.x1-page-heading):not(.x1-hero-panel):not(.x1-sidebar):not(.x1-mobile-nav__item.is-active):not(.zx-mobile-nav-item.is-active):not(.zx-primary-action):not(.x1-primary-link):not(.zx-tv-canvas):not(.zx-tv-canvas *){
   background:#F7F4ED!important;
   background-image:none!important;
 }
 
 .dashboard-page :is(
-  [class*="text-white"],
-  [class*="text-amber"],
-  [class*="text-rose"],
-  [class*="text-emerald"],
-  [class*="text-slate"],
-  [class*="text-zinc"],
-  [class*="text-neutral"]
+  [class*="text-[#2F2A25]"],
+  [class*="text-[#2F2A25]"],
+  [class*="text-[#2F2A25]"],
+  [class*="text-[#2F2A25]"],
+  [class*="text-[#2F2A25]"],
+  [class*="text-[#2F2A25]"],
+  [class*="text-[#2F2A25]"]
 ):not(.page-heading *):not(.x1-page-heading *):not(.x1-hero-panel *):not(.zx-tv-canvas):not(.zx-tv-canvas *){
   color:#2F2A25!important;
   -webkit-text-fill-color:currentColor!important;
 }
 
 .dashboard-page :is(
-  [class*="border-white"],
-  [class*="border-amber"],
-  [class*="border-rose"],
-  [class*="border-slate"],
-  [class*="border-zinc"]
+  [class*="border-[#E6D8C3]"],
+  [class*="border-[#E6D8C3]"],
+  [class*="border-[#E6D8C3]"],
+  [class*="border-[#E6D8C3]"],
+  [class*="border-[#E6D8C3]"]
 ):not(.zx-tv-canvas):not(.zx-tv-canvas *){
   border-color:#E6D8C3!important;
 }

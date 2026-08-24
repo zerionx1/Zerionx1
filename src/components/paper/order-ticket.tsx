@@ -25,6 +25,6 @@ export function OrderTicket(){
     <label>Quantity<input name="quantity" type="number" min="0.0001" step="any" defaultValue="1" required/></label>
     <label>Limit price (only for limit orders)<input name="limitPrice" type="number" min="0" step="any" placeholder="Optional"/></label>
     <button type="submit">Place paper order</button>{message&&<p className="form-message" aria-live="polite">{message}</p>}
-    {instrument.market!=="crypto"&&<p className="mt-3 text-xs text-white/50">Indian and forex instruments require ZERION_MARKET_DATA_BASE_URL. Crypto quotes use the public provider feed.</p>}
+    {instrument.market!=="crypto"&&<p className="mt-3 text-xs text-[#2F2A25]">Indian and forex instruments require ZERION_MARKET_DATA_BASE_URL. Crypto quotes use the public provider feed.</p>}
   </form>;
 }

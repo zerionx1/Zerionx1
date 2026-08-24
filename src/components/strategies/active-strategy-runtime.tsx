@@ -115,7 +115,7 @@ export function ActiveStrategyRuntime({ symbol }: { symbol?: string }) {
   if (!rows.length && !message) return null;
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-black/15 p-4">
+    <section className="rounded-2xl border border-[#E6D8C3] bg-[#F7F4ED] p-4">
       <div className="mb-3 flex items-center justify-between">
         <strong className="text-sm">Installed strategy runtime</strong>
         <button className="zx-secondary-action" onClick={() => void load()}>
@@ -126,12 +126,12 @@ export function ActiveStrategyRuntime({ symbol }: { symbol?: string }) {
         {rows.map((deployment) => (
           <article
             key={deployment.id}
-            className="rounded-xl border border-white/10 p-3"
+            className="rounded-xl border border-[#E6D8C3] p-3"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <strong>{deployment.name}</strong>
-                <p className="text-xs text-white/45">
+                <p className="text-xs text-[#2F2A25]">
                   {deployment.mode} · {deployment.market} · {deployment.symbol}
                 </p>
               </div>

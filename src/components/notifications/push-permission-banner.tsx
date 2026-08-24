@@ -69,15 +69,15 @@ export function PushPermissionBanner() {
   if (!visible && !message) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-24 z-40 mx-auto max-w-xl rounded-3xl border border-amber-100/20 bg-[#171c20]/95 p-4 shadow-2xl backdrop-blur-xl lg:bottom-6">
+    <div className="fixed inset-x-3 bottom-24 z-40 mx-auto max-w-xl rounded-3xl border border-[#E6D8C3] bg-[#2F2A25]/95 p-4 shadow-2xl backdrop-blur-xl lg:bottom-6">
       <div className="flex items-start gap-3">
         <span className="x1-menu-icon"><BellRing className="h-4 w-4" /></span>
         <div className="min-w-0 flex-1">
           <strong>Enable Zerion market alerts</strong>
-          <p className="mt-1 text-sm text-white/55">
+          <p className="mt-1 text-sm text-[#2F2A25]">
             Receive browser notifications when an enabled strategy or Zerion opportunity engine detects a qualifying market condition.
           </p>
-          {message ? <p className="mt-2 text-xs text-amber-100/70">{message}</p> : null}
+          {message ? <p className="mt-2 text-xs text-[#2F2A25]">{message}</p> : null}
           <button type="button" onClick={() => void enable()} disabled={busy} className="zx-primary-action mt-3">
             {busy ? "Enabling…" : "Enable notifications"}
           </button>

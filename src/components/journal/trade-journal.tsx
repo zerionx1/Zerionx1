@@ -167,7 +167,7 @@ export function TradeJournal() {
             entries.map((entry) => (
               <article
                 key={entry.id}
-                className="rounded-2xl border border-[rgba(230,216,195,.14)] p-4"
+                className="rounded-2xl border border-[#E6D8C3] p-4"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">

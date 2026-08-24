@@ -246,10 +246,10 @@ function ZerionProviderChartImpl({
   if (!renderedCandles.length) {
     return (
       <div
-        className="flex items-center justify-center rounded-2xl border border-white/10 bg-[#151a1d]"
+        className="flex items-center justify-center rounded-2xl border border-[#E6D8C3] bg-[#2F2A25]"
         style={{ minHeight: height }}
       >
-        <div className="text-center text-sm text-white/55">
+        <div className="text-center text-sm text-[#2F2A25]">
           <LoaderCircle className="mx-auto mb-3 h-6 w-6 animate-spin" />
           <p>{message}</p>
           <button
@@ -267,7 +267,7 @@ function ZerionProviderChartImpl({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/50">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#2F2A25]">
         <span>
           {instrument?.exchange} · {instrument?.symbol} · {message}
         </span>

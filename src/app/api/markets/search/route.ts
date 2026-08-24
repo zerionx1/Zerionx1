@@ -1,164 +1,17 @@
 import { NextRequest } from "next/server";
-
-import { getCoinDcxMarketDetails } from "@/lib/brokers/coindcx-core";
+import { getCoinDcxFuturesActiveInstruments,getCoinDcxMarketDetails } from "@/lib/brokers/coindcx-core";
+import { getConnectedMt5Credentials } from "@/lib/brokers/connection-store";
+import { mt5BridgeClient } from "@/lib/brokers/mt5-bridge-client";
 import { upstoxClient } from "@/lib/brokers/upstox-client";
 import { searchMarketCatalog } from "@/lib/market/market-catalog";
 import { ok } from "@/lib/security/api-response";
-import type { MarketInstrument, MarketKind } from "@/types/market";
-
-type UpstoxSearchRow = {
-  name?: string;
-  short_name?: string;
-  trading_symbol?: string;
-  instrument_key?: string;
-  exchange?: string;
-  segment?: string;
-  instrument_type?: string;
-  lot_size?: number;
-  tick_size?: number;
-  expiry?: string;
-  strike_price?: number;
-};
-
-function upstoxKind(row: UpstoxSearchRow): MarketKind {
-  const segment = String(row.segment ?? "");
-  const type = String(row.instrument_type ?? "").toUpperCase();
-  if (segment.includes("INDEX")) return "indian-index";
-  if (segment.includes("FO") && (type === "CE" || type === "PE"))
-    return "indian-options";
-  if (segment.includes("FO") || type === "FUT") return "indian-futures";
-  if (segment.includes("MCX")) return "commodity";
-  return "indian-equity";
-}
-
-function mapUpstox(row: UpstoxSearchRow): MarketInstrument | null {
-  const key = String(row.instrument_key ?? "");
-  const symbol = String(row.trading_symbol ?? row.short_name ?? row.name ?? "");
-  if (!key || !symbol) return null;
-
-  return {
-    id: `upstox:${key}`,
-    symbol,
-    displayName: String(row.short_name ?? row.name ?? symbol),
-    market: upstoxKind(row),
-    exchange: String(row.exchange ?? "NSE"),
-    currency: "INR",
-    tickSize: Number(row.tick_size ?? 0.05),
-    lotSize: Number(row.lot_size ?? 1),
-    enabled: true,
-    providerRequired: true,
-    searchableText: [
-      row.name,
-      row.short_name,
-      row.trading_symbol,
-      row.expiry,
-      row.strike_price,
-      row.instrument_type,
-    ]
-      .filter(Boolean)
-      .join(" "),
-  };
-}
-
-function dedupe(items: MarketInstrument[]) {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    const key = `${item.id}|${item.symbol}`.toUpperCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-async function searchUpstox(query: string, market?: MarketKind) {
-  if (!query.trim()) return [];
-
-  let filters = "page_number=1&records=30";
-  if (market === "indian-equity") filters += "&exchanges=NSE,BSE&segments=EQ";
-  if (market === "indian-index") filters += "&exchanges=NSE,BSE&segments=INDEX";
-  if (market === "indian-futures")
-    filters += "&exchanges=NSE,BSE&segments=FO&instrument_types=FUT";
-  if (market === "indian-options")
-    filters += "&exchanges=NSE,BSE&segments=FO&instrument_types=CE,PE";
-  if (market === "commodity") filters += "&exchanges=MCX&segments=COMM";
-
-  try {
-    const result = (await upstoxClient.instrumentSearch(query, filters)) as {
-      data?: UpstoxSearchRow[];
-    };
-    return (result.data ?? [])
-      .map(mapUpstox)
-      .filter((value): value is MarketInstrument => Boolean(value));
-  } catch {
-    return [];
-  }
-}
-
-async function searchCoinDcx(query: string) {
-  if (!query.trim()) return [];
-  try {
-    const rows = await getCoinDcxMarketDetails();
-    const needle = query
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "");
-
-    const results: MarketInstrument[] = [];
-
-    for (const row of rows) {
-      const providerName = String(row.coindcx_name ?? "");
-      const base = String(row.base_currency_short_name ?? "");
-      const target = String(row.target_currency_short_name ?? "");
-      const pair = String(row.pair ?? "");
-      const symbol =
-        base && target
-          ? `${base}/${target}`
-          : providerName.includes("_")
-            ? providerName.replace("_", "/")
-            : providerName;
-
-      const haystack = `${providerName} ${base} ${target} ${pair} ${symbol}`
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, "");
-
-      if (!haystack.includes(needle) || !symbol) continue;
-
-      results.push({
-        id: `coindcx:${pair || providerName}`,
-        symbol,
-        displayName: symbol,
-        market: "crypto",
-        exchange: "COINDCX",
-        currency: target || "USDT",
-        tickSize: 0.00000001,
-        lotSize: 0.00000001,
-        enabled: true,
-        providerRequired: true,
-      });
-    }
-
-    return results.slice(0, 30);
-  } catch {
-    return [];
-  }
-}
-
-export async function GET(request: NextRequest) {
-  const query = request.nextUrl.searchParams.get("q") ?? "";
-  const market = request.nextUrl.searchParams.get(
-    "market",
-  ) as MarketKind | null;
-
-  const local = searchMarketCatalog(query, market ?? undefined);
-
-  if (!query.trim()) return ok(local.slice(0, 30));
-
-  const provider =
-    market === "crypto"
-      ? await searchCoinDcx(query)
-      : market && !market.startsWith("indian-") && market !== "commodity"
-        ? []
-        : await searchUpstox(query, market ?? undefined);
-
-  return ok(dedupe([...provider, ...local]).slice(0, 30));
-}
+import type { MarketInstrument,MarketKind } from "@/types/market";
+type U={name?:string;short_name?:string;trading_symbol?:string;instrument_key?:string;exchange?:string;segment?:string;instrument_type?:string;lot_size?:number;tick_size?:number;expiry?:string;strike_price?:number};
+function kind(r:U):MarketKind{const s=String(r.segment??"").toUpperCase(),t=String(r.instrument_type??"").toUpperCase();if(s.includes("INDEX"))return"indian-index";if(s.includes("FO")&&(t==="CE"||t==="PE"))return"indian-options";if(s.includes("FO")||t==="FUT")return"indian-futures";if(s.includes("MCX"))return"commodity";return"indian-equity"}
+function mapU(r:U):MarketInstrument|null{const id=String(r.instrument_key??""),symbol=String(r.trading_symbol??r.short_name??r.name??"");if(!id||!symbol)return null;return{id:`upstox:${id}`,symbol,displayName:String(r.short_name??r.name??symbol),market:kind(r),exchange:String(r.exchange??"NSE"),currency:"INR",tickSize:Number(r.tick_size??.05),lotSize:Number(r.lot_size??1),enabled:true,providerRequired:true,searchableText:[r.name,r.short_name,r.trading_symbol,r.expiry,r.strike_price,r.instrument_type].filter(Boolean).join(" ")}}
+function uniq(a:MarketInstrument[]){const s=new Set<string>();return a.filter(x=>{const k=`${x.id}|${x.symbol}`.toUpperCase();if(s.has(k))return false;s.add(k);return true})}
+function aliases(q:string){const x=q.trim().toUpperCase();if(["NIFTY","NIFTY50","NIFTY 50"].includes(x))return["NIFTY","NIFTY 50"];if(["BANKNIFTY","BANK NIFTY","NIFTY BANK"].includes(x))return["BANKNIFTY","NIFTY BANK"];if(["SENSEX","BSE SENSEX"].includes(x))return["SENSEX"];return[q]}
+async function india(q:string,m?:MarketKind){let f="page_number=1&records=100";if(m==="indian-equity")f+="&exchanges=NSE,BSE&segments=EQ";if(m==="indian-index")f+="&exchanges=NSE,BSE&segments=INDEX";if(m==="indian-futures")f+="&exchanges=NSE,BSE&segments=FO&instrument_types=FUT";if(m==="indian-options")f+="&exchanges=NSE,BSE&segments=FO&instrument_types=CE,PE";try{const groups=await Promise.all(aliases(q).map(async x=>{try{const r=await upstoxClient.instrumentSearch(x,f) as{data?:U[]};return(r.data??[]).map(mapU).filter((v):v is MarketInstrument=>Boolean(v))}catch{return[]}}));return uniq(groups.flat())}catch{return[]}}
+async function crypto(q:string){const n=q.toUpperCase().replace(/[^A-Z0-9]/g,""),out:MarketInstrument[]=[];try{for(const r of await getCoinDcxMarketDetails()){const p=String(r.pair??""),c=String(r.coindcx_name??""),b=String(r.base_currency_short_name??""),t=String(r.target_currency_short_name??""),s=b&&t?`${b}/${t}`:c.replace("_","/");if(!`${p}${c}${b}${t}${s}`.toUpperCase().replace(/[^A-Z0-9]/g,"").includes(n))continue;out.push({id:`coindcx:${p||c}`,symbol:s,displayName:`${s} · Spot`,market:"crypto",exchange:"COINDCX",currency:t||"USDT",tickSize:1e-8,lotSize:1e-8,enabled:true,providerRequired:true})}}catch{}try{for(const p of await getCoinDcxFuturesActiveInstruments()){if(!p.toUpperCase().replace(/[^A-Z0-9]/g,"").includes(n))continue;const s=p.replace(/^B-/i,"").replace("_","/");out.push({id:`coindcx-futures:${p}`,symbol:s,displayName:`${s} · Perpetual`,market:"crypto",exchange:"COINDCX-FUTURES",currency:"USDT",tickSize:1e-8,lotSize:1e-6,enabled:true,providerRequired:true})}}catch{}return uniq(out).slice(0,100)}
+async function forex(q:string){try{const c=await getConnectedMt5Credentials(),b=await mt5BridgeClient.marketSymbols(c,q) as{symbols?:Record<string,unknown>[]};return(b.symbols??[]).map(r=>({id:`forex:${String(r.name??"")}`,symbol:String(r.name??""),displayName:String(r.description??r.name??""),market:"forex" as const,exchange:"MT5",currency:String(r.currency_profit??""),tickSize:Number(r.point??1e-5),lotSize:Number(r.volume_min??.01),enabled:true,providerRequired:true,searchableText:[r.name,r.description,r.path].filter(Boolean).join(" ")})).filter(x=>x.symbol).slice(0,100)}catch{return[]}}
+export async function GET(request:NextRequest){const q=request.nextUrl.searchParams.get("q")??"",m=request.nextUrl.searchParams.get("market") as MarketKind|null,local=searchMarketCatalog(q,m??undefined);if(!q.trim())return ok(local.slice(0,100));const[i,c,f]=await Promise.all([m&&!m.startsWith("indian-")&&m!=="commodity"?[]:india(q,m??undefined),m&&m!=="crypto"?[]:crypto(q),m&&m!=="forex"?[]:forex(q)]);return ok(uniq([...i,...c,...f,...local]).slice(0,120))}

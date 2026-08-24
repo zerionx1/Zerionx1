@@ -9,13 +9,15 @@ export type ChartPriceLine = {
   id: string;
   price: number;
   label: string;
-  kind: "entry" | "stop" | "target";
+  kind: "entry" | "stop" | "target" | "support" | "resistance" | "fib";
   pnl?: number;
   exit?: {
     mode: "paper" | "live";
     positionId: string;
-    broker?: "upstox";
+    broker?: "upstox" | "exness-mt5" | "coindcx";
     instrumentToken?: string;
+    ticket?: number;
+    volume?: number;
     symbol?: string;
     quantity?: number;
     product?: string;
@@ -231,42 +233,42 @@ export function ZerionProChart({
     const x=(i:number)=>left+((i+.5)/visible.length)*plotW;
     const y=(p:number)=>top+((hi-p)/range)*chartH;
 
-    ctx.fillStyle="#11181c";ctx.fillRect(0,0,width,height);ctx.font="13px system-ui";ctx.lineWidth=1;
-    for(let i=0;i<=6;i++){const yy=top+chartH*i/6;ctx.strokeStyle="rgba(255,255,255,.07)";ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.fillStyle="rgba(245,239,228,.64)";ctx.fillText(fmt(hi-range*i/6),width-right+6,yy+4)}
+    ctx.fillStyle="#2F2A25";ctx.fillRect(0,0,width,height);ctx.font="13px system-ui";ctx.lineWidth=1;
+    for(let i=0;i<=6;i++){const yy=top+chartH*i/6;ctx.strokeStyle="#E6D8C3";ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.fillStyle="#E6D8C3";ctx.fillText(fmt(hi-range*i/6),width-right+6,yy+4)}
     const timeLines=Math.min(7,visible.length);
-    for(let i=0;i<timeLines;i++){const idx=Math.round(i*(visible.length-1)/Math.max(1,timeLines-1)),xx=x(idx);ctx.strokeStyle="rgba(255,255,255,.05)";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.stroke();ctx.fillStyle="rgba(245,239,228,.54)";ctx.fillText(new Date(visible[idx]!.time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),Math.max(left,xx-25),height-10)}
+    for(let i=0;i<timeLines;i++){const idx=Math.round(i*(visible.length-1)/Math.max(1,timeLines-1)),xx=x(idx);ctx.strokeStyle="#E6D8C3";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.stroke();ctx.fillStyle="#E6D8C3";ctx.fillText(new Date(visible[idx]!.time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),Math.max(left,xx-25),height-10)}
     const slot=plotW/visible.length,bodyW=Math.max(3,Math.min(15,slot*.72));
-    visible.forEach((c,i)=>{const xx=x(i),color=c.close>=c.open?"#5fd4aa":"#e98484";ctx.strokeStyle=color;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(xx,y(c.high));ctx.lineTo(xx,y(c.low));ctx.stroke();const y1=y(c.open),y2=y(c.close);ctx.fillRect(xx-bodyW/2,Math.min(y1,y2),bodyW,Math.max(1.5,Math.abs(y2-y1)))});
+    visible.forEach((c,i)=>{const xx=x(i),color=c.close>=c.open?"#E6D8C3":"#E6D8C3";ctx.strokeStyle=color;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(xx,y(c.high));ctx.lineTo(xx,y(c.low));ctx.stroke();const y1=y(c.open),y2=y(c.close);ctx.fillRect(xx-bodyW/2,Math.min(y1,y2),bodyW,Math.max(1.5,Math.abs(y2-y1)))});
 
     const line=(values:Array<number|null>,color:string,width=1.25)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();let started=false;values.forEach((v,i)=>{if(v==null||!Number.isFinite(v))return;started?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v));started=true});if(started)ctx.stroke();ctx.lineWidth=1};
-    if(indicators.has("sma"))line(series.sma,"#d5b56f");
-    if(indicators.has("ema"))line(series.ema,"#8fc7ff");
-    if(indicators.has("vwap"))line(series.vwap,"#c59cff");
-    if(indicators.has("supertrend"))line(series.supertrend,"#f3c779",1.5);
-    if(indicators.has("bb")){line(series.bb.map(v=>v?.upper??null),"rgba(143,199,255,.65)");line(series.bb.map(v=>v?.mid??null),"rgba(143,199,255,.35)");line(series.bb.map(v=>v?.lower??null),"rgba(143,199,255,.65)")}
+    if(indicators.has("sma"))line(series.sma,"#E6D8C3");
+    if(indicators.has("ema"))line(series.ema,"#E6D8C3");
+    if(indicators.has("vwap"))line(series.vwap,"#E6D8C3");
+    if(indicators.has("supertrend"))line(series.supertrend,"#E6D8C3",1.5);
+    if(indicators.has("bb")){line(series.bb.map(v=>v?.upper??null),"#E6D8C3");line(series.bb.map(v=>v?.mid??null),"#E6D8C3");line(series.bb.map(v=>v?.lower??null),"#E6D8C3")}
 
     if(indicators.has("volume")){
       const vTop=top+chartH+12,vBottom=vTop+60,maxV=Math.max(...visible.map(c=>Number(c.volume??0)),1);
-      visible.forEach((c,i)=>{const h=Number(c.volume??0)/maxV*55;ctx.fillStyle=c.close>=c.open?"rgba(95,212,170,.3)":"rgba(233,132,132,.28)";ctx.fillRect(x(i)-bodyW/2,vBottom-h,bodyW,h)});
-      ctx.fillStyle="rgba(245,239,228,.5)";ctx.fillText("VOL",left+4,vTop+10);
+      visible.forEach((c,i)=>{const h=Number(c.volume??0)/maxV*55;ctx.fillStyle=c.close>=c.open?"#E6D8C3":"#E6D8C3";ctx.fillRect(x(i)-bodyW/2,vBottom-h,bodyW,h)});
+      ctx.fillStyle="#E6D8C3";ctx.fillText("VOL",left+4,vTop+10);
     }
 
     let panelTop=top+chartH+12+volumeH;
     if(indicators.has("rsi")){
       const topR=panelTop,bottomR=topR+70,ry=(v:number)=>bottomR-(v/100)*(bottomR-topR);
-      [30,50,70].forEach(v=>{ctx.strokeStyle="rgba(255,255,255,.06)";ctx.beginPath();ctx.moveTo(left,ry(v));ctx.lineTo(width-right,ry(v));ctx.stroke()});
-      ctx.strokeStyle="#d5b56f";ctx.beginPath();let s=false;series.rsi.forEach((v,i)=>{if(v==null)return;s?ctx.lineTo(x(i),ry(v)):ctx.moveTo(x(i),ry(v));s=true});if(s)ctx.stroke();ctx.fillStyle="rgba(245,239,228,.5)";ctx.fillText("RSI",left+4,topR+10);panelTop+=rsiH;
+      [30,50,70].forEach(v=>{ctx.strokeStyle="#E6D8C3";ctx.beginPath();ctx.moveTo(left,ry(v));ctx.lineTo(width-right,ry(v));ctx.stroke()});
+      ctx.strokeStyle="#E6D8C3";ctx.beginPath();let s=false;series.rsi.forEach((v,i)=>{if(v==null)return;s?ctx.lineTo(x(i),ry(v)):ctx.moveTo(x(i),ry(v));s=true});if(s)ctx.stroke();ctx.fillStyle="#E6D8C3";ctx.fillText("RSI",left+4,topR+10);panelTop+=rsiH;
     }
     if(indicators.has("macd")){
       const topM=panelTop,bottomM=topM+70,maxAbs=Math.max(...series.macd.hist.map(Math.abs),...series.macd.line.map(Math.abs),1e-9),my=(v:number)=>(topM+bottomM)/2-v/maxAbs*(bottomM-topM)/2*.85;
-      ctx.strokeStyle="rgba(255,255,255,.08)";ctx.beginPath();ctx.moveTo(left,my(0));ctx.lineTo(width-right,my(0));ctx.stroke();
-      series.macd.hist.forEach((v,i)=>{ctx.fillStyle=v>=0?"rgba(95,212,170,.32)":"rgba(233,132,132,.3)";ctx.fillRect(x(i)-bodyW/2,Math.min(my(v),my(0)),bodyW,Math.max(1,Math.abs(my(v)-my(0))))});
-      const ml=(vals:number[],color:string)=>{ctx.strokeStyle=color;ctx.beginPath();vals.forEach((v,i)=>i?ctx.lineTo(x(i),my(v)):ctx.moveTo(x(i),my(v)));ctx.stroke()};ml(series.macd.line,"#8fc7ff");ml(series.macd.signal,"#d5b56f");ctx.fillStyle="rgba(245,239,228,.5)";ctx.fillText("MACD",left+4,topM+10);
+      ctx.strokeStyle="#E6D8C3";ctx.beginPath();ctx.moveTo(left,my(0));ctx.lineTo(width-right,my(0));ctx.stroke();
+      series.macd.hist.forEach((v,i)=>{ctx.fillStyle=v>=0?"#E6D8C3":"#E6D8C3";ctx.fillRect(x(i)-bodyW/2,Math.min(my(v),my(0)),bodyW,Math.max(1,Math.abs(my(v)-my(0))))});
+      const ml=(vals:number[],color:string)=>{ctx.strokeStyle=color;ctx.beginPath();vals.forEach((v,i)=>i?ctx.lineTo(x(i),my(v)):ctx.moveTo(x(i),my(v)));ctx.stroke()};ml(series.macd.line,"#E6D8C3");ml(series.macd.signal,"#E6D8C3");ctx.fillStyle="#E6D8C3";ctx.fillText("MACD",left+4,topM+10);
     }
 
-    if(livePrice!=null&&livePrice>=lo&&livePrice<=hi){const yy=y(livePrice);ctx.setLineDash([5,4]);ctx.strokeStyle="#efe1c9";ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#efe1c9";ctx.fillRect(width-right,yy-10,right,20);ctx.fillStyle="#191c1f";ctx.fillText(fmt(livePrice),width-right+5,yy+4)}
+    if(livePrice!=null&&livePrice>=lo&&livePrice<=hi){const yy=y(livePrice);ctx.setLineDash([5,4]);ctx.strokeStyle="#E6D8C3";ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#E6D8C3";ctx.fillRect(width-right,yy-10,right,20);ctx.fillStyle="#2F2A25";ctx.fillText(fmt(livePrice),width-right+5,yy+4)}
 
-    const lineColor:Record<ChartPriceLine["kind"],string>={entry:"#8fc7ff",stop:"#e98484",target:"#5fd4aa"};
+    const lineColor:Record<ChartPriceLine["kind"],string>={entry:"#3E4A3F",stop:"#2F2A25",target:"#3E4A3F",support:"#E6D8C3",resistance:"#2F2A25",fib:"#E6D8C3"};
     priceLines.forEach(pl=>{
       if(pl.price<lo||pl.price>hi)return;
       const yy=y(pl.price);
@@ -285,11 +287,11 @@ export function ZerionProChart({
       ctx.fillText(label,left+8,yy-6);
       if(pl.kind==="entry"&&pl.exit){
         const bx=width-right-28,by=yy-12;
-        ctx.fillStyle=exitBusyId===pl.id?"rgba(255,255,255,.22)":"rgba(20,24,27,.92)";
+        ctx.fillStyle=exitBusyId===pl.id?"#E6D8C3":"#E6D8C3";
         ctx.fillRect(bx,by,24,24);
         ctx.strokeStyle=lineColor.entry;
         ctx.strokeRect(bx,by,24,24);
-        ctx.fillStyle="#f7f4ed";
+        ctx.fillStyle="#F7F4ED";
         ctx.font="bold 15px system-ui";
         ctx.fillText("×",bx+7,by+17);
         ctx.font="13px system-ui";
@@ -297,7 +299,7 @@ export function ZerionProChart({
     });
 
     function ax(a:Anchor){return x(Math.max(0,Math.min(visible.length-1,a.index)))} function ay(a:Anchor){return y(a.price)}
-    drawings.forEach(d=>{ctx.strokeStyle="rgba(230,216,195,.9)";ctx.fillStyle="rgba(230,216,195,.9)";ctx.lineWidth=1.2;const aX=ax(d.a),aY=ay(d.a),b=d.b,bX=b?ax(b):aX,bY=b?ay(b):aY;
+    drawings.forEach(d=>{ctx.strokeStyle="#E6D8C3";ctx.fillStyle="#E6D8C3";ctx.lineWidth=1.2;const aX=ax(d.a),aY=ay(d.a),b=d.b,bX=b?ax(b):aX,bY=b?ay(b):aY;
       if(d.tool==="hline"){ctx.beginPath();ctx.moveTo(left,aY);ctx.lineTo(width-right,aY);ctx.stroke()}
       else if(d.tool==="vline"){ctx.beginPath();ctx.moveTo(aX,top);ctx.lineTo(aX,top+chartH);ctx.stroke()}
       else if(d.tool==="trend"||d.tool==="ray"){ctx.beginPath();ctx.moveTo(aX,aY);const endX=d.tool==="ray"?width-right:bX;const slope=(bX-aX)?(bY-aY)/(bX-aX):0;ctx.lineTo(endX,d.tool==="ray"?aY+slope*(endX-aX):bY);ctx.stroke()}
@@ -306,7 +308,7 @@ export function ZerionProChart({
       else if(d.tool==="text"){ctx.fillText(d.text??"Note",aX,aY)}
     });
 
-    if(hoverIndex!=null&&visible[hoverIndex]){const xx=x(hoverIndex),yy=y(visible[hoverIndex]!.close);ctx.setLineDash([3,3]);ctx.strokeStyle="rgba(255,255,255,.28)";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([])}
+    if(hoverIndex!=null&&visible[hoverIndex]){const xx=x(hoverIndex),yy=y(visible[hoverIndex]!.close);ctx.setLineDash([3,3]);ctx.strokeStyle="#E6D8C3";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([])}
   }, [drawings,exitBusyId,height,hoverIndex,indicators,livePrice,priceLines,series,visible]);
 
   const hovered = hoverIndex != null ? visible[hoverIndex] : visible.at(-1);
@@ -366,23 +368,23 @@ export function ZerionProChart({
 
   const toggle=(key:Indicator)=>setIndicators(cur=>{const n=new Set(cur);n.has(key)?n.delete(key):n.add(key);return n});
 
-  return <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151a1d]">
-    <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 p-2 text-xs">
-      <strong className="mr-1">{symbol}</strong><span className="rounded border border-white/10 px-2 py-1">{timeframe}</span>
-      {(["sma","ema","vwap","volume","rsi","macd","bb","atr","supertrend"] as Indicator[]).map(k=><button key={k} onClick={()=>toggle(k)} className={`rounded border px-2 py-1 ${indicators.has(k)?"border-amber-100/30 bg-amber-100/10":"border-white/10"}`}>{k.toUpperCase()}</button>)}
-      <button onClick={()=>setVisibleCount(v=>Math.max(20,v-12))} className="rounded border border-white/10 px-2 py-1">Zoom +</button>
-      <button onClick={()=>setVisibleCount(v=>Math.min(300,v+12))} className="rounded border border-white/10 px-2 py-1">Zoom -</button>
-      <button onClick={()=>{setVisibleCount(72);setPan(0)}} className="rounded border border-white/10 px-2 py-1">Fit</button>
-      <button onClick={()=>void stageRef.current?.requestFullscreen()} className="rounded border border-white/10 px-2 py-1">Fullscreen</button>
+  return <div className="overflow-hidden rounded-2xl border border-[#E6D8C3] bg-[#2F2A25]">
+    <div className="flex flex-wrap items-center gap-1.5 border-b border-[#E6D8C3] p-2 text-xs">
+      <strong className="mr-1">{symbol}</strong><span className="rounded border border-[#E6D8C3] px-2 py-1">{timeframe}</span>
+      {(["sma","ema","vwap","volume","rsi","macd","bb","atr","supertrend"] as Indicator[]).map(k=><button key={k} onClick={()=>toggle(k)} className={`rounded border px-2 py-1 ${indicators.has(k)?"border-[#E6D8C3] bg-[#F7F4ED]":"border-[#E6D8C3]"}`}>{k.toUpperCase()}</button>)}
+      <button onClick={()=>setVisibleCount(v=>Math.max(20,v-12))} className="rounded border border-[#E6D8C3] px-2 py-1">Zoom +</button>
+      <button onClick={()=>setVisibleCount(v=>Math.min(300,v+12))} className="rounded border border-[#E6D8C3] px-2 py-1">Zoom -</button>
+      <button onClick={()=>{setVisibleCount(72);setPan(0)}} className="rounded border border-[#E6D8C3] px-2 py-1">Fit</button>
+      <button onClick={()=>void stageRef.current?.requestFullscreen()} className="rounded border border-[#E6D8C3] px-2 py-1">Fullscreen</button>
     </div>
-    <div className="flex flex-wrap gap-1 border-b border-white/10 p-2 text-xs">
-      {(["cursor","trend","hline","vline","ray","rect","fib","text","erase"] as Tool[]).map(k=><button key={k} onClick={()=>{setTool(k);setPending(null)}} className={`rounded border px-2 py-1 ${tool===k?"border-amber-100/30 bg-amber-100/10":"border-white/10"}`}>{k}</button>)}
-      <button onClick={undo} className="rounded border border-white/10 px-2 py-1">Undo</button>
-      <button onClick={redoOnce} className="rounded border border-white/10 px-2 py-1">Redo</button>
-      <button onClick={()=>commit([])} className="rounded border border-white/10 px-2 py-1">Clear</button>
-      {pending?<span className="px-2 py-1 text-white/50">Select second point…</span>:null}
+    <div className="flex flex-wrap gap-1 border-b border-[#E6D8C3] p-2 text-xs">
+      {(["cursor","trend","hline","vline","ray","rect","fib","text","erase"] as Tool[]).map(k=><button key={k} onClick={()=>{setTool(k);setPending(null)}} className={`rounded border px-2 py-1 ${tool===k?"border-[#E6D8C3] bg-[#F7F4ED]":"border-[#E6D8C3]"}`}>{k}</button>)}
+      <button onClick={undo} className="rounded border border-[#E6D8C3] px-2 py-1">Undo</button>
+      <button onClick={redoOnce} className="rounded border border-[#E6D8C3] px-2 py-1">Redo</button>
+      <button onClick={()=>commit([])} className="rounded border border-[#E6D8C3] px-2 py-1">Clear</button>
+      {pending?<span className="px-2 py-1 text-[#2F2A25]">Select second point…</span>:null}
     </div>
-    <div className="flex flex-wrap gap-3 border-b border-white/5 px-3 py-1.5 text-[11px] text-white/55">
+    <div className="flex flex-wrap gap-3 border-b border-[#E6D8C3] px-3 py-1.5 text-[11px] text-[#2F2A25]">
       {hovered?<><span>{new Date(hovered.time).toLocaleString()}</span><span>O {fmt(hovered.open)}</span><span>H {fmt(hovered.high)}</span><span>L {fmt(hovered.low)}</span><span>C {fmt(hovered.close)}</span><span>V {fmt(Number(hovered.volume??0))}</span></>:<span>No candles</span>}
       <span className="ml-auto">Candle {Math.floor(remaining/60000).toString().padStart(2,"0")}:{Math.floor((remaining%60000)/1000).toString().padStart(2,"0")}</span>
     </div>

@@ -1,120 +1,14 @@
 import { upstoxClient } from "@/lib/brokers/upstox-client";
-import { getCoinDcxCandles } from "@/lib/brokers/coindcx-core";
+import { getCoinDcxCandles,getCoinDcxFuturesCandles } from "@/lib/brokers/coindcx-core";
+import { getConnectedMt5Credentials } from "@/lib/brokers/connection-store";
+import { mt5BridgeClient } from "@/lib/brokers/mt5-bridge-client";
 import { coinDcxPairFor } from "@/lib/market-data/providers/coindcx/feed-normalizer";
 import { upstoxInstrumentKeyFor } from "@/lib/market-data/providers/upstox/feed-normalizer";
-import { fail, ok } from "@/lib/security/api-response";
-import type { Candle } from "@/types/market";
-
-function upstoxTimeframe(value: string | null) {
-  switch (value) {
-    case "1m": return { unit: "minutes" as const, interval: 1 };
-    case "3m": return { unit: "minutes" as const, interval: 3 };
-    case "5m": return { unit: "minutes" as const, interval: 5 };
-    case "15m": return { unit: "minutes" as const, interval: 15 };
-    case "30m": return { unit: "minutes" as const, interval: 30 };
-    case "1h": return { unit: "hours" as const, interval: 1 };
-    case "4h": return { unit: "hours" as const, interval: 4 };
-    case "1d": return { unit: "days" as const, interval: 1 };
-    default: return { unit: "minutes" as const, interval: 15 };
-  }
-}
-
-function coinDcxTimeframe(value: string | null) {
-  const supported = new Set([
-    "1m", "5m", "15m", "30m", "1h", "2h", "4h",
-    "6h", "8h", "1d", "3d", "1w", "1M",
-  ]);
-  return supported.has(value ?? "") ? String(value) : "15m";
-}
-
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ instrumentId: string }> },
-) {
-  const { instrumentId } = await params;
-  const url = new URL(request.url);
-  const decoded = decodeURIComponent(instrumentId);
-  const cryptoSymbol = decoded
-    .replace(/^coindcx:/i, "")
-    .replace(/^crypto:/i, "");
-  const coinDcxPair = coinDcxPairFor(cryptoSymbol);
-
-  if (coinDcxPair) {
-    try {
-      const rows = await getCoinDcxCandles(
-        coinDcxPair,
-        coinDcxTimeframe(url.searchParams.get("timeframe")),
-        500,
-      );
-
-      const candles: Candle[] = rows
-        .map((row) => ({
-          time: new Date(Number(row.time)).toISOString(),
-          open: Number(row.open),
-          high: Number(row.high),
-          low: Number(row.low),
-          close: Number(row.close),
-          volume: Number(row.volume),
-        }))
-        .reverse();
-
-      return ok({
-        instrumentId,
-        provider: "coindcx",
-        pair: coinDcxPair,
-        candles,
-      });
-    } catch (error) {
-      return fail(
-        "CANDLE_PROVIDER_ERROR",
-        error instanceof Error ? error.message : "Unable to load CoinDCX candles",
-        502,
-      );
-    }
-  }
-
-  const requestedSymbol = decoded
-    .replace(/^nse:/i, "")
-    .replace(/^upstox:/i, "");
-  const instrumentKey =
-    requestedSymbol.includes("|")
-      ? requestedSymbol
-      : upstoxInstrumentKeyFor(requestedSymbol);
-
-  if (!instrumentKey) {
-    return fail(
-      "INSTRUMENT_NOT_MAPPED",
-      "Select a concrete provider instrument before requesting candles.",
-      404,
-    );
-  }
-
-  const tf = upstoxTimeframe(url.searchParams.get("timeframe"));
-
-  try {
-    const payload = (await upstoxClient.intradayV3(
-      instrumentKey,
-      tf.unit,
-      tf.interval,
-    )) as { data?: { candles?: unknown[][] } };
-
-    const candles: Candle[] = (payload.data?.candles ?? [])
-      .map((row) => ({
-        time: String(row[0] ?? ""),
-        open: Number(row[1] ?? 0),
-        high: Number(row[2] ?? 0),
-        low: Number(row[3] ?? 0),
-        close: Number(row[4] ?? 0),
-        volume: Number(row[5] ?? 0),
-      }))
-      .reverse();
-
-    return ok({ instrumentId, provider: "upstox", instrumentKey, candles });
-  } catch (error) {
-    return fail(
-      "CANDLE_PROVIDER_ERROR",
-      error instanceof Error ? error.message : "Unable to load Upstox candles",
-      502,
-    );
-  }
-}
+import { TIMEFRAME_MS } from "@/lib/market-data/live-candle-builder";
+import { fail,ok } from "@/lib/security/api-response";
+import type { Candle,Timeframe } from "@/types/market";
+function utf(v:string|null){switch(v){case"1m":return{unit:"minutes" as const,interval:1};case"3m":return{unit:"minutes" as const,interval:3};case"5m":return{unit:"minutes" as const,interval:5};case"15m":return{unit:"minutes" as const,interval:15};case"30m":return{unit:"minutes" as const,interval:30};case"1h":return{unit:"hours" as const,interval:1};case"4h":return{unit:"hours" as const,interval:4};case"1d":return{unit:"days" as const,interval:1};default:return{unit:"minutes" as const,interval:15}}}
+function ctf(v:string){return new Set(["1m","5m","15m","30m","1h","2h","4h","6h","8h","1d","3d","1w","1M"]).has(v)?v:"15m"}
+function fres(tf:Timeframe){if(tf==="1m"||tf==="3m")return"1";if(["5m","15m","30m"].includes(tf))return"5";if(tf==="1h"||tf==="4h")return"60";return"1D"}
+function agg(rows:Candle[],tf:Timeframe){const size=TIMEFRAME_MS[tf],m=new Map<number,Candle[]>();for(const c of rows){const k=Math.floor(Date.parse(c.time)/size)*size,a=m.get(k)??[];a.push(c);m.set(k,a)}return[...m].sort((a,b)=>a[0]-b[0]).map(([t,a])=>({time:new Date(t).toISOString(),open:a[0]!.open,high:Math.max(...a.map(x=>x.high)),low:Math.min(...a.map(x=>x.low)),close:a.at(-1)!.close,volume:a.reduce((s,x)=>s+Number(x.volume??0),0)}))}
+export async function GET(request:Request,{params}:{params:Promise<{instrumentId:string}>}){const{instrumentId}=await params,d=decodeURIComponent(instrumentId),tf=(new URL(request.url).searchParams.get("timeframe")??"15m") as Timeframe;if(d.toLowerCase().startsWith("forex:")){const symbol=d.replace(/^forex:/i,"");try{const c=await getConnectedMt5Credentials(),p=await mt5BridgeClient.marketCandles(c,symbol,tf,700) as{candles?:Record<string,unknown>[]};return ok({instrumentId,provider:"mt5",symbol,candles:(p.candles??[]).map(r=>({time:new Date(Number(r.time)).toISOString(),open:Number(r.open),high:Number(r.high),low:Number(r.low),close:Number(r.close),volume:Number(r.volume??0)}))})}catch(e){return fail("CANDLE_PROVIDER_ERROR",e instanceof Error?e.message:"MT5 candles unavailable",502)}}if(d.toLowerCase().startsWith("coindcx-futures:")){const pair=d.replace(/^coindcx-futures:/i,""),now=Math.floor(Date.now()/1000),from=now-86400*(tf==="1w"?120:30);try{const p=await getCoinDcxFuturesCandles(pair,fres(tf),from,now),source=(p.data??[]).map(r=>({time:new Date(Number(r.time)).toISOString(),open:Number(r.open),high:Number(r.high),low:Number(r.low),close:Number(r.close),volume:Number(r.volume??0)}));return ok({instrumentId,provider:"coindcx-futures",pair,candles:agg(source,tf).slice(-700)})}catch(e){return fail("CANDLE_PROVIDER_ERROR",e instanceof Error?e.message:"CoinDCX futures candles unavailable",502)}}const cp=d.replace(/^coindcx:/i,"").replace(/^crypto:/i,""),pair=coinDcxPairFor(cp);if(pair){try{const rows=await getCoinDcxCandles(pair,ctf(tf),700);return ok({instrumentId,provider:"coindcx",pair,candles:rows.map(r=>({time:new Date(Number(r.time)).toISOString(),open:Number(r.open),high:Number(r.high),low:Number(r.low),close:Number(r.close),volume:Number(r.volume)})).reverse()})}catch(e){return fail("CANDLE_PROVIDER_ERROR",e instanceof Error?e.message:"CoinDCX candles unavailable",502)}}const requested=d.replace(/^nse:/i,"").replace(/^upstox:/i,""),key=requested.includes("|")?requested:upstoxInstrumentKeyFor(requested);if(!key)return fail("INSTRUMENT_NOT_MAPPED","Select a concrete Upstox instrument.",404);try{const t=utf(tf),p=await upstoxClient.intradayV3(key,t.unit,t.interval) as{data?:{candles?:unknown[][]}};return ok({instrumentId,provider:"upstox",instrumentKey:key,candles:(p.data?.candles??[]).map(r=>({time:String(r[0]??""),open:Number(r[1]??0),high:Number(r[2]??0),low:Number(r[3]??0),close:Number(r[4]??0),volume:Number(r[5]??0)})).reverse()})}catch(e){return fail("CANDLE_PROVIDER_ERROR",e instanceof Error?e.message:"Upstox candles unavailable",502)}}

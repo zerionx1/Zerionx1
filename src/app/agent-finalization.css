@@ -1,17 +1,17 @@
 .zx-agent-inbox{display:grid;gap:18px}
 .zx-agent-inbox .x1-panel-heading{align-items:flex-start;gap:20px}
 .zx-agent-inbox .x1-panel-heading p{max-width:760px;margin-top:8px}
-.zx-agent-message{padding:12px 14px;border:1px solid rgba(230,216,195,.18);border-radius:14px;background:rgba(107,143,122,.12);color:#F7F4ED}
+.zx-agent-message{padding:12px 14px;border:1px solid #E6D8C3;border-radius:14px;background:#E6D8C3;color:#F7F4ED}
 .zx-agent-notification-list{display:grid;gap:12px}
-.zx-agent-notification{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(220px,300px);gap:14px;align-items:center;padding:16px;border:1px solid rgba(230,216,195,.14);border-radius:18px;background:linear-gradient(145deg,rgba(62,74,63,.72),rgba(47,42,37,.88))}
-.zx-agent-notification.is-unread{border-color:rgba(107,143,122,.42)}
-.zx-agent-notification__icon{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:rgba(107,143,122,.14);color:#E6D8C3}
+.zx-agent-notification{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(220px,300px);gap:14px;align-items:center;padding:16px;border:1px solid #E6D8C3;border-radius:18px;background:linear-gradient(145deg,#E6D8C3,#E6D8C3)}
+.zx-agent-notification.is-unread{border-color:#E6D8C3}
+.zx-agent-notification__icon{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#E6D8C3;color:#E6D8C3}
 .zx-agent-notification__icon svg{width:18px}
 .zx-agent-notification__title{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.zx-agent-notification__body p{margin:.45rem 0;color:#E4E0DF;line-height:1.55}
-.zx-agent-notification__body small{color:#8C8A81}
+.zx-agent-notification__body p{margin:.45rem 0;color:#E6D8C3;line-height:1.55}
+.zx-agent-notification__body small{color:#3E4A3F}
 .zx-agent-notification__actions{display:grid;gap:9px}
 .zx-agent-notification__actions select{width:100%;min-width:0}
-.zx-agent-empty{padding:24px;text-align:center;border:1px dashed rgba(230,216,195,.18);border-radius:18px;color:#8C8A81}
+.zx-agent-empty{padding:24px;text-align:center;border:1px dashed #E6D8C3;border-radius:18px;color:#3E4A3F}
 @media(max-width:900px){.zx-agent-notification{grid-template-columns:auto minmax(0,1fr)}.zx-agent-notification__actions{grid-column:1/-1}}
 @media(max-width:560px){.zx-agent-notification{grid-template-columns:1fr}.zx-agent-notification__icon{display:none}.zx-agent-notification__actions{grid-column:auto}}

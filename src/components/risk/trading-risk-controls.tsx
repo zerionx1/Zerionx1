@@ -173,7 +173,7 @@ export function TradingRiskControlsPanel() {
       <button className="zx-primary-action" disabled={busy} onClick={() => void save()}>
         {busy ? "Saving…" : "Save trading risk controls"}
       </button>
-      {message ? <p className="text-sm text-white/60">{message}</p> : null}
+      {message ? <p className="text-sm text-[#2F2A25]">{message}</p> : null}
     </section>
   );
 }

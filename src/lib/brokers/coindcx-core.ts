@@ -150,3 +150,17 @@ export async function getCoinDcxCandles(
     time: number;
   }>;
 }
+
+export async function getCoinDcxFuturesActiveInstruments() {
+  const response=await fetch(`${API}/exchange/v1/derivatives/futures/data/active_instruments?margin_currency_short_name[]=USDT`,{cache:"no-store"});
+  return (await jsonOrThrow(response)) as string[];
+}
+export async function getCoinDcxFuturesTrades(pair:string) {
+  const response=await fetch(`${API}/exchange/v1/derivatives/futures/data/trades?pair=${encodeURIComponent(pair)}`,{cache:"no-store"});
+  return (await jsonOrThrow(response)) as Array<{price:number|string;quantity:number|string;timestamp:number|string;is_maker?:boolean}>;
+}
+export async function getCoinDcxFuturesCandles(pair:string,resolution:string,from:number,to:number) {
+  const q=new URLSearchParams({pair,from:String(from),to:String(to),resolution,pcode:"f"});
+  const response=await fetch(`${PUBLIC}/market_data/candlesticks?${q}`,{cache:"no-store"});
+  return (await jsonOrThrow(response)) as {s?:string;data?:Array<{open:number;high:number;low:number;close:number;volume:number;time:number}>};
+}

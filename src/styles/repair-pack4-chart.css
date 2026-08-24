@@ -1,14 +1,14 @@
 .zx-pro-chart-stage:fullscreen{
   height:100vh!important;
   width:100vw!important;
-  background:#11181c;
+  background:#2F2A25;
 }
 .zx-pro-chart-stage:fullscreen canvas{height:100%!important}
 .zx-chart-timeframes button{min-width:42px;min-height:38px;font-size:13px}
 .zx-chart-exit-message{
-  border:1px solid #d8d2c8;
-  background:#fff;
-  color:#2f2a25;
+  border:1px solid #E6D8C3;
+  background:#F7F4ED;
+  color:#2F2A25;
   border-radius:12px;
   padding:10px 12px;
   font-weight:700;

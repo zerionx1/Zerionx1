@@ -172,7 +172,7 @@ export function StrategyTemplateGallery() {
         <h2 className="mt-2 text-2xl font-semibold">
           Install a ready Zerion strategy
         </h2>
-        <p className="mt-2 text-sm text-white/55">
+        <p className="mt-2 text-sm text-[#2F2A25]">
           Install creates a real strategy record and immediately enables its
           paper runtime. You can enable, pause or delete it from the chart
           runtime.

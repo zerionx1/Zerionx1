@@ -1,0 +1,9 @@
+:root{--zx-bg:#F7F4ED;--zx-ink:#2F2A25;--zx-deep:#3E4A3F;--zx-accent:#E6D8C3;color-scheme:light}
+html,body{background:#F7F4ED!important;color:#2F2A25!important}
+::selection{background:#3E4A3F!important;color:#F7F4ED!important}
+input,select,textarea{background:#F7F4ED!important;color:#2F2A25!important;border-color:#E6D8C3!important}
+.page-heading,.x1-page-heading,.x1-hero-panel,.zx-provider-intro,.zx-primary-action,.x1-primary-link,.zx-market-tabs .is-active,.x1-mobile-nav__item.is-active,.zx-mobile-nav-item.is-active{background:#3E4A3F!important;color:#F7F4ED!important;border-color:#E6D8C3!important}
+.page-heading *,.x1-page-heading *,.x1-hero-panel *,.zx-provider-intro *,.zx-primary-action *,.x1-primary-link *,.zx-market-tabs .is-active *{color:#F7F4ED!important}
+.zx-secondary-action,.zx-pricing-card,.x1-menu-group,.zx-broker-card,.zx-chart-commandbar,.zx-chart-stage,.zx-agent-notification,.zx-notification-popover,.zx-live-toast{background:#F7F4ED!important;color:#2F2A25!important;border-color:#E6D8C3!important}
+.zx-pricing-page,.marketing-page{background:#F7F4ED!important;color:#2F2A25!important}.zx-pricing-page .cinematic-background{display:none!important}
+.status-pill,.data-badge,.zx-plan-badge{background:#E6D8C3!important;color:#2F2A25!important;border-color:#3E4A3F!important}

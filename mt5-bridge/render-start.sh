@@ -44,7 +44,7 @@ echo "===== START MT5 TERMINAL ====="
 wine "$MT5_EXE" /portable >/tmp/mt5.log 2>&1 &
 
 # Give Wine/terminal IPC a short warm-up window before the first user login.
-sleep "${MT5_TERMINAL_WARMUP_SECONDS:-8}"
+sleep "${MT5_TERMINAL_WARMUP_SECONDS:-15}"
 
 # Do not fail the service only because the GUI process changes PID under Wine;
 # the worker's initialize() retry is the authoritative readiness check.

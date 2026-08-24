@@ -174,7 +174,7 @@ export function AccountHub() {
                 <strong>{title}</strong>
                 <small>{description}</small>
               </span>
-              <ChevronRight className="h-4 w-4 text-white/35" />
+              <ChevronRight className="h-4 w-4 text-[#2F2A25]" />
             </Link>
           ))}
         </section>
@@ -188,15 +188,15 @@ export function AccountHub() {
             <strong>Secure logout</strong>
             <small>End the authenticated session on this device.</small>
           </span>
-          <ChevronRight className="h-4 w-4 text-white/35" />
+          <ChevronRight className="h-4 w-4 text-[#2F2A25]" />
         </button>
-        <Link href="mailto:zerionx1@gmail.com?subject=Zerion%20X1%20account%20deletion" className="x1-menu-row text-rose-200">
+        <Link href="mailto:zerionx1@gmail.com?subject=Zerion%20X1%20account%20deletion" className="x1-menu-row text-[#2F2A25]">
           <span className="x1-menu-icon"><Trash2 /></span>
           <span>
             <strong>Request account deletion</strong>
             <small>Start a verified support and data-export workflow.</small>
           </span>
-          <ChevronRight className="h-4 w-4 text-white/35" />
+          <ChevronRight className="h-4 w-4 text-[#2F2A25]" />
         </Link>
       </section>
     </div>

@@ -46,6 +46,7 @@ export type ApprovedTradePlan = {
   instrumentId?: string | null;
   executionSymbol?: string | null;
   autoTrailing: boolean;
+  quantity?: number | null;
   riskOverrideConfirmed?: boolean;
   trailing?: { enabled?: boolean; trigger?: number | null; distance?: number | null } | null;
 };
@@ -79,7 +80,11 @@ async function executePaper(plan: ApprovedTradePlan) {
   const perUnitRisk = Math.abs(plan.entry - plan.stopLoss);
   if (!(perUnitRisk > 0)) throw new Error("Invalid trade risk distance");
   const budget = riskBudget(account.equity, controls);
-  const quantity = Math.max(0.000001, budget / perUnitRisk);
+  const automaticQuantity = Math.max(0.000001, budget / perUnitRisk);
+  const quantity = plan.quantity != null ? Number(plan.quantity) : automaticQuantity;
+  if (!Number.isFinite(quantity) || quantity <= 0) throw new Error("Quantity must be greater than zero");
+  const requestedLoss = quantity * perUnitRisk;
+  if (plan.quantity != null && requestedLoss > budget && !plan.riskOverrideConfirmed) throw new RiskConfirmationRequiredError({ proposedNotional: quantity * plan.entry, defaultGuardNotional: budget, defaultGuardPercent: controls.riskPerTradePct || 1, userRiskBudget: budget, quantity, symbol: plan.symbol });
   const now = new Date().toISOString();
   const order: PaperOrder = {
     id: crypto.randomUUID(),
@@ -189,9 +194,12 @@ async function executeUpstox(plan: ApprovedTradePlan) {
   const perUnitRisk = Math.abs(plan.entry - plan.stopLoss);
   if (!(perUnitRisk > 0)) throw new Error("Invalid trade risk distance");
   const { instrumentToken, lotSize } = await resolveUpstoxInstrument(plan);
-  const rawQty = Math.floor(budget / perUnitRisk);
-  const quantity = Math.floor(rawQty / lotSize) * lotSize;
-  if (quantity < lotSize) throw new Error(`Risk budget is too small for the minimum Upstox lot size (${lotSize})`);
+  const rawQty = plan.quantity != null ? Math.floor(Number(plan.quantity)) : Math.floor(budget / perUnitRisk);
+  if (!Number.isFinite(rawQty) || rawQty <= 0) throw new Error("Quantity must be greater than zero");
+  if (rawQty % lotSize !== 0) throw new Error(`Quantity must be a multiple of the Upstox lot size (${lotSize})`);
+  const quantity = rawQty;
+  const requestedLoss = quantity * perUnitRisk;
+  if (plan.quantity != null && requestedLoss > budget && !plan.riskOverrideConfirmed) throw new RiskConfirmationRequiredError({ proposedNotional: quantity * plan.entry, defaultGuardNotional: budget, defaultGuardPercent: controls.riskPerTradePct || 1, userRiskBudget: budget, quantity, symbol: plan.symbol });
   const trailingGap = plan.autoTrailing && plan.trailing?.distance
     ? Math.max(Math.abs(plan.entry - plan.stopLoss) * 0.1, Number(plan.trailing.distance))
     : undefined;
@@ -233,7 +241,53 @@ async function executeCoinDcx(plan: ApprovedTradePlan) {
   const budget = riskBudget(available, controls);
   const perUnitRisk = Math.abs(plan.entry - plan.stopLoss);
   if (!(perUnitRisk > 0)) throw new Error("Invalid trade risk distance");
-  const quantity = Number(Math.max(0.000001, budget / perUnitRisk).toFixed(6));
+  const automaticQuantity = Number(Math.max(0.000001, budget / perUnitRisk).toFixed(6));
+  const quantity = plan.quantity != null ? Number(Number(plan.quantity).toFixed(6)) : automaticQuantity;
+  if (!Number.isFinite(quantity) || quantity <= 0) throw new Error("Quantity must be greater than zero");
+  const requestedLoss = quantity * perUnitRisk;
+  if (plan.quantity != null && requestedLoss > budget && !plan.riskOverrideConfirmed) throw new RiskConfirmationRequiredError({ proposedNotional: quantity * plan.entry, defaultGuardNotional: budget, defaultGuardPercent: controls.riskPerTradePct || 1, userRiskBudget: budget, quantity, symbol: plan.symbol });
+const futuresId = String(plan.instrumentId ?? plan.executionSymbol ?? "");
+if (futuresId.toLowerCase().startsWith("coindcx-futures:")) {
+  const pair = futuresId.replace(/^coindcx-futures:/i, "");
+  const order = await coinDcxAuthRequest<Row>(
+    credentials,
+    "/exchange/v1/derivatives/futures/orders/create",
+    {
+      order: {
+        side: plan.side,
+        pair,
+        order_type: "market_order",
+        total_quantity: quantity,
+        leverage: 1,
+        notification: "no_notification",
+        hidden: false,
+        post_only: false,
+        margin_currency_short_name: ["USDT"],
+      },
+    },
+  );
+  let protective: unknown = null;
+  try {
+    const positions = await coinDcxAuthRequest<Row[]>(
+      credentials,
+      "/exchange/v1/derivatives/futures/positions",
+      { page: "1", size: "100", pairs: pair, margin_currency_short_name: ["USDT"] },
+    );
+    const pos = positions.find((row) => Math.abs(Number(row.active_pos ?? 0)) > 0);
+    if (pos?.id) {
+      protective = await coinDcxAuthRequest<Row>(
+        credentials,
+        "/exchange/v1/derivatives/futures/positions/create_tpsl",
+        {
+          id: String(pos.id),
+          take_profit: { stop_price: String(plan.takeProfit), order_type: "take_profit_market" },
+          stop_loss: { stop_price: String(plan.stopLoss), order_type: "stop_market" },
+        },
+      );
+    }
+  } catch {}
+  return { broker:"coindcx",product:"futures",executed:true,quantity,riskBudget:budget,order,protective,protectiveStop:plan.stopLoss,target:plan.takeProfit,autoTrailing:false };
+}
   const market = await resolveCoinDcxMarket(plan);
   const order = await coinDcxAuthRequest<Row>(credentials, "/exchange/v1/margin/create", {
     market: market.market,
@@ -261,7 +315,7 @@ async function executeMt5(plan: ApprovedTradePlan) {
     {
       symbol,
       side: plan.side,
-      risk_budget: budget,
+      ...(plan.quantity != null ? { volume: plan.quantity } : { risk_budget: budget }),
       stop_loss: plan.stopLoss,
       take_profit: plan.takeProfit,
       auto_trailing: plan.autoTrailing,

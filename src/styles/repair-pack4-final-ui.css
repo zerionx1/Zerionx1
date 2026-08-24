@@ -1,12 +1,12 @@
 :root{
-  --zx-bg:#f7f4ed;
-  --zx-surface:#ffffff;
-  --zx-surface-soft:#f3f1ec;
-  --zx-border:#ddd7cd;
-  --zx-text:#2f2a25;
-  --zx-muted:#6d665e;
-  --zx-accent:#6b8f7a;
-  --zx-deep:#3e4a3f;
+  --zx-bg:#F7F4ED;
+  --zx-surface:#F7F4ED;
+  --zx-surface-soft:#F7F4ED;
+  --zx-border:#E6D8C3;
+  --zx-text:#2F2A25;
+  --zx-muted:#3E4A3F;
+  --zx-accent:#3E4A3F;
+  --zx-deep:#3E4A3F;
 }
 
 html,body{
@@ -87,7 +87,7 @@ body{
 
 .zx-primary-action{
   background:var(--zx-deep)!important;
-  color:#fff!important;
+  color:#F7F4ED!important;
 }
 
 .zx-secondary-action{
@@ -119,9 +119,9 @@ body{
 
 .zx-market-tabs button.is-active,
 .zx-switch-grid button.is-active{
-  background:#e9eee9!important;
-  border-color:#9eafa5!important;
-  box-shadow:0 0 0 2px rgba(107,143,122,.10);
+  background:#F7F4ED!important;
+  border-color:#E6D8C3!important;
+  box-shadow:0 0 0 2px #E6D8C3;
 }
 
 .zx-coindcx-connect{
@@ -143,7 +143,7 @@ body{
   min-height:46px;
   border:1px solid var(--zx-border);
   border-radius:12px;
-  background:#fff;
+  background:#F7F4ED;
   color:var(--zx-text);
   padding:10px 12px;
   font-size:15px;
@@ -151,8 +151,8 @@ body{
 }
 
 .zx-coindcx-connect input:focus{
-  border-color:#8fa69a;
-  box-shadow:0 0 0 3px rgba(107,143,122,.13);
+  border-color:#E6D8C3;
+  box-shadow:0 0 0 3px #E6D8C3;
 }
 
 .zx-auth-explainer,
@@ -164,7 +164,7 @@ body{
   padding:13px 14px;
   border:1px solid var(--zx-border);
   border-radius:13px;
-  background:#f7f4ed!important;
+  background:#F7F4ED!important;
   color:var(--zx-text)!important;
 }
 
@@ -185,7 +185,7 @@ body{
 .zx-chart-workspace .zx-chart-stage,
 .zx-chart-workspace canvas,
 .zx-pro-chart-stage{
-  color:#f7f4ed;
+  color:#F7F4ED;
 }
 
 .zx-chart-stage{
