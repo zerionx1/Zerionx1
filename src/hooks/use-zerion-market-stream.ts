@@ -81,7 +81,7 @@ class Gateway {
         return;
       }
       const silence = this.lastGatewayMessageAt ? Date.now() - this.lastGatewayMessageAt : 0;
-      if (silence > 90_000) {
+      if (silence > 180_000) {
         this.setStatus("STALE");
         // An open-but-silent socket is not useful. Force a clean reconnect instead
         // of leaving the UI stale indefinitely.
@@ -214,6 +214,11 @@ class Gateway {
         this.reconnectTimer = null;
         this.socket?.close();
         this.socket = null;
+        if (this.healthTimer) {
+          clearInterval(this.healthTimer);
+          this.healthTimer = null;
+        }
+        this.lastGatewayMessageAt = 0;
         this.setStatus("DISCONNECTED");
       }
     };

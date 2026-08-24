@@ -9,7 +9,11 @@ import {
   verifyCoinDcxCredentials,
 } from "@/lib/brokers/coindcx-core";
 import { sealBrokerSecret } from "@/lib/brokers/token-vault";
-import { mt5BridgeClient, mt5BridgeConfigured } from "@/lib/brokers/mt5-bridge-client";
+import {
+  Mt5BridgeError,
+  mt5BridgeClient,
+  mt5BridgeConfigured,
+} from "@/lib/brokers/mt5-bridge-client";
 import { normalizeCoinDcxUserCredentials } from "@/lib/brokers/coindcx-user-credentials";
 import { fail, ok } from "@/lib/security/api-response";
 import {
@@ -245,6 +249,13 @@ export async function POST(request: Request) {
         environment,
       });
     } catch (error) {
+      if (error instanceof Mt5BridgeError && [502, 503, 504].includes(error.status)) {
+        return fail(
+          "BROKER_TEMPORARILY_UNAVAILABLE",
+          error.message,
+          503,
+        );
+      }
       return fail(
         "BROKER_AUTH_FAILED",
         error instanceof Error ? error.message : "Exness MT5 verification failed.",

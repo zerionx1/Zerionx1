@@ -39,6 +39,7 @@ def connect(credentials: dict[str, Any]):
         server = str(credentials["server"])
     except Exception:
         fail(400, "Invalid MT5 credentials")
+
     kwargs = {
         "login": login,
         "password": password,
@@ -46,13 +47,40 @@ def connect(credentials: dict[str, Any]):
         "timeout": 30000,
         "portable": True,
     }
-    ok = mt5.initialize(TERMINAL_PATH, **kwargs) if TERMINAL_PATH else mt5.initialize(**kwargs)
-    if not ok:
-        fail(401, f"MT5 login failed: {mt5.last_error()}")
-    info = mt5.account_info()
-    if info is None:
-        fail(401, f"MT5 account_info failed after login: {mt5.last_error()}")
-    return info
+
+    last_error = None
+    for attempt in range(2):
+        try:
+            mt5.shutdown()
+        except Exception:
+            pass
+
+        ok = (
+            mt5.initialize(TERMINAL_PATH, **kwargs)
+            if TERMINAL_PATH
+            else mt5.initialize(**kwargs)
+        )
+        if ok:
+            info = mt5.account_info()
+            if info is not None:
+                return info
+            last_error = mt5.last_error()
+        else:
+            last_error = mt5.last_error()
+
+        if attempt == 0:
+            time.sleep(1.5)
+
+    code = None
+    try:
+        if isinstance(last_error, (tuple, list)) and last_error:
+            code = int(last_error[0])
+    except Exception:
+        code = None
+
+    if code is not None and code <= -10000:
+        fail(503, f"MT5 runtime/IPC unavailable: {last_error}")
+    fail(401, f"MT5 login failed: {last_error}")
 
 
 def ensure_symbol(symbol: str):

@@ -13,6 +13,7 @@
 @import "./payment-upgrade-flow.css";
 @import "./trading-workspace-v2.css";
 @import "./agent-finalization.css";
+@import "./home-luxury-fix.css";
 :root{--ink:#2F2A25;--espresso:#2F2A25;--walnut:#8C8A81;--bronze:#8C8A81;--gold:#E4E0DF;--ivory:#E4E0DF;--mist:#E4E0DF;--danger:#2F2A25;--success:#8C8A81;--radius:22px}
 *{box-sizing:border-box}html{background:var(--ink);color:var(--ivory);scroll-behavior:smooth}body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0%,rgba(167,123,79,.16),transparent 30%),linear-gradient(180deg,#2F2A25,#2F2A25 60%,#2F2A25);font-family:Arial,Helvetica,sans-serif}.glass{background:linear-gradient(135deg,rgba(43,27,18,.82),rgba(14,12,10,.72));border:1px solid rgba(215,183,126,.2);box-shadow:0 24px 70px rgba(0,0,0,.35);backdrop-filter:blur(20px)}.gold-text{background:linear-gradient(100deg,#E6D8C3,#E6D8C3,#E6D8C3);-webkit-background-clip:text;background-clip:text;color:transparent}.focus-ring:focus-visible{outline:2px solid var(--gold);outline-offset:3px}a{text-decoration:none;color:inherit}button,input,select,textarea{font:inherit}
 /* Zerion X1 marketing experience */
@@ -1226,8 +1227,8 @@ button[class*="bg-[#E4E0DF]"] * {
 
 
 /* Zerion X1 FixPack 1: chart/mobile stability */
-.zx-gocharting-host { position: relative; min-width: 0; width: 100%; }
-.zx-gocharting-attribution {
+.zx-tradingview-host { position: relative; min-width: 0; width: 100%; }
+.zx-tradingview-attribution {
   display: flex; justify-content: flex-end; padding: .35rem .6rem;
   font-size: .72rem; letter-spacing: .02em; opacity: .62;
 }
@@ -1252,30 +1253,30 @@ button[class*="bg-[#E4E0DF]"] * {
     align-items: flex-start; gap: .65rem; padding-inline: .85rem;
   }
   .zx-chart-stage .data-badge { font-size: .66rem; white-space: nowrap; }
-  .zx-gocharting-host { touch-action: pan-x pan-y; }
+  .zx-tradingview-host { touch-action: pan-x pan-y; }
 }
 
 
-/* Zerion X1 FixPack 3 — GoCharting runtime + Intelligence */
-.zx-gocharting-runtime {
+/* Zerion X1 FixPack 3 — TradingView runtime + Intelligence */
+.zx-tradingview-runtime {
   position: relative;
   width: 100%;
   overflow: hidden;
   border-radius: 20px;
   background: #151a1d;
 }
-.zx-gc-canvas {
+.zx-tv-canvas {
   opacity: 0;
   filter: blur(8px);
   transform: scale(.995);
   transition: opacity .28s ease, filter .35s ease, transform .35s ease;
 }
-.zx-gc-canvas.is-ready {
+.zx-tv-canvas.is-ready {
   opacity: 1;
   filter: none;
   transform: none;
 }
-.zx-gc-loader {
+.zx-tv-loader {
   position: absolute;
   inset: 0;
   z-index: 5;
@@ -1285,8 +1286,8 @@ button[class*="bg-[#E4E0DF]"] * {
     linear-gradient(180deg, rgba(47,42,37,.92), rgba(62,74,63,.88));
   backdrop-filter: blur(16px);
 }
-.zx-gc-loader.is-loading { display: block; }
-.zx-gc-loader-grid {
+.zx-tv-loader.is-loading { display: block; }
+.zx-tv-loader-grid {
   height: 78%;
   border-radius: 16px;
   opacity: .38;
@@ -1295,15 +1296,15 @@ button[class*="bg-[#E4E0DF]"] * {
     linear-gradient(90deg, rgba(247,244,237,.08) 1px, transparent 1px);
   background-size: 52px 52px;
 }
-.zx-gc-loader-bar {
+.zx-tv-loader-bar {
   width: 55%;
   height: 12px;
   margin-top: 16px;
   border-radius: 99px;
   background: rgba(247,244,237,.18);
 }
-.zx-gc-loader-bar.short { width: 31%; }
-.zx-gc-attribution {
+.zx-tv-loader-bar.short { width: 31%; }
+.zx-tv-attribution {
   position: absolute;
   right: 10px;
   bottom: 8px;
@@ -1437,7 +1438,7 @@ button[class*="bg-[#E4E0DF]"] * {
   .zx-intel-news,
   .zx-intel-chart-lab { padding: 15px; border-radius: 18px; }
   .zx-news-list article > div { display: grid; gap: 7px; }
-  .zx-gc-attribution {
+  .zx-tv-attribution {
     right: 7px;
     bottom: 6px;
     font-size: 9px;
@@ -1643,21 +1644,21 @@ body {
   color: #2F2A25 !important;
 }
 
-/* GoCharting area follows light Zerion shell while leaving the SDK UI intact. */
-.zx-gocharting-runtime {
+/* TradingView area follows light Zerion shell while leaving the SDK UI intact. */
+.zx-tradingview-runtime {
   border: 1px solid rgba(140,138,129,.22);
   box-shadow: 0 20px 70px rgba(47,42,37,.08);
 }
-.zx-gc-loader {
+.zx-tv-loader {
   background:
     linear-gradient(180deg, rgba(247,244,237,.92), rgba(230,216,195,.86)) !important;
 }
-.zx-gc-loader-grid {
+.zx-tv-loader-grid {
   background-image:
     linear-gradient(rgba(62,74,63,.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(62,74,63,.08) 1px, transparent 1px) !important;
 }
-.zx-gc-attribution {
+.zx-tv-attribution {
   background: rgba(247,244,237,.84) !important;
   color: #3E4A3F !important;
   border-color: rgba(140,138,129,.22) !important;

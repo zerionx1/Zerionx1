@@ -5,10 +5,12 @@ import { ZerionProMaxHome } from "@/components/marketing/zerion-pro-max-home";
 
 export default function HomePage() {
   return (
-    <div className="marketing-page">
+    <div className="marketing-page zx-home-page">
       <CinematicBackground />
       <MarketingHeader />
-      <main><ZerionProMaxHome /></main>
+      <main>
+        <ZerionProMaxHome />
+      </main>
       <MarketingFooter />
     </div>
   );

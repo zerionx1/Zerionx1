@@ -4,6 +4,7 @@ import './zerion-final-four.css';
 import './zerion-strict-four.css';
 import { AppProviders } from '@/components/providers/app-providers';
 import { GlobalProviders } from '@/components/system/GlobalProviders';
+import { AuthSessionBridge } from '@/components/auth/auth-session-bridge';
 
 export const metadata: Metadata = {
   title: { default: 'Zerion X1', template: '%s · Zerion X1' },
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body>
         <AppProviders>
+          <AuthSessionBridge />
           <GlobalProviders>{children}</GlobalProviders>
         </AppProviders>
       </body>

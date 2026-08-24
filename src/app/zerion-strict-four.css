@@ -24,7 +24,7 @@ html,body{
 body,
 .x1-app-shell,
 .dashboard-page,
-.dashboard-page *:not(.zx-gc-canvas):not(.zx-gc-canvas *){
+.dashboard-page *:not(.zx-tv-canvas):not(.zx-tv-canvas *){
   font-stretch:normal!important;
 }
 
@@ -100,7 +100,7 @@ body{
   [class*="to-amber"],
   [class*="to-rose"],
   [class*="to-slate"]
-):not(.page-heading):not(.x1-page-heading):not(.x1-hero-panel):not(.x1-sidebar):not(.x1-mobile-nav__item.is-active):not(.zx-mobile-nav-item.is-active):not(.zx-primary-action):not(.x1-primary-link):not(.zx-gc-canvas):not(.zx-gc-canvas *){
+):not(.page-heading):not(.x1-page-heading):not(.x1-hero-panel):not(.x1-sidebar):not(.x1-mobile-nav__item.is-active):not(.zx-mobile-nav-item.is-active):not(.zx-primary-action):not(.x1-primary-link):not(.zx-tv-canvas):not(.zx-tv-canvas *){
   background:#F7F4ED!important;
   background-image:none!important;
 }
@@ -113,7 +113,7 @@ body{
   [class*="text-slate"],
   [class*="text-zinc"],
   [class*="text-neutral"]
-):not(.page-heading *):not(.x1-page-heading *):not(.x1-hero-panel *):not(.zx-gc-canvas):not(.zx-gc-canvas *){
+):not(.page-heading *):not(.x1-page-heading *):not(.x1-hero-panel *):not(.zx-tv-canvas):not(.zx-tv-canvas *){
   color:#2F2A25!important;
   -webkit-text-fill-color:currentColor!important;
 }
@@ -124,11 +124,11 @@ body{
   [class*="border-rose"],
   [class*="border-slate"],
   [class*="border-zinc"]
-):not(.zx-gc-canvas):not(.zx-gc-canvas *){
+):not(.zx-tv-canvas):not(.zx-tv-canvas *){
   border-color:#E6D8C3!important;
 }
 
-.dashboard-page :is(h1,h2,h3,h4,h5,h6,strong,label,p,span,small,li,a,button,input,select,textarea):not(.page-heading *):not(.x1-page-heading *):not(.x1-hero-panel *):not(.x1-sidebar *):not(.x1-mobile-nav__item.is-active *):not(.zx-mobile-nav-item.is-active *):not(.zx-gc-canvas):not(.zx-gc-canvas *){
+.dashboard-page :is(h1,h2,h3,h4,h5,h6,strong,label,p,span,small,li,a,button,input,select,textarea):not(.page-heading *):not(.x1-page-heading *):not(.x1-hero-panel *):not(.x1-sidebar *):not(.x1-mobile-nav__item.is-active *):not(.zx-mobile-nav-item.is-active *):not(.zx-tv-canvas):not(.zx-tv-canvas *){
   color:#2F2A25!important;
 }
 
@@ -329,17 +329,17 @@ label{color:#2F2A25!important}
   display:inline-flex;align-items:center;gap:6px;background:#E6D8C3!important;color:#2F2A25!important;border:1px solid #E6D8C3!important;box-shadow:none!important;
 }
 
-/* Chart shell only. GoCharting's own generated DOM is intentionally not hard-reset. */
+/* Chart shell only. TradingView's own generated DOM is intentionally not hard-reset. */
 .zx-chart-commandbar,.zx-chart-stage{background:#F7F4ED!important;border-color:#E6D8C3!important}
 .zx-chart-stage>header{border-bottom:1px solid #E6D8C3!important}
-.zx-gocharting-runtime,.zx-gc-loader,.zx-gc-error{background:#F7F4ED!important;color:#2F2A25!important}
-.zx-gc-loader-grid{
+.zx-tradingview-runtime,.zx-tv-loader,.zx-tv-error{background:#F7F4ED!important;color:#2F2A25!important}
+.zx-tv-loader-grid{
   background-image:linear-gradient(to right,#E6D8C3 1px,transparent 1px),linear-gradient(to bottom,#E6D8C3 1px,transparent 1px)!important;
 }
-.zx-gc-loader-bar{background:#3E4A3F!important}
-.zx-gc-attribution{background:#E6D8C3!important;color:#2F2A25!important;border:1px solid #E6D8C3!important}
-.zx-gc-error button{background:#3E4A3F!important;color:#F7F4ED!important;border:1px solid #3E4A3F!important}
-.zx-gc-error p{color:#3E4A3F!important}
+.zx-tv-loader-bar{background:#3E4A3F!important}
+.zx-tv-attribution{background:#E6D8C3!important;color:#2F2A25!important;border:1px solid #E6D8C3!important}
+.zx-tv-error button{background:#3E4A3F!important;color:#F7F4ED!important;border:1px solid #3E4A3F!important}
+.zx-tv-error p{color:#3E4A3F!important}
 
 /* Shell chrome */
 .x1-sidebar{background:#2F2A25!important;color:#F7F4ED!important;border-color:#E6D8C3!important}
@@ -353,7 +353,7 @@ label{color:#2F2A25!important}
 .zx-page-back{background:#F7F4ED!important;color:#2F2A25!important;border:1px solid #E6D8C3!important}
 
 /* No accidental overlay/translucent glass in app UI. */
-.x1-app-shell :is(.glass,[class*="backdrop-blur"]):not(.x1-sidebar):not(.zx-gc-canvas):not(.zx-gc-canvas *){
+.x1-app-shell :is(.glass,[class*="backdrop-blur"]):not(.x1-sidebar):not(.zx-tv-canvas):not(.zx-tv-canvas *){
   backdrop-filter:none!important;
   box-shadow:none!important;
 }

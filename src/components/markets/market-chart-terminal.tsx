@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { GoChartingChartHost } from "@/components/markets/gocharting-chart-host";
+import { TradingViewChartHost } from "@/components/markets/tradingview-chart-host";
 import type { ChartPriceLine } from "@/components/charts/zerion-pro-chart";
 import { useZerionMarketStream } from "@/hooks/use-zerion-market-stream";
 import { positionPnl } from "@/lib/charts/position-pnl";
@@ -69,6 +69,17 @@ export function MarketChartTerminal() {
 
   useEffect(() => {
     void refreshPositions();
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refreshPositions();
+    }, 3000);
+    const onVisible = () => {
+      if (!document.hidden) void refreshPositions();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [refreshPositions]);
 
   useEffect(() => {
@@ -275,7 +286,7 @@ export function MarketChartTerminal() {
               setQuery(e.target.value);
               setSelected(null);
             }}
-            placeholder="Search Upstox stock/index/F&O or CoinDCX pair"
+            placeholder="Search NIFTY 50, options, stocks, crypto or forex"
           />
           {searching ? <span className="zx-chart-muted">Searching…</span> : null}
           {results.length && !selected ? (
@@ -310,7 +321,7 @@ export function MarketChartTerminal() {
       <section className="zx-chart-stage">
         <header>
           <div>
-            <p className="eyebrow">ZERION X1 · GOCHARTING TERMINAL</p>
+            <p className="eyebrow">ZERION X1 · TRADINGVIEW TERMINAL</p>
             <h2>{selected?.displayName ?? query}</h2>
             <p className="zx-chart-muted">
               {selected
@@ -318,10 +329,10 @@ export function MarketChartTerminal() {
                 : "Select a provider-backed instrument"}
             </p>
           </div>
-          <span className="data-badge">GoCharting · provider-backed</span>
+          <span className="data-badge">TradingView · Zerion market layer</span>
         </header>
 
-        <GoChartingChartHost
+        <TradingViewChartHost
           instrument={selected}
           symbol={selected?.symbol ?? query}
           timeframe={timeframe}

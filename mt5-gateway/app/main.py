@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import threading
+import time
 import urllib.error
 import urllib.request
 from typing import Literal, Optional
@@ -11,7 +12,7 @@ from typing import Literal, Optional
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field, model_validator
 
-app = FastAPI(title="Zerion X1 MT5 Gateway", version="4.0.0")
+app = FastAPI(title="Zerion X1 MT5 Gateway", version="4.1.0")
 
 BRIDGE_TOKEN = os.getenv("MT5_BRIDGE_TOKEN", "").strip()
 WORKER_URL = os.getenv("MT5_WORKER_URL", "").strip().rstrip("/")
@@ -85,10 +86,15 @@ class CloseRequest(CredentialsRequest):
     close: Close
 
 
-def worker_call(operation: str, credentials: Credentials, extra: dict | None = None) -> dict:
+def _worker_once(operation: str, credentials: Credentials, extra: dict | None = None) -> dict:
     if not WORKER_URL:
         raise HTTPException(503, "MT5_WORKER_URL is not configured")
-    payload = {"operation": operation, "credentials": credentials.model_dump(), **(extra or {})}
+
+    payload = {
+        "operation": operation,
+        "credentials": credentials.model_dump(),
+        **(extra or {}),
+    }
     request = urllib.request.Request(
         f"{WORKER_URL}/execute",
         data=json.dumps(payload).encode(),
@@ -99,6 +105,7 @@ def worker_call(operation: str, credentials: Credentials, extra: dict | None = N
             "authorization": f"Bearer {BRIDGE_TOKEN}",
         },
     )
+
     try:
         with urllib.request.urlopen(request, timeout=60) as response:
             return json.loads(response.read().decode())
@@ -107,25 +114,66 @@ def worker_call(operation: str, credentials: Credentials, extra: dict | None = N
             body = json.loads(exc.read().decode())
         except Exception:
             body = {}
-        raise HTTPException(exc.code, body.get("detail", f"MT5 worker error ({exc.code})"))
+        raise HTTPException(
+            exc.code,
+            body.get("detail", f"MT5 worker error ({exc.code})"),
+        )
     except urllib.error.URLError as exc:
         raise HTTPException(503, f"MT5 worker unavailable: {exc.reason}")
     except TimeoutError:
         raise HTTPException(504, "MT5 worker timeout")
 
 
+def worker_call(operation: str, credentials: Credentials, extra: dict | None = None) -> dict:
+    # Only idempotent/read operations get one transient retry.
+    # Order mutation endpoints are not retried here.
+    retryable = operation in {"verify", "account", "positions"}
+    attempts = 2 if retryable else 1
+    last: HTTPException | None = None
+
+    for attempt in range(attempts):
+        try:
+            return _worker_once(operation, credentials, extra)
+        except HTTPException as exc:
+            last = exc
+            if attempt + 1 >= attempts or exc.status_code not in {502, 503, 504}:
+                raise
+            time.sleep(1.5)
+
+    raise last or HTTPException(503, "MT5 worker unavailable")
+
+
+def worker_probe() -> dict:
+    if not WORKER_URL:
+        return {"configured": False, "reachable": False}
+    try:
+        request = urllib.request.Request(f"{WORKER_URL}/healthz", method="GET")
+        with urllib.request.urlopen(request, timeout=5) as response:
+            body = json.loads(response.read().decode())
+            return {
+                "configured": True,
+                "reachable": response.status == 200,
+                "executor": body.get("executor"),
+            }
+    except Exception:
+        return {"configured": True, "reachable": False}
+
+
 @app.api_route("/healthz", methods=["GET", "HEAD"])
 def healthz():
-    return {"ok": True, "service": "zerion-mt5-gateway", "version": "4.0.0"}
+    return {"ok": True, "service": "zerion-mt5-gateway", "version": "4.1.0"}
 
 
 @app.get("/health", dependencies=[Depends(auth)])
 def health():
+    probe = worker_probe()
     return {
         "ok": True,
         "service": "zerion-mt5-gateway",
         "mode": "production-split",
         "workerConfigured": bool(WORKER_URL),
+        "workerReachable": probe.get("reachable", False),
+        "workerExecutor": probe.get("executor"),
     }
 
 
@@ -155,7 +203,11 @@ def order_place(
     with seen_lock:
         if key in seen:
             return seen[key]
-    result = worker_call("order_place", payload.credentials, {"order": payload.order.model_dump()})
+    result = worker_call(
+        "order_place",
+        payload.credentials,
+        {"order": payload.order.model_dump()},
+    )
     with seen_lock:
         seen[key] = result
     return result
@@ -163,9 +215,17 @@ def order_place(
 
 @app.post("/order/modify", dependencies=[Depends(auth)])
 def order_modify(payload: ModifyRequest):
-    return worker_call("order_modify", payload.credentials, {"modification": payload.modification.model_dump()})
+    return worker_call(
+        "order_modify",
+        payload.credentials,
+        {"modification": payload.modification.model_dump()},
+    )
 
 
 @app.post("/order/close", dependencies=[Depends(auth)])
 def order_close(payload: CloseRequest):
-    return worker_call("order_close", payload.credentials, {"close": payload.close.model_dump()})
+    return worker_call(
+        "order_close",
+        payload.credentials,
+        {"close": payload.close.model_dump()},
+    )
