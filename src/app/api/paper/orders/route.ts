@@ -14,7 +14,7 @@ export async function POST(request:Request){
  const parsed=paperOrderSchema.safeParse(await request.json().catch(()=>null));
  if(!parsed.success)return fail("VALIDATION_ERROR","Invalid paper order",400,parsed.error.flatten());
  const account=await paperStore.getAccount(),positions=await paperStore.listPositions(),orders=await paperStore.listOrders();
- const quote=await quoteStore.get(parsed.data.symbol);
+ const quote=await quoteStore.get(parsed.data.instrumentId??parsed.data.symbol);
  if(!quote)return fail("QUOTE_UNAVAILABLE",`No live quote configured for ${parsed.data.symbol}`,409);
  const controls=await getRiskControls("paper"),today=new Date().toISOString().slice(0,10);
  const exposure=positions.reduce((s,p)=>s+Math.abs(p.quantity*p.markPrice),0);

@@ -128,7 +128,7 @@ class Gateway {
     socket.addEventListener("open", () => {
       this.reconnectAttempt = 0;
       this.lastGatewayMessageAt = Date.now();
-      this.setStatus("LIVE");
+      this.setStatus("RECONNECTING");
       this.startHealth();
       const instruments = [...this.refs.keys()];
       if (instruments.length) socket.send(JSON.stringify({ type: "subscribe", instruments }));

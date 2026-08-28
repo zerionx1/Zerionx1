@@ -18,7 +18,7 @@ export function BrokerConnectionCenter(){
   const visible=useMemo(()=>catalog.filter(x=>x.kind===market),[catalog,market]);
   const connectionFor=(key:string)=>connections.find(x=>(x.broker_key??x.brokerKey)===key);
 
-  async function warmMt5(){const end=Date.now()+120000;while(Date.now()<end){setMt5Warm(Math.ceil((end-Date.now())/1000));try{const r=await fetch("/api/brokers/mt5-health",{cache:"no-store"});const j=await r.json().catch(()=>({}));if(r.ok&&j.data?.workerReachable===true){setMt5Warm(null);return true}}catch{}await new Promise(resolve=>setTimeout(resolve,5000))}setMt5Warm(null);return false}
+  async function warmMt5(){const end=Date.now()+120000;setMt5Warm(120);const clock=window.setInterval(()=>setMt5Warm(Math.max(0,Math.ceil((end-Date.now())/1000))),1000);try{while(Date.now()<end){try{const r=await fetch("/api/brokers/mt5-health",{cache:"no-store"});const j=await r.json().catch(()=>({}));if(r.ok&&j.data?.workerReachable===true)return true}catch{}await new Promise(resolve=>setTimeout(resolve,3000))}return false}finally{window.clearInterval(clock);setMt5Warm(null)}}
 
   async function connect(broker:Broker){
     setBusy(broker.key);setMessage("");
@@ -30,7 +30,7 @@ export function BrokerConnectionCenter(){
       }
       if(broker.key==="exness-mt5"){
         if(!mt5Login.trim()||!mt5Password||!mt5Server.trim()){setMessage("Enter MT5 login, trading password and exact Exness MT5 server.");return}
-        setMessage("Waking MT5 server. Sleeping instances can need up to 120 seconds.");
+        setMessage("Waking MT5 gateway and worker. The countdown updates live while health is checked.");
         if(!(await warmMt5())){setMessage("MT5 server did not become ready within 120 seconds. Retry once; credentials were not stored.");return}
         payload={...payload,mt5Login:mt5Login.trim(),mt5Password,mt5Server:mt5Server.trim(),mt5Environment};
       }

@@ -161,6 +161,20 @@ export function ZerionProChart({
     return candles.slice(Math.max(0, end - count), end);
   }, [candles, pan, visibleCount]);
 
+  const autoTrend = useMemo(() => {
+    if (visible.length < 8) return null;
+    const count = Math.min(48, visible.length);
+    const startIndex = visible.length - count;
+    const sample = visible.slice(startIndex);
+    const xMean = (count - 1) / 2;
+    const yMean = sample.reduce((sum, candle) => sum + candle.close, 0) / count;
+    let numerator = 0, denominator = 0;
+    sample.forEach((candle, index) => { const dx = index - xMean; numerator += dx * (candle.close - yMean); denominator += dx * dx; });
+    const slope = denominator ? numerator / denominator : 0;
+    const intercept = yMean - slope * xMean;
+    return { startIndex, endIndex: visible.length - 1, startPrice: intercept, endPrice: intercept + slope * (count - 1), direction: slope >= 0 ? "UP" : "DOWN" };
+  }, [visible]);
+
   const series = useMemo(() => ({
     sma: sma(visible, 20),
     ema: ema(visible, 20),
@@ -238,7 +252,9 @@ export function ZerionProChart({
     const timeLines=Math.min(7,visible.length);
     for(let i=0;i<timeLines;i++){const idx=Math.round(i*(visible.length-1)/Math.max(1,timeLines-1)),xx=x(idx);ctx.strokeStyle="#E6D8C3";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.stroke();ctx.fillStyle="#E6D8C3";ctx.fillText(new Date(visible[idx]!.time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),Math.max(left,xx-25),height-10)}
     const slot=plotW/visible.length,bodyW=Math.max(3,Math.min(15,slot*.72));
-    visible.forEach((c,i)=>{const xx=x(i),color=c.close>=c.open?"#E6D8C3":"#E6D8C3";ctx.strokeStyle=color;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(xx,y(c.high));ctx.lineTo(xx,y(c.low));ctx.stroke();const y1=y(c.open),y2=y(c.close);ctx.fillRect(xx-bodyW/2,Math.min(y1,y2),bodyW,Math.max(1.5,Math.abs(y2-y1)))});
+    visible.forEach((c,i)=>{const xx=x(i),color=c.close>=c.open?"#6B8F7A":"#8C8A81";ctx.strokeStyle=color;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(xx,y(c.high));ctx.lineTo(xx,y(c.low));ctx.stroke();const y1=y(c.open),y2=y(c.close);ctx.fillRect(xx-bodyW/2,Math.min(y1,y2),bodyW,Math.max(1.5,Math.abs(y2-y1)))});
+
+    if(autoTrend){ctx.setLineDash([7,4]);ctx.strokeStyle=autoTrend.direction==="UP"?"#6B8F7A":"#8C8A81";ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(x(autoTrend.startIndex),y(autoTrend.startPrice));ctx.lineTo(x(autoTrend.endIndex),y(autoTrend.endPrice));ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=ctx.strokeStyle;ctx.fillText(`Auto trend ${autoTrend.direction}`,x(autoTrend.startIndex)+6,y(autoTrend.startPrice)-8);ctx.lineWidth=1;}
 
     const line=(values:Array<number|null>,color:string,width=1.25)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();let started=false;values.forEach((v,i)=>{if(v==null||!Number.isFinite(v))return;started?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v));started=true});if(started)ctx.stroke();ctx.lineWidth=1};
     if(indicators.has("sma"))line(series.sma,"#E6D8C3");
@@ -309,7 +325,7 @@ export function ZerionProChart({
     });
 
     if(hoverIndex!=null&&visible[hoverIndex]){const xx=x(hoverIndex),yy=y(visible[hoverIndex]!.close);ctx.setLineDash([3,3]);ctx.strokeStyle="#E6D8C3";ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+chartH);ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([])}
-  }, [drawings,exitBusyId,height,hoverIndex,indicators,livePrice,priceLines,series,visible]);
+  }, [autoTrend,drawings,exitBusyId,height,hoverIndex,indicators,livePrice,priceLines,series,visible]);
 
   const hovered = hoverIndex != null ? visible[hoverIndex] : visible.at(-1);
   const remaining = useMemo(() => {

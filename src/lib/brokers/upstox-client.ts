@@ -113,6 +113,15 @@ export const upstoxClient = {
       )}`,
     ),
 
+  fullQuotes: (instrumentKeys: string[]) =>
+    marketV2Get(
+      `/market-quote/quotes?instrument_key=${encodeURIComponent(
+        [...new Set(instrumentKeys.map((value) => value.trim()).filter(Boolean))].join(","),
+      )}`,
+    ),
+
+  gttOrders: () => accountV3Get("/order/gtt"),
+
   optionContracts: (instrumentKey: string, expiry?: string) =>
     marketV2Get(
       `/option/contract?instrument_key=${encodeURIComponent(

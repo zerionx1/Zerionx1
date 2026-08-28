@@ -16,7 +16,7 @@ async function tick() {
       method: "POST",
       headers: { authorization: `Bearer ${secret}` },
       cache: "no-store",
-      signal: AbortSignal.timeout(25_000),
+      signal: AbortSignal.timeout(55_000),
     }).catch(() => null);
   } finally {
     running = false;

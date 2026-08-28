@@ -95,6 +95,8 @@ let coinDcxFallbackTimer: ReturnType<typeof setInterval> | null = null;
 
 const upstoxDynamicRefs = new Map<string, number>();
 const coinDcxDynamicRefs = new Map<string, number>();
+const scannerUpstoxKeys = new Set<string>();
+const scannerCoinDcxKeys = new Set<string>();
 
 const BASE_UPSTOX_KEYS: Set<string> = new Set(UPSTOX_KEYS.map(String));
 new Set(UPSTOX_KEYS);
@@ -107,11 +109,13 @@ function refreshSubscribedCounts() {
   providers.upstox.subscribedInstruments = new Set([
     ...UPSTOX_KEYS,
     ...upstoxDynamicRefs.keys(),
+    ...scannerUpstoxKeys,
   ]).size;
 
   providers.coindcx.subscribedInstruments = new Set([
     ...COINDCX_KEYS,
     ...coinDcxDynamicRefs.keys(),
+    ...scannerCoinDcxKeys,
   ]).size;
 }
 
@@ -183,6 +187,39 @@ function removeRuntimeSubscription(value: string) {
   }
 
   refreshSubscribedCounts();
+}
+
+function replaceScannerSubscriptions(values: string[]) {
+  const wantedUpstox = new Set<string>();
+  const wantedCoinDcx = new Set<string>();
+  for (const value of values) {
+    const parsed = parseRuntimeInstrument(value);
+    if (!parsed) continue;
+    if (parsed.provider === "upstox") wantedUpstox.add(parsed.key);
+    else wantedCoinDcx.add(parsed.key);
+  }
+  for (const key of wantedUpstox) {
+    if (scannerUpstoxKeys.has(key)) continue;
+    scannerUpstoxKeys.add(key);
+    if (!BASE_UPSTOX_KEYS.has(key) && !upstoxDynamicRefs.has(key)) for (const handle of upstoxHandles) handle.subscribe([key], "full");
+  }
+  for (const key of [...scannerUpstoxKeys]) {
+    if (wantedUpstox.has(key)) continue;
+    scannerUpstoxKeys.delete(key);
+    if (!BASE_UPSTOX_KEYS.has(key) && !upstoxDynamicRefs.has(key)) for (const handle of upstoxHandles) handle.unsubscribe([key], "full");
+  }
+  for (const key of wantedCoinDcx) {
+    if (scannerCoinDcxKeys.has(key)) continue;
+    scannerCoinDcxKeys.add(key);
+    if (!BASE_COINDCX_KEYS.has(key) && !coinDcxDynamicRefs.has(key)) coinDcxPublicHandle?.subscribe([key]);
+  }
+  for (const key of [...scannerCoinDcxKeys]) {
+    if (wantedCoinDcx.has(key)) continue;
+    scannerCoinDcxKeys.delete(key);
+    if (!BASE_COINDCX_KEYS.has(key) && !coinDcxDynamicRefs.has(key)) coinDcxPublicHandle?.unsubscribe([key]);
+  }
+  refreshSubscribedCounts();
+  return { upstox: scannerUpstoxKeys.size, coindcx: scannerCoinDcxKeys.size };
 }
 
 function aggregateHealth() {
@@ -262,7 +299,7 @@ async function runUpstoxConnection(
     feedHandle = await connectUpstoxV3MarketFeed({
       accessToken: connection.accessToken,
       instrumentKeys: [
-        ...new Set([...UPSTOX_KEYS, ...upstoxDynamicRefs.keys()]),
+        ...new Set([...UPSTOX_KEYS, ...upstoxDynamicRefs.keys(), ...scannerUpstoxKeys]),
       ],
       mode: "full",
       onOpen: () => {
@@ -396,6 +433,7 @@ async function refreshCoinDcxFromLatestTrades() {
   for (const pair of new Set([
     ...COINDCX_KEYS,
     ...coinDcxDynamicRefs.keys(),
+    ...scannerCoinDcxKeys,
   ])) {
     try {
       const rows = await getCoinDcxTradeHistory(pair, 5);
@@ -444,7 +482,7 @@ async function startCoinDcx() {
 
   let publicCounted = false;
   coinDcxPublicHandle = connectCoinDcxMarketSocket({
-    pairs: [...new Set([...COINDCX_KEYS, ...coinDcxDynamicRefs.keys()])],
+    pairs: [...new Set([...COINDCX_KEYS, ...coinDcxDynamicRefs.keys(), ...scannerCoinDcxKeys])],
     onTrade: (response) => {
       const envelope = response as { data?: unknown };
       const row = (envelope?.data ?? response) as {
@@ -557,7 +595,14 @@ async function startCoinDcx() {
   }
 }
 
-const server = http.createServer((request, response) => {
+async function readJsonBody(request: http.IncomingMessage) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  if (!chunks.length) return {} as Record<string, unknown>;
+  try { return JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>; } catch { return {} as Record<string, unknown>; }
+}
+
+const server = http.createServer(async (request, response) => {
   const url = new URL(
     request.url ?? "/",
     `http://${request.headers.host ?? "localhost"}`,
@@ -565,6 +610,15 @@ const server = http.createServer((request, response) => {
 
   if (url.pathname === "/" || url.pathname === "/health") {
     return json(response, 200, aggregateHealth());
+  }
+
+  if (url.pathname === "/subscriptions/scanner" && request.method === "POST") {
+    const secret = process.env.CRON_SECRET?.trim();
+    if (!secret || request.headers.authorization !== `Bearer ${secret}`) return json(response, 401, { error: "unauthorized" });
+    const body = await readJsonBody(request);
+    const instruments = Array.isArray(body.instruments) ? body.instruments.filter((value): value is string => typeof value === "string") : [];
+    const scanner = replaceScannerSubscriptions(instruments);
+    return json(response, 200, { ok: true, scanner, health: aggregateHealth() });
   }
 
   if (url.pathname === "/quote") {

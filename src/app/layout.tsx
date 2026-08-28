@@ -6,6 +6,8 @@ import './zerion-final-four.css';
 import './zerion-strict-four.css';
 import './zerion-four-color-lock.css';
 import './phase4-chart-flow.css';
+import './zerion-repair-v3.css';
+import './zerion-v4-completion.css';
 import { AppProviders } from '@/components/providers/app-providers';
 import { GlobalProviders } from '@/components/system/GlobalProviders';
 import { AuthSessionBridge } from '@/components/auth/auth-session-bridge';

@@ -2,7 +2,9 @@ import { z } from "zod";
 
 export const paperOrderSchema = z
   .object({
-    symbol: z.string().min(1).max(30),
+    symbol: z.string().min(1).max(80),
+
+    instrumentId: z.string().min(1).max(180).optional(),
 
     market: z.enum([
       "indian-equity",

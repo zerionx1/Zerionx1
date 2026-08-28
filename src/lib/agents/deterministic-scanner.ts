@@ -122,17 +122,25 @@ export async function deterministicMarketScan(symbols: string[]): Promise<ScanOp
           : clamp(Math.max(70, qualityScore), 70, 88);
 
       if (direction === "neutral" || confidence < 70 || qualityScore < 74) {
+        const biasLong = score >= 0;
+        const aligned = Math.max(alignedLong, alignedShort);
+        const developing = qualityScore >= 60 && aligned >= 2 && strength >= 0.8;
+        const devSupport = low + range * 0.16;
+        const devResistance = high - range * 0.16;
         direction = "neutral";
         return {
           symbol: q.symbol,
           price,
           direction,
-          confidence: Math.min(69, confidence),
-          reason:
-            "NO TRADE: Zerion requires at least 3 aligned directional factors plus a quality score of 74 before publishing a setup.",
+          confidence: developing ? clamp(Math.max(55, qualityScore - 5), 55, 69) : Math.min(54, confidence),
+          reason: developing
+            ? `DEVELOPING ${biasLong ? "LONG" : "SHORT"}: ${aligned}/4 factors aligned · quality ${qualityScore} · waiting for the full Zerion qualification gate.`
+            : "NO TRADE: Zerion requires at least 3 aligned directional factors plus a quality score of 74 before publishing a setup.",
           source: q.source,
           requiresUserApproval: true as const,
-          tradePlan: neutralPlan(instrumentId),
+          tradePlan: developing
+            ? { ...neutralPlan(instrumentId), support: round(devSupport, price), resistance: round(devResistance, price), qualityScore, executionSymbol: executionSymbol(q.symbol, instrumentId), validityMinutes: 3, invalidation: "developing-not-executable: wait for 3 aligned factors, confidence >=70, quality >=74 and 1:3 R:R." }
+            : neutralPlan(instrumentId),
         };
       }
 

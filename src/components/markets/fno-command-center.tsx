@@ -71,7 +71,7 @@ export function FnoCommandCenter() {
           { cache: "no-store" },
         ),
         fetch(
-          `/api/markets/search?q=${encodeURIComponent(underlying)}&market=indian-index`,
+          `/api/markets/search?q=${encodeURIComponent(underlying)}`,
           { cache: "no-store" },
         ),
       ]);

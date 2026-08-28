@@ -144,12 +144,8 @@ export function RealtimeNotificationCenter() {
   }, []);
 
   const toggleCenter = useCallback(() => {
-    setOpen((value) => {
-      const next = !value;
-      if (next) void markAllRead();
-      return next;
-    });
-  }, [markAllRead]);
+    setOpen((value) => !value);
+  }, []);
 
   useEffect(() => {
     try {
@@ -165,6 +161,13 @@ export function RealtimeNotificationCenter() {
     const timer = window.setInterval(() => void load(), 8000);
     return () => window.clearInterval(timer);
   }, [load]);
+
+  useEffect(() => {
+    const reconcile = () => { if (!document.hidden) void fetch("/api/live/reconcile", { method: "POST", cache: "no-store" }).catch(() => {}); };
+    reconcile();
+    const timer = window.setInterval(reconcile, 20_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -196,9 +199,10 @@ export function RealtimeNotificationCenter() {
                 <strong>Notifications</strong>
                 <small>{unread ? `${unread} unread` : "You're up to date"}</small>
               </div>
-              <Link href="/dashboard/notifications" onClick={() => setOpen(false)}>
-                View all
-              </Link>
+              <div className="flex items-center gap-2">
+                {unread ? <button type="button" className="zx-notification-mark-all" onClick={() => void markAllRead()}>Mark all read</button> : null}
+                <Link href="/dashboard/notifications" onClick={() => setOpen(false)}>View all</Link>
+              </div>
             </div>
 
             <div className="zx-notification-popover__list">

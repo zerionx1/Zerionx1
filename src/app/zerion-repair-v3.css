@@ -1,0 +1,10 @@
+/* Final targeted repair layer. Imported last so we stop adding broad destructive overrides. */
+.zx-notification-popover{width:min(390px,calc(100vw - 20px));max-height:min(520px,72vh);overflow:hidden;border-radius:18px;box-shadow:0 22px 60px rgba(47,42,37,.22)}
+.zx-notification-popover__list{max-height:430px;overflow:auto}
+.zx-notification-mark-all{font-size:11px;font-weight:700;opacity:.72;text-decoration:underline;text-underline-offset:3px}
+.zx-live-toast{width:min(390px,calc(100vw - 20px));border-radius:16px}
+.zx-opportunity-basis{margin-top:12px;padding:12px;border:1px solid #E6D8C3;border-radius:14px;background:#F7F4ED}
+.zx-opportunity-basis small,.zx-opportunity-basis strong{display:block}.zx-opportunity-basis p{margin-top:6px;font-size:12px;opacity:.72}
+.zx-agent-notification input,.zx-coindcx-connect input,.zx-coindcx-connect select{min-height:44px;background:#F7F4ED;color:#2F2A25;border:1px solid #E6D8C3;border-radius:12px;padding:10px 12px}
+.zx-broker-card{overflow:visible}.zx-final-message{border-radius:14px}
+@media(max-width:640px){.zx-notification-dock{right:12px}.zx-notification-popover{position:fixed;right:10px;top:68px}.zx-agent-notification__actions{width:100%}}

@@ -58,7 +58,6 @@ export async function GET(request: Request) {
   try {
     const contractsPayload = (await upstoxClient.optionContracts(
       instrumentKey,
-      expiry || undefined,
     )) as { data?: Contract[] };
 
     const contracts = (contractsPayload.data ?? [])

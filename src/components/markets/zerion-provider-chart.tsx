@@ -115,14 +115,26 @@ export function ZerionProviderChart({
     );
   }, [live, timeframe]);
 
+  const autoStructureLines = useMemo<ChartPriceLine[]>(() => {
+    if (candles.length < 8) return [];
+    const window = candles.slice(-Math.min(80, candles.length));
+    const support = Math.min(...window.map((c) => c.low));
+    const resistance = Math.max(...window.map((c) => c.high));
+    const lines: ChartPriceLine[] = [];
+    if (!priceLines.some((line) => line.kind === "support")) lines.push({ id: "auto-support", price: support, label: "Auto support", kind: "support" });
+    if (!priceLines.some((line) => line.kind === "resistance")) lines.push({ id: "auto-resistance", price: resistance, label: "Auto resistance", kind: "resistance" });
+    return lines;
+  }, [candles, priceLines]);
+  const mergedPriceLines = useMemo(() => [...priceLines, ...autoStructureLines], [autoStructureLines, priceLines]);
+
   if (!candles.length) {
     return (
       <div className="flex min-h-[420px] items-center justify-center rounded-2xl border border-[#E6D8C3] bg-[#2F2A25]">
-        <div className="text-center text-sm text-[#2F2A25]">
-          <LoaderCircle className="mx-auto mb-3 h-6 w-6 animate-spin" />
+        <div className="text-center text-sm text-[#F7F4ED]">
+          {loading ? <LoaderCircle className="mx-auto mb-3 h-6 w-6 animate-spin" /> : <RefreshCw className="mx-auto mb-3 h-6 w-6" />}
           <p>{message}</p>
           <button
-            className="zx-secondary-action mt-4"
+            className="zx-secondary-action mt-4 bg-[#F7F4ED] text-[#2F2A25]"
             onClick={() => void loadHistory()}
           >
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -155,7 +167,7 @@ export function ZerionProviderChart({
         symbol={resolved?.symbol ?? symbol}
         timeframe={timeframe}
         livePrice={live?.price ?? candles.at(-1)?.close ?? null}
-        priceLines={priceLines}
+        priceLines={mergedPriceLines}
         instrumentId={resolved?.id ?? symbol}
         height={height}
         onExitPriceLine={onExitPriceLine}

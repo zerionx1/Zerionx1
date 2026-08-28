@@ -72,6 +72,9 @@ function eventData(
       (record(plan.trailing).enabled ? "Dynamic" : "Off"),
     expiresAt: row.expires_at ?? null,
     opportunityId: row.id,
+    strategy: "Zerion deterministic multi-factor structure + momentum",
+    basis: [row.reason, `${quality}% quality`, `${plan.riskReward ?? "—"} R:R`].filter(Boolean),
+    invalidation: plan.invalidation ?? null,
     continuouslyRevalidated: true,
     scanCadenceSeconds: 30,
   };
@@ -97,53 +100,22 @@ export async function GET() {
       .map((row) => {
         const analysis = record(row.analysis);
         const plan = record(analysis.tradePlan);
-        return {
-          row,
-          analysis,
-          plan,
-          quality: Number(plan.qualityScore ?? row.confidence ?? 0),
-        };
+        return { row, analysis, plan, quality: Number(plan.qualityScore ?? row.confidence ?? 0) };
       })
-      .filter(
-        ({ row, plan, quality }) =>
-          Number(row.confidence) >= 70 &&
-          quality >= 74 &&
-          Number(plan.riskReward) >= 3,
-      )
-      .sort(
-        (a, b) =>
-          b.quality - a.quality ||
-          Number(b.row.confidence) - Number(a.row.confidence),
-      )[0];
+      .filter(({ row, plan, quality }) => Number(row.confidence) >= 70 && quality >= 74 && Number(plan.riskReward) >= 3)
+      .sort((a, b) => b.quality - a.quality || Number(b.row.confidence) - Number(a.row.confidence))
+      .slice(0, 12);
 
-    if (strongest) {
-      const { row, analysis, plan, quality } = strongest;
+    for (const { row, analysis, plan, quality } of strongest) {
       const data = eventData(row, analysis, plan, quality);
       const old = byOpportunity.get(String(row.id));
       if (old?.id) {
-        await update(
-          "user_notifications",
-          `id=eq.${encodeURIComponent(String(old.id))}&owner_id=eq.${user.id}`,
-          {
-            title: `${String(row.symbol)} ${String(row.direction).toUpperCase()} opportunity`,
-            body: `${quality}% setup quality · ${String(row.reason)}`,
-            priority: quality >= 80 ? "high" : "normal",
-            event_data: data,
-            action_url: "/dashboard/notifications",
-          },
-        );
-      } else {
-        await insert("user_notifications", {
-          owner_id: user.id,
-          opportunity_id: row.id,
-          kind: "agent-opportunity",
+        await update("user_notifications", `id=eq.${encodeURIComponent(String(old.id))}&owner_id=eq.${user.id}`, {
           title: `${String(row.symbol)} ${String(row.direction).toUpperCase()} opportunity`,
-          body: `${quality}% setup quality · ${String(row.reason)}`,
-          priority: quality >= 80 ? "high" : "normal",
-          action_url: "/dashboard/notifications",
-          event_key: `agent-opportunity-${String(row.id)}`,
-          event_data: data,
+          body: `${quality}% setup quality · ${String(row.reason)}`, priority: quality >= 80 ? "high" : "normal", event_data: data, action_url: "/dashboard/notifications",
         });
+      } else {
+        await insert("user_notifications", { owner_id: user.id, opportunity_id: row.id, kind: "agent-opportunity", title: `${String(row.symbol)} ${String(row.direction).toUpperCase()} opportunity`, body: `${quality}% setup quality · ${String(row.reason)}`, priority: quality >= 80 ? "high" : "normal", action_url: "/dashboard/notifications", event_key: `agent-opportunity-${String(row.id)}`, event_data: data });
       }
     }
 

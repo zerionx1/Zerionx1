@@ -62,6 +62,9 @@ function riskBudget(balance: number, controls: Awaited<ReturnType<typeof getRisk
 function paperMarket(market: string): MarketKind {
   if (market === "crypto") return "crypto";
   if (market === "forex") return "forex";
+  if (market === "indian-index") return "indian-index";
+  if (market === "indian-futures") return "indian-futures";
+  if (market === "indian-options") return "indian-options";
   return "indian-equity";
 }
 
